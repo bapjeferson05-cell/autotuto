@@ -223,6 +223,19 @@ CALCULOS: dict[str, Gerador] = {
                    "mínimo múltiplo comum — 'daqui a quantos dias/voltas coincidem de novo', "
                    "menor quantidade que serve para os dois",
                    {"gerador": "mmc", "params": {"a": 4, "b": 6}}),
+    "media": Gerador("media", "calc", calc.media,
+                     {"valores": Param("list", nota="lista de números")},
+                     "média aritmética — nota final, temperatura média, média de gastos",
+                     {"gerador": "media", "params": {"valores": [7, 8, 6, 9]}}),
+    "velocidade_media": Gerador("velocidade_media", "calc", calc.velocidade_media,
+                                _p("distancia", "tempo"),
+                                "velocidade média — 'percorreu X em Y horas', v = distância ÷ tempo",
+                                {"gerador": "velocidade_media", "params": {"distancia": 240, "tempo": 3}}),
+    "juros_simples": Gerador("juros_simples", "calc", calc.juros_simples,
+                             _p("capital", "taxa", "tempo"),
+                             "juros simples — empréstimo/poupança a taxa fixa. taxa em % ao período. "
+                             "J = C·i·t; devolve também o montante (C + J)",
+                             {"gerador": "juros_simples", "params": {"capital": 1000, "taxa": 2, "tempo": 6}}),
 }
 
 GERADORES: dict[str, Gerador] = {**FIGURAS, **CALCULOS}

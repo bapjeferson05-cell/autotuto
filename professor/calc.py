@@ -145,10 +145,39 @@ def mmc(a, b) -> Resultado:
     return Resultado(m, [rf"\mathrm{{mmc}}({_n(a)},\,{_n(b)}) = \dfrac{{{_n(a)}\cdot{_n(b)}}}{{\mathrm{{mdc}}}} = {m}"])
 
 
+# ──────────────────────────────────────────────── cálculos simples do dia a dia
+def media(valores) -> Resultado:
+    vs = [float(v) for v in valores]
+    s, n = sum(vs), len(vs)
+    return Resultado(round(s / n, 4), [
+        r"\bar{x} = \dfrac{\text{soma}}{\text{quantidade}}",
+        rf"\bar{{x}} = \dfrac{{{' + '.join(_n(v) for v in vs)}}}{{{n}}} = \dfrac{{{_n(s)}}}{{{n}}} = {_n(s / n)}",
+    ])
+
+
+def velocidade_media(distancia, tempo) -> Resultado:
+    v = distancia / tempo
+    return Resultado(round(v, 4), [
+        r"v = \dfrac{\text{distância}}{\text{tempo}}",
+        rf"v = \dfrac{{{_n(distancia)}}}{{{_n(tempo)}}} = {_n(v)}",
+    ], "u/t")
+
+
+def juros_simples(capital, taxa, tempo) -> Resultado:
+    """taxa em % ao período."""
+    j = capital * (taxa / 100) * tempo
+    return Resultado(round(j, 2), [
+        r"J = C \cdot i \cdot t",
+        rf"J = {_n(capital)} \cdot \dfrac{{{_n(taxa)}}}{{100}} \cdot {_n(tempo)} = {_n(j)}",
+        rf"\text{{montante}} = {_n(capital)} + {_n(j)} = {_n(capital + j)}",
+    ])
+
+
 CATALOGO = {
     "area_trapezio": area_trapezio, "area_triangulo": area_triangulo,
     "area_circulo": area_circulo, "area_retangulo": area_retangulo,
     "pitagoras": pitagoras, "eq_primeiro_grau": eq_primeiro_grau,
     "bhaskara": bhaskara, "porcentagem": porcentagem, "regra_de_tres": regra_de_tres,
     "mdc": mdc, "mmc": mmc,
+    "media": media, "velocidade_media": velocidade_media, "juros_simples": juros_simples,
 }
