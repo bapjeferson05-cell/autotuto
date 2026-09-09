@@ -219,18 +219,25 @@ def _tronco_cone(ax):
 
 
 def _toro(ax):
-    R, r = 2.6, 1.25
-    t = np.linspace(0, 2 * np.pi, 240)
-    # contorno externo e interno da "rosquinha" (elipses achatadas)
-    ax.plot((R + r) * np.cos(t), _K * (R + r) * np.sin(t), color=GIZ, lw=2.4)
-    ax.plot((R - r) * np.cos(t), _K * (R - r) * np.sin(t), color=GIZ, lw=2.4)
-    # borda do furo, levantada (dá o volume do tubo): arco perto sólido, longe tracejado
-    xh = (R - r) * np.cos(t)
-    yh = _K * (R - r) * np.sin(t) + 2 * _K * r
-    perto = np.sin(t) < 0
-    ax.plot(np.where(perto, xh, np.nan), np.where(perto, yh, np.nan), color=GIZ, lw=2.2)
-    ax.plot(np.where(~perto, xh, np.nan), np.where(~perto, yh, np.nan), color=GIZ,
-            lw=1.6, ls=(0, (3, 3)), alpha=0.45)
+    R, r = 2.7, 1.15
+    t = np.linspace(np.pi / 2, np.pi / 2 + 2 * np.pi, 260)   # emenda do fill fica em cima
+    xo, yo = (R + r) * np.cos(t), _K * (R + r) * np.sin(t)
+    xi, yi = (R - r) * np.cos(t), _K * (R - r) * np.sin(t)
+    # preenche o anel — é o que faz ler como "rosquinha sólida", não dois círculos
+    ax.fill(np.r_[xo, xi[::-1]], np.r_[yo, yi[::-1]], color=CORES["destaque"],
+            alpha=0.10, linewidth=0)
+    ax.plot(xo, yo, color=GIZ, lw=2.5)
+    # o furo: metade de baixo (parede perto, você vê descendo) sólida; metade de cima
+    # (parede longe) subida um tico e tracejada — dá o volume do tubo
+    perto = np.sin(t) <= 0
+    ax.plot(np.where(perto, xi, np.nan), np.where(perto, yi - _K * 0.25, np.nan),
+            color=GIZ, lw=2.3)
+    ax.plot(np.where(~perto, xi, np.nan), np.where(~perto, yi + _K * 0.5, np.nan),
+            color=GIZ, lw=1.7, ls=(0, (4, 3)), alpha=0.5)
+    # brilho do tubo (canto superior esquerdo)
+    tb = np.linspace(np.pi * 0.75, np.pi * 1.05, 40)
+    ax.plot((R + r * 0.55) * np.cos(tb), _K * (R + r * 0.55) * np.sin(tb) + _K * 0.3,
+            color=GIZ, lw=1.4, alpha=0.55)
     _lim(ax, (-R - r - 1, R + r + 1), (-_K * (R + r) - 1.6, _K * (R + r) + 1.6))
 
 
