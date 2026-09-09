@@ -47,7 +47,9 @@ class Voz:
         self.piper = Piper()
         self.stt = FasterWhisperEngine()
         self.vad = SileroVAD()
-        self.on_inicio_fala: Callable[[str], None] | None = None   # visor notifica aqui
+        self.on_inicio_fala: Callable[[str], None] | None = None   # visor mostra o texto
+        self.on_injecao: Callable[[], str | None] | None = None    # contingência: teclado → texto
+        self._inj_pendente: str | None = None
 
     # ------------------------------------------------------------------ falar
     def falar(self, texto: str) -> str | None:
@@ -63,6 +65,7 @@ class Voz:
 
         monitor = BargeInMonitor()
         res: dict = {}
+        inj: dict = {}
 
         def _rodar() -> None:
             try:
@@ -75,23 +78,37 @@ class Voz:
 
         th = threading.Thread(target=_rodar, daemon=True)
         th.start()
-        th.join(_TIMEOUT_FALA)
-        if th.is_alive():
+        # cão-de-guarda + vigia de injeção do teclado (contingência)
+        fim = time.monotonic() + _TIMEOUT_FALA
+        while th.is_alive() and time.monotonic() < fim:
+            if self.on_injecao:
+                t = self.on_injecao()
+                if t:
+                    inj["texto"] = t
+                    monitor.triggered.set()      # corta o Piper na hora
+                    break
+            th.join(0.1)
+        if th.is_alive() and not inj:
             print("[voz] fala pendurou — abandonando essa frase", file=sys.stderr, flush=True)
             try:
                 monitor.stop()
             except Exception:  # noqa: BLE001
                 pass
             return None
+        if inj:
+            th.join(1.0)
+            return inj["texto"]                  # veio do teclado, não precisa de STT
 
         if not res.get("cortou"):
             return None
 
-        # cortou: junta o onset do monitor + o resto (limitado a 4 s — eco não trava)
+        # cortou (mic): junta o onset + o resto (limitado a 4 s — eco não trava)
         onset = np.frombuffer(monitor.buffer, dtype=np.int16).astype(np.float32) / 32768.0
         try:
             resto = self._record_ate(4.0)
         except Exception:  # noqa: BLE001
+            resto = None
+        if isinstance(resto, str):              # "INJ" — teclado; ignora aqui
             resto = None
         audio = np.concatenate([onset, resto]) if resto is not None and resto.size else onset
         if audio.size < _SR:           # < 1 s: quase certo que é eco do Piper
@@ -110,18 +127,23 @@ class Voz:
 
     # ------------------------------------------------------------------ ouvir
     def ouvir(self, timeout: float | None = None) -> str | None:
-        """Escuta o aluno. Com `timeout`, desiste se ele não começar a falar nesse
-        tempo. Devolve a transcrição, ou None."""
-        from jarvis.audio import capture
-
-        audio = (self._record_ate(timeout) if timeout
-                 else capture.record_vad(self.vad))
+        """Escuta o aluno (mic OU teclado, o que vier primeiro). Com `timeout`,
+        desiste se ninguém falar/apertar nesse tempo. Devolve a transcrição/texto."""
+        if self.on_injecao:                    # já tem tecla na fila?
+            t = self.on_injecao()
+            if t:
+                return t
+        audio = self._record_ate(timeout if timeout else 3600.0)
+        if audio == "INJ":                      # teclado interrompeu a espera
+            return self._inj_pendente
         if audio is None or audio.size < _SR // 3:
             return None
         return self.stt.transcribe(audio).text.strip() or None
 
     def _record_ate(self, timeout: float):
-        """record_vad, mas desiste se nenhuma fala começar em `timeout` s."""
+        """record_vad, mas desiste se nenhuma fala começar em `timeout` s.
+        Se o teclado (on_injecao) disparar antes da fala, devolve "INJ" e guarda o
+        texto em self._inj_pendente."""
         from jarvis.audio import capture
 
         frame_ms = _CHUNK * 1000 // _SR
@@ -131,10 +153,16 @@ class Voz:
         voiced = bytearray()
         triggered = False
         silence = 0
+        self._inj_pendente = None
         self.vad.reset()
         stream = capture.frames(_CHUNK)
         try:
             for i, frame in enumerate(stream):
+                if not triggered and self.on_injecao:
+                    t = self.on_injecao()
+                    if t:
+                        self._inj_pendente = t
+                        return "INJ"
                 fala = self.vad.is_speech(frame)
                 if not triggered:
                     preroll.append(frame)

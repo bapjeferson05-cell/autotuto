@@ -3,9 +3,13 @@
     v = Visor().start()                       # http://localhost:8080
     Tocador(falar=v.falar, desenhar=v.desenhar).toca(aula)
 
-O tocador empurra figura (`desenhar`) e fala (`falar`); a página faz polling de
-`/estado` a cada 150 ms e troca a `<img>` quando o frame muda. `ritmo` faz o
-`falar` dormir proporcional ao texto — dá pra assistir sem TTS ainda.
+A página faz polling de `/estado` a cada 120 ms e troca a `<img>` quando o frame
+muda. `ritmo` faz o `falar` dormir proporcional ao texto (modo sem TTS).
+
+CONTINGÊNCIA (mic ruim no palco): teclas na página simulam a fala do aluno —
+  1 = "por que divide por dois"   2 = "não entendi"   3 = "e se fosse um triângulo"
+  0 = "vira um triângulo" (resposta da pergunta)   Espaço = igual ao 1
+Elas fazem POST /interromper; o `demo_voz` injeta esse texto no lugar do microfone.
 """
 from __future__ import annotations
 
@@ -13,6 +17,13 @@ import json
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+_TECLAS = {
+    "1": "por que que divide por dois?",
+    "2": "não entendi essa parte",
+    "3": "e se fosse um triângulo?",
+    "0": "acho que vira um triângulo",
+}
 
 _PAGINA = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -44,13 +55,17 @@ _PAGINA = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
   #prof { color:var(--giz); font-size:1.4rem; line-height:1.4; text-wrap:balance;
           max-width:70ch; }
   #resumo { position:fixed; bottom:6px; right:10px; color:#ffffff18; font-size:.7rem; }
+  #dicas { position:fixed; bottom:6px; left:10px; color:#ffffff14; font-size:.7rem; }
 </style></head><body>
 <header><span class="pill" id="pill"><span class="dot"></span><span id="rot">pronto</span></span></header>
 <main><img id="fig" alt=""></main>
 <footer><div id="aluno"></div><div id="prof"></div></footer>
 <div id="resumo"></div>
+<div id="dicas">1 por quê · 2 não entendi · 3 triângulo · 0 responder</div>
 <script>
 const R = { falando:"falando", ouvindo:"ouvindo", pensando:"pensando" };
+const TECLAS = {"1":"por que que divide por dois?","2":"não entendi essa parte",
+  "3":"e se fosse um triângulo?","0":"acho que vira um triângulo"," ":"por que que divide por dois?"};
 let frame = -1;
 async function poll() {
   try {
@@ -63,6 +78,16 @@ async function poll() {
     document.getElementById("resumo").textContent = s.resumo || "";
   } catch (e) {}
 }
+document.addEventListener("keydown", (e) => {
+  const t = TECLAS[e.key];
+  if (!t) return;
+  e.preventDefault();
+  document.getElementById("aluno").textContent = t;
+  document.getElementById("rot").textContent = "ouvindo";
+  document.getElementById("pill").className = "pill ouvindo";
+  fetch("/interromper", {method:"POST", headers:{"Content-Type":"application/json"},
+                         body: JSON.stringify({texto: t})}).catch(()=>{});
+});
 setInterval(poll, 120); poll();
 </script></body></html>"""
 
@@ -74,6 +99,7 @@ class Visor:
         self._png = b""
         self._frame = 0
         self._st = {"estado": "pronto", "professor": "", "aluno": "", "resumo": ""}
+        self._injecao: str | None = None
         self._srv: ThreadingHTTPServer | None = None
 
     # ------------------------------------------------ API pro tocador
@@ -88,7 +114,6 @@ class Visor:
         return None
 
     def mostrar_fala(self, texto: str) -> None:
-        """Só atualiza a tela (sem dormir). Pro modo voz, onde o TTS dá o tempo."""
         with self._lock:
             self._st["estado"], self._st["professor"] = "falando", texto
 
@@ -104,6 +129,12 @@ class Visor:
         with self._lock:
             self._st["resumo"] = txt
 
+    # contingência: fala do aluno vinda do teclado (não do mic)
+    def pop_injecao(self) -> str | None:
+        with self._lock:
+            t, self._injecao = self._injecao, None
+            return t
+
     def _payload(self) -> bytes:
         with self._lock:
             return json.dumps({"frame": self._frame, **self._st}).encode()
@@ -113,7 +144,7 @@ class Visor:
         v = self
 
         class H(BaseHTTPRequestHandler):
-            def log_message(self, *a):  # silêncio
+            def log_message(self, *a):
                 pass
 
             def do_GET(self):
@@ -125,6 +156,22 @@ class Visor:
                     with v._lock:
                         png = v._png
                     self._resp(200, "image/png", png)
+                else:
+                    self._resp(404, "text/plain", b"nao")
+
+            def do_POST(self):
+                if self.path == "/interromper":
+                    n = int(self.headers.get("Content-Length", 0))
+                    try:
+                        txt = json.loads(self.rfile.read(n) or b"{}").get("texto", "")
+                    except Exception:  # noqa: BLE001
+                        txt = ""
+                    if txt:
+                        with v._lock:
+                            v._injecao = txt
+                            v._st["aluno"] = txt
+                            v._st["estado"] = "ouvindo"
+                    self._resp(200, "text/plain", b"ok")
                 else:
                     self._resp(404, "text/plain", b"nao")
 

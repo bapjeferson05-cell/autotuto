@@ -36,6 +36,7 @@ def main() -> None:
     visor = Visor(ritmo=0).start()
     visor.estado("pensando")
     voz = liga_no_visor(Voz(), visor)          # carrega Piper + faster-whisper
+    voz.on_injecao = visor.pop_injecao         # contingência: teclas da página = fala do aluno
     visor.estado("pronto")
 
     # instrumentação: mede a latência do barge-in e mostra a transcrição
@@ -58,22 +59,27 @@ def main() -> None:
             print(f"  🎤 “{r}”", flush=True)
         return r
 
+    loop = "loop" in sys.argv[1:]
     espera = int(os.environ.get("DEMO_ESPERA", "3"))
-    print(f"\nvisor pronto em http://localhost:8080 — a aula começa em {espera}s "
-          f"(Ctrl+C encerra)", flush=True)
+    print(f"\nvisor pronto em http://localhost:8080 — a aula começa em {espera}s"
+          + ("  ·  modo LOOP (repete até Ctrl+C)" if loop else "  ·  Ctrl+C encerra"), flush=True)
     time.sleep(espera)
 
     # settle=0.5: a figura aparece e o visor pega no polling ANTES da fala
     tocador = Tocador(falar=falar, ouvir=ouvir, desenhar=visor.desenhar,
                       pausas=True, settle=0.5)
-    est = tocador.toca(carregar(qual))
-
-    visor.estado("pronto")
-    visor.resumo(est.resumo())
-    print(f"\n■ {est.resumo()}\no visor segue no ar. Ctrl+C encerra.", flush=True)
     try:
         while True:
-            time.sleep(1)
+            est = tocador.toca(carregar(qual))
+            visor.estado("pronto")
+            visor.resumo(est.resumo())
+            print(f"\n■ {est.resumo()}", flush=True)
+            if not loop:
+                print("o visor segue no ar. Ctrl+C encerra.", flush=True)
+                while True:
+                    time.sleep(1)
+            print("\n… reinicia em 8s (Ctrl+C encerra) …", flush=True)
+            time.sleep(8)
     except KeyboardInterrupt:
         visor.stop()
 
