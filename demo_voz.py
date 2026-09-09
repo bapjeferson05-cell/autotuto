@@ -1,16 +1,16 @@
-"""demo_voz.py — o Ciclo do Trapézio COM VOZ, no visor.
+"""demo_voz.py — o professor COM VOZ, no visor.
 
-Roda com o Python do jarvis (Piper + faster-whisper; matplotlib+pillow já estão lá):
+    ~/jarvis/.venv/bin/python demo_voz.py                 # aula pronta (trapézio), loop opcional
+    ~/jarvis/.venv/bin/python demo_voz.py pitagoras loop
+    ~/jarvis/.venv/bin/python demo_voz.py aluno           # o ALUNO começa: descreve o problema,
+                                                          # o planejador monta a aula na hora
+(sempre com  PYTHONPATH=~/professor-matematica  na frente)
 
-    PYTHONPATH=~/professor-matematica ~/jarvis/.venv/bin/python demo_voz.py
-    PYTHONPATH=~/professor-matematica ~/jarvis/.venv/bin/python demo_voz.py pitagoras
+Abre http://localhost:8080. Interrompe por voz ("por que divide por dois?") ou por
+tecla na página (1/2/3/0, Espaço) — contingência pra mic ruim.
 
-Abre http://localhost:8080. Fale "por que que divide por dois?" durante a fórmula,
-ou responda a pergunta ("vira um triângulo") — o professor reage.
-
-Áudio: usa o DEFAULT do sistema. Se o default tiver echo-cancel (recomendado com
-caixa de som), o barge-in funciona sem fone. Sem AEC e sem fone, o mic ouve o
-próprio Piper — aí rode com JARVIS_BARGE_IN=0 (só a fala, sem interrupção).
+Áudio: usa o DEFAULT do sistema. Com echo-cancel no default, o barge-in funciona
+com caixa de som, sem fone.
 """
 from __future__ import annotations
 
@@ -18,28 +18,16 @@ import os
 import sys
 import time
 
-# voz calma de professor (o default 1.0 sai meio atropelado)
-os.environ.setdefault("JARVIS_TTS_LENGTH_SCALE", "1.1")
+os.environ.setdefault("JARVIS_TTS_LENGTH_SCALE", "1.1")   # voz calma de professor
 
 from professor.aulas import carregar, disponiveis          # noqa: E402
+from professor.fillers import filler_para                  # noqa: E402
 from professor.tocador import Tocador                       # noqa: E402
 from professor.visor import Visor                           # noqa: E402
 from professor.voz import Voz, liga_no_visor                # noqa: E402
 
 
-def main() -> None:
-    qual = sys.argv[1] if len(sys.argv) > 1 else "trapezio"
-    if qual not in disponiveis():
-        print(f"aulas: {disponiveis()}")
-        return
-
-    visor = Visor(ritmo=0).start()
-    visor.estado("pensando")
-    voz = liga_no_visor(Voz(), visor)          # carrega Piper + faster-whisper
-    voz.on_injecao = visor.pop_injecao         # contingência: teclas da página = fala do aluno
-    visor.estado("pronto")
-
-    # instrumentação: mede a latência do barge-in e mostra a transcrição
+def _monta_callbacks(voz: Voz, visor: Visor):
     falar_visor = voz.falar
 
     def falar(texto: str):
@@ -47,7 +35,7 @@ def main() -> None:
         t0 = time.monotonic()
         fala = falar_visor(texto)
         if fala:
-            print(f"  ✋ barge-in ~{time.monotonic() - t0:.1f}s  ·  “{fala}”", flush=True)
+            print(f"  ✋ ~{time.monotonic() - t0:.1f}s  ·  “{fala}”", flush=True)
         return fala
 
     def ouvir(seg: float):
@@ -59,26 +47,76 @@ def main() -> None:
             print(f"  🎤 “{r}”", flush=True)
         return r
 
-    loop = "loop" in sys.argv[1:]
-    espera = int(os.environ.get("DEMO_ESPERA", "3"))
-    print(f"\nvisor pronto em http://localhost:8080 — a aula começa em {espera}s"
-          + ("  ·  modo LOOP (repete até Ctrl+C)" if loop else "  ·  Ctrl+C encerra"), flush=True)
-    time.sleep(espera)
+    return falar, ouvir
 
-    # settle=0.5: a figura aparece e o visor pega no polling ANTES da fala
+
+def _aula_do_aluno(voz: Voz, visor: Visor):
+    """O aluno fala o problema; o planejador monta a aula. Filler cobre a espera."""
+    from professor import planejador
+
+    visor.estado("pronto")
+    visor.mostrar_fala("Pode perguntar. Descreve o teu problema de matemática.")
+    voz.falar("Pode perguntar. Descreve o teu problema.")
+    problema = voz.ouvir()                       # bloqueia até o aluno falar
+    if not problema:
+        return None
+    visor.aluno(problema)
+    print(f"\n  🎤 problema: “{problema}”", flush=True)
+
+    visor.estado("pensando")
+    voz.falar(filler_para("_planejando"))        # "deixa eu montar isso aqui"
+    t0 = time.monotonic()
+    aula, rel = planejador.planeja(problema, verbose=True)
+    print(f"  planejador: {time.monotonic() - t0:.0f}s · '{aula.titulo}' · "
+          f"{len(aula.blocos)} blocos · ok={rel.ok}", flush=True)
+    return aula
+
+
+def main() -> None:
+    args = sys.argv[1:]
+    modo_aluno = "aluno" in args
+    loop = "loop" in args
+    qual = next((a for a in args if a in disponiveis()), "trapezio")
+
+    visor = Visor(ritmo=0).start()
+    visor.estado("pensando")
+    voz = liga_no_visor(Voz(), visor)
+    voz.on_injecao = visor.pop_injecao          # contingência: teclas da página
+
+    if modo_aluno:                              # pré-aquece o LLM do planejador
+        try:
+            from professor.planejador import _llm_json
+            print("[llm] pré-aquecendo o planejador…", flush=True)
+            _llm_json([{"role": "user", "content": "responda só: ok"}], timeout=90)
+        except Exception as e:  # noqa: BLE001
+            print(f"[llm] pré-aquecimento pulado ({e})", flush=True)
+
+    visor.estado("pronto")
+    falar, ouvir = _monta_callbacks(voz, visor)
     tocador = Tocador(falar=falar, ouvir=ouvir, desenhar=visor.desenhar,
                       pausas=True, settle=0.5)
+
+    espera = int(os.environ.get("DEMO_ESPERA", "3"))
+    print(f"\nvisor → http://localhost:8080  ·  "
+          f"{'ALUNO começa' if modo_aluno else 'aula ' + qual}"
+          f"{'  ·  LOOP' if loop else ''}  ·  começa em {espera}s", flush=True)
+    time.sleep(espera)
+
     try:
         while True:
-            est = tocador.toca(carregar(qual))
+            aula = _aula_do_aluno(voz, visor) if modo_aluno else carregar(qual)
+            if aula is None:
+                print("  (não entendi o problema — repetindo)", flush=True)
+                continue
+            est = tocador.toca(aula)
             visor.estado("pronto")
             visor.resumo(est.resumo())
             print(f"\n■ {est.resumo()}", flush=True)
-            if not loop:
-                print("o visor segue no ar. Ctrl+C encerra.", flush=True)
+            if not loop and not modo_aluno:
+                print("visor no ar. Ctrl+C encerra.", flush=True)
                 while True:
                     time.sleep(1)
-            print("\n… reinicia em 8s (Ctrl+C encerra) …", flush=True)
+            print("\n… de novo em 8s (Ctrl+C encerra) …", flush=True)
             time.sleep(8)
     except KeyboardInterrupt:
         visor.stop()
