@@ -1,13 +1,15 @@
 """planejador.py — problema (texto) → LLM → PLANO estruturado (Aula) → validado.
 
     problema
-       ↓  hermes3:8b via Ollama, format=json
+       ↓  LLM (Ollama local OU Claude API), saída JSON
     JSON bruto
        ↓  valida_aula()  — se falhar, devolve os erros pro LLM e tenta de novo
     Aula pronta pros geradores
 
-Sem dependência externa: fala com o Ollama por HTTP puro (urllib). Se o Ollama
-não responder, `planeja()` cai no plano offline (aula escrita à mão).
+Agnóstico de modelo. `PROF_LLM=ollama` (padrão) fala com o Ollama por HTTP puro;
+`PROF_LLM=claude` usa a API da Anthropic (precisa de ANTHROPIC_API_KEY). O resto do
+sistema — validador, geradores, tocador — não percebe a troca. Sem Ollama nem chave,
+`planeja()` cai no plano offline.
 """
 from __future__ import annotations
 
@@ -17,10 +19,23 @@ import urllib.error
 import urllib.request
 
 from professor import validador
+from professor.aulas import TRAPEZIO
 from professor.esquema import Aula, catalogo_para_prompt
 
+PROVEDOR = os.environ.get("PROF_LLM", "ollama")
 OLLAMA = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 MODELO = os.environ.get("PROF_MODELO", "hermes3:8b")
+CLAUDE_MODELO = os.environ.get("PROF_CLAUDE_MODEL", "claude-sonnet-5")
+
+
+def _fewshot() -> str:
+    """A aula de ouro do trapézio, enxugada — o LLM copia o padrão."""
+    ex = {"titulo": TRAPEZIO["titulo"], "topico": TRAPEZIO["topico"],
+          "dados": {k: TRAPEZIO["dados"][k] for k in ("B", "b", "h")},
+          "blocos": TRAPEZIO["blocos"][:4],
+          "ramos": {"por_que_div_2": TRAPEZIO["ramos"]["por_que_div_2"][:2],
+                    "nao_entendi": TRAPEZIO["ramos"]["nao_entendi"][:1]}}
+    return json.dumps(ex, ensure_ascii=False, indent=1)
 
 PROMPT = f"""Você é o planejador de um professor de matemática que fala e desenha ao vivo.
 
@@ -63,11 +78,17 @@ Regras:
         "cotas": [{{"de": "A", "para": "B", "texto": "18", "lado": -1}}],
         "angulos": [{{"em": "A", "de": "B", "para": "D", "reto": true}}]}}
   Chaves válidas: pontos, poligonos, segmentos, circulos, angulos, marcas, cotas, rotulos.
-- "ramos" são desvios curtos para quando o aluno interrompe. Sempre inclua
-  "por_que" e "nao_entendi", cada um com 1 a 3 blocos.
-- 4 a 8 blocos no plano principal. Frases curtas.
+- "ramos" são desvios para quando o aluno interrompe. Gatilhos: "por_que_div_2"
+  (ou "por_que" genérico), "nao_entendi", e outros que fizerem sentido pro tópico
+  (ex.: "e_triangulo", "decompor"). Sempre inclua "nao_entendi" e um "por_que...".
+  Cada ramo com 1 a 3 blocos. A trilha principal retoma de onde parou.
+- 4 a 8 blocos no plano principal. Frases curtas, faladas, como um bom professor.
 - Use SÓ os geradores do catálogo abaixo, com esses parâmetros.
 
+EXEMPLO de um plano bom (área do trapézio):
+{_fewshot()}
+
+CATÁLOGO:
 {catalogo_para_prompt()}
 """
 
@@ -78,12 +99,38 @@ def _ollama_json(mensagens: list[dict], *, timeout: float = 120) -> str:
         "messages": mensagens,
         "stream": False,
         "format": "json",
-        "options": {"temperature": 0.2, "num_ctx": 8192},
+        "options": {"temperature": 0.2, "num_ctx": 12288},
     }).encode()
     req = urllib.request.Request(f"{OLLAMA}/api/chat", data=corpo,
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310
         return json.loads(r.read())["message"]["content"]
+
+
+def _claude_json(mensagens: list[dict], *, timeout: float = 120) -> str:
+    chave = os.environ.get("ANTHROPIC_API_KEY")
+    if not chave:
+        raise ConnectionError("PROF_LLM=claude mas ANTHROPIC_API_KEY não está definida")
+    sistema = "\n".join(m["content"] for m in mensagens if m["role"] == "system")
+    turnos = [m for m in mensagens if m["role"] != "system"]
+    corpo = json.dumps({
+        "model": CLAUDE_MODELO,
+        "max_tokens": 4096,
+        "temperature": 0.3,
+        "system": sistema + "\n\nResponda APENAS com o objeto JSON, sem cercas de código.",
+        "messages": turnos,
+    }).encode()
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=corpo,
+                                 headers={"content-type": "application/json",
+                                          "x-api-key": chave,
+                                          "anthropic-version": "2023-06-01"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310
+        d = json.loads(r.read())
+    return "".join(b.get("text", "") for b in d.get("content", []) if b.get("type") == "text")
+
+
+def _llm_json(mensagens: list[dict], *, timeout: float = 120) -> str:
+    return (_claude_json if PROVEDOR == "claude" else _ollama_json)(mensagens, timeout=timeout)
 
 
 def _extrai_json(txt: str) -> dict:
@@ -160,11 +207,11 @@ def planeja(problema: str, *, tentativas: int = 4, sanear: bool = True,
     rel = validador.Relatorio(["não rodou"])
     for t in range(1, tentativas + 1):
         try:
-            bruto = _ollama_json(msgs)
+            bruto = _llm_json(msgs)
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
             if verbose:
-                print(f"  Ollama indisponível ({e}) — usando plano offline")
-            return planeja_offline(problema), validador.Relatorio(avisos=["plano offline"])
+                print(f"  LLM ({PROVEDOR}) indisponível ({e}) — usando plano offline")
+            return planeja_offline(problema), validador.Relatorio(avisos=[f"plano offline ({e})"])
         try:
             ultima = Aula.de_json(_extrai_json(bruto))
         except (json.JSONDecodeError, KeyError, TypeError) as e:
@@ -195,40 +242,9 @@ def planeja(problema: str, *, tentativas: int = 4, sanear: bool = True,
 
 # ────────────────────────────────────────────────────────── plano offline (demo)
 def planeja_offline(problema: str = "") -> Aula:
-    """O problema do trapézio-terreno, escrito à mão. Usado quando não há LLM."""
-    return Aula.de_json({
-        "titulo": "Área do trapézio — o terreno",
-        "topico": "area_trapezio",
-        "dados": {"B": 18, "b": 10, "h": 10},
-        "blocos": [
-            {"diz": "O terreno tem forma de trapézio. A base de baixo mede dezoito, "
-                    "a de cima mede dez.",
-             "figura": {"gerador": "quadrilatero", "params": {"tipo": "trapezio_retangulo"}},
-             "espera": "media"},
-            {"diz": "A distância entre as duas bases é a altura, que vale dez.",
-             "figura": {"gerador": "quadrilatero", "params": {"tipo": "trapezio_retangulo"}}},
-            {"diz": "A área do trapézio é a soma das bases, vezes a altura, dividido por dois.",
-             "calc": {"gerador": "area_trapezio", "params": {"B": 18, "b": 10, "h": 10}},
-             "mostra_passos": True, "espera": "longa"},
-        ],
-        "ramos": {
-            "por_que": [
-                {"diz": "Se fosse um retângulo com a base maior, a área seria dezoito vezes a "
-                        "altura. Com a base menor, dez vezes. O trapézio fica no meio: por isso "
-                        "a média das bases.",
-                 "figura": {"gerador": "quadrilatero", "params": {"tipo": "retangulo"}},
-                 "espera": "longa"},
-            ],
-            "nao_entendi": [
-                {"diz": "Vamos devagar. Primeiro só as duas bases: dezoito embaixo, dez em cima.",
-                 "figura": {"gerador": "quadrilatero", "params": {"tipo": "trapezio_isosceles"}},
-                 "espera": "media"},
-                {"diz": "Agora soma as duas: dezoito mais dez, vinte e oito. Esse é o número "
-                        "que entra na conta.",
-                 "espera": "media"},
-            ],
-        },
-    })
+    """Sem LLM: devolve a aula de ouro do trapézio (professor/aulas.py)."""
+    from professor.aulas import carregar
+    return carregar("trapezio")
 
 
 if __name__ == "__main__":
