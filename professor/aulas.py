@@ -330,6 +330,8 @@ EQ_PRIMEIRO_GRAU: dict = {
                 "fazer pra balança não desequilibrar?",
          "figura": _balanca(r"3x + 5", r"20"),
          "pergunta": {"escuta_s": 12, "senao": "por_que",
+                      "acerta": ["dois lado", "dos dois", "outro lado", "os dois", "ambos",
+                                 "mesma coisa", "tira dos dois", "tirar dos dois"],
                       "confirma": "Exato — tiro cinco dos DOIS lados. É a regra: o que "
                                   "faço de um lado, faço do outro."}},
         {"diz": "Então: tiro cinco dos dois lados, depois divido os dois lados por três.",
@@ -409,6 +411,7 @@ REGRA_DE_TRES: dict = {
                 "maior ou menor que vinte e quatro?",
          "figura": _tabela_prop("?"),
          "pergunta": {"escuta_s": 12, "senao": "por_que",
+                      "acerta": ["maior", "mais caro", "aumenta", "cresce", "sobe", "fica caro"],
                       "confirma": "Isso — mais cadernos, mais caro. É proporção direta: "
                                   "as duas coisas crescem juntas."}},
         {"diz": "Como as duas colunas crescem juntas, eu multiplico em cruz e divido.",

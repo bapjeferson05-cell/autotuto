@@ -130,7 +130,9 @@ class Tocador:
                 if dita:
                     print(f'  🎤 "{dita}"')
                     achou = classificar(dita, est.aula.ramos)
-                    if achou == senao and pg.get("confirma"):   # acertou → fading: confirma curto
+                    d = dita.lower()
+                    acertou = achou == senao or any(k in d for k in pg.get("acerta", []))
+                    if acertou and pg.get("confirma"):           # acertou → fading: confirma curto
                         print("  ✓ acertou — pula a derivação (fading)")
                         self.falar(pg["confirma"])
                         gat = None

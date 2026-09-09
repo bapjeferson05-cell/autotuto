@@ -27,6 +27,9 @@ PROBLEMAS = {
     "hexagono": "O que é um hexágono regular e quantos lados ele tem?",
     "pitagoras_casa": ("Uma escada de 5 m está apoiada numa parede, com a base a 3 m do pé "
                        "da parede. A que altura a escada toca a parede?"),
+    "eq_1grau": "Pensei num número, multipliquei por 4 e somei 3, e deu 23. Que número é?",
+    "regra3_lapis": "Se 4 lápis custam 12 reais, quanto custam 7 lápis?",
+    "velocidade": "Um carro percorreu 240 km em 3 horas. Qual foi a velocidade média?",
 }
 
 OUT = pathlib.Path("out/exemplos")

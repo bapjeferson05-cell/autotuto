@@ -38,7 +38,9 @@ _FEWSHOT = json.dumps({
          "figura": {"gerador": "triangulo", "params": {"tipo": "acutangulo"}},
          "espera": "media"},
         {"diz": "Antes da fórmula: dentro de que figura o triângulo cabe exatamente duas vezes?",
-         "pergunta": {"escuta_s": 12, "senao": "por_que_div_2"}},
+         "pergunta": {"escuta_s": 12, "senao": "por_que_div_2",
+                      "acerta": ["retângulo", "retangulo", "quadrado", "caixa"],
+                      "confirma": "Isso! Dentro de um retângulo. Por isso a fórmula divide por dois."}},
         {"diz": "Por isso a fórmula divide por dois: o triângulo é metade do retângulo.",
          "calc": {"gerador": "area_triangulo", "params": {"base": 8, "altura": 5}},
          "mostra_passos": True,
@@ -147,10 +149,12 @@ Regras:
 - Preencha "dados" com os números do enunciado (não deixe vazio).
 - UM beat pode ser uma PERGUNTA ao aluno, pra ele pensar antes de você dar a resposta:
       {{"diz": "antes da fórmula, o que você acha que acontece se ...?",
-        "pergunta": {{"escuta_s": 12, "senao": "<nome de um ramo>"}}}}
-  O sistema espera a resposta e classifica ela nos ramos; se o aluno não responder,
-  vai pro ramo "senao". Ponha 1 beat "pergunta" logo antes do passo mais importante,
-  e faça o ramo "senao" ser o que responde essa pergunta.
+        "pergunta": {{"escuta_s": 12, "senao": "<ramo>",
+                     "acerta": ["palavra", "que", "indica", "acerto"],
+                     "confirma": "Isso! <frase curta confirmando e emendando>"}}}}
+  O sistema espera; se a resposta bate com "acerta" (ou classifica no ramo "senao"),
+  ele diz "confirma" e SEGUE — não repete a explicação (o aluno já sabe). Se errou ou
+  calou, vai pro ramo "senao". Ponha 1 beat "pergunta" antes do passo mais importante.
 - "ramos" são desvios para quando o aluno interrompe OU responde uma pergunta.
   Gatilhos: "por_que_div_2" (ou "por_que" genérico), "nao_entendi", e outros que
   fizerem sentido pro tópico (ex.: "e_triangulo", "decompor"). Sempre inclua
