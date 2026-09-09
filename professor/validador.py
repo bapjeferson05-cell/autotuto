@@ -257,7 +257,7 @@ def _mat_calc(nome: str, params: dict) -> list[str]:
 
 
 # ─────────────────────────────────────────────── entrada
-def valida_bloco(bloco: dict, *, onde: str = "bloco") -> Relatorio:
+def valida_bloco(bloco: dict, *, onde: str = "bloco", ramos_validos: set | None = None) -> Relatorio:
     rel = Relatorio()
     if not isinstance(bloco, dict):
         rel.problemas.append(f"{onde}: não é um objeto")
@@ -267,6 +267,21 @@ def valida_bloco(bloco: dict, *, onde: str = "bloco") -> Relatorio:
     esp = bloco.get("espera")
     if esp is not None and esp not in ESPERAS:
         rel.problemas.append(f"{onde}: espera='{esp}' inválida (use {list(ESPERAS)} ou omita)")
+
+    if "pergunta" in bloco and bloco["pergunta"]:
+        pg = bloco["pergunta"]
+        if not isinstance(pg, dict):
+            rel.problemas.append(f"{onde}.pergunta: tem que ser um objeto {{escuta_s, senao}}")
+        else:
+            senao = pg.get("senao")
+            if not senao:
+                rel.problemas.append(f"{onde}.pergunta: falta 'senao' (ramo se o aluno não responder)")
+            elif ramos_validos is not None and senao not in ramos_validos:
+                rel.problemas.append(f"{onde}.pergunta.senao='{senao}' não é um ramo da aula "
+                                     f"({sorted(ramos_validos)})")
+            es = pg.get("escuta_s", 12)
+            if not isinstance(es, (int, float)) or not (3 <= es <= 60):
+                rel.problemas.append(f"{onde}.pergunta.escuta_s deve ser um número de 3 a 60")
 
     if "figura" in bloco and bloco["figura"]:
         params, erros = _valida_chamada(bloco["figura"], "figura")
@@ -293,12 +308,13 @@ def valida_aula(aula: Aula | dict) -> Relatorio:
         rel.problemas.append("aula: falta 'titulo'")
     if not aula.blocos:
         rel.problemas.append("aula: 'blocos' está vazio")
+    rv = set(aula.ramos or {})
     for i, b in enumerate(aula.blocos):
-        rel += valida_bloco(b, onde=f"blocos[{i}]")
+        rel += valida_bloco(b, onde=f"blocos[{i}]", ramos_validos=rv)
     for gatilho, blist in (aula.ramos or {}).items():
         if not isinstance(blist, list) or not blist:
             rel.problemas.append(f"ramos['{gatilho}']: tem que ser uma lista não vazia de blocos")
             continue
         for i, b in enumerate(blist):
-            rel += valida_bloco(b, onde=f"ramos['{gatilho}'][{i}]")
+            rel += valida_bloco(b, onde=f"ramos['{gatilho}'][{i}]", ramos_validos=rv)
     return rel

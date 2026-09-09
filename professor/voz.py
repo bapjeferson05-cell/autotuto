@@ -70,13 +70,52 @@ class Voz:
         texto_aluno = self.stt.transcribe(audio).text.strip()
         return texto_aluno or None
 
-    # ------------------------------------------------------------------ ouvir (1ª fala)
-    def ouvir(self) -> str:
-        """Bloqueia até o aluno falar, devolve a transcrição. Pro início da sessão."""
+    # ------------------------------------------------------------------ ouvir
+    def ouvir(self, timeout: float | None = None) -> str | None:
+        """Escuta o aluno. Com `timeout`, desiste se ele não começar a falar em
+        `timeout` s (pro beat 'pergunta'). Sem `timeout`, bloqueia (início da sessão).
+        Devolve a transcrição, ou None se calou / não deu pra entender."""
         from jarvis.audio import capture
+        from jarvis.audio.vad import SileroVAD  # noqa: F401  (garante import cedo)
 
-        audio = capture.record_vad(self.vad)
-        return self.stt.transcribe(audio).text.strip() if audio.size else ""
+        audio = (self._record_ate(capture, timeout) if timeout
+                 else capture.record_vad(self.vad))
+        if audio is None or audio.size < self._onset_rate // 3:
+            return None
+        return self.stt.transcribe(audio).text.strip() or None
+
+    def _record_ate(self, capture, timeout: float):
+        """record_vad, mas desiste se nenhuma fala começar em `timeout` s."""
+        import collections
+
+        chunk = 512
+        frame_ms = chunk * 1000 // 16000
+        limite_frames = int(timeout * 1000 / frame_ms)
+        silence_limit = max(1, 700 // frame_ms)
+        preroll = collections.deque(maxlen=max(1, 300 // frame_ms))
+        voiced = bytearray()
+        triggered = False
+        silence = 0
+        self.vad.reset()
+        stream = capture.frames(chunk)
+        try:
+            for i, frame in enumerate(stream):
+                fala = self.vad.is_speech(frame)
+                if not triggered:
+                    preroll.append(frame)
+                    if fala:
+                        triggered = True
+                        voiced = bytearray(b"".join(preroll))
+                    elif i >= limite_frames:
+                        return None
+                    continue
+                voiced += frame
+                silence = 0 if fala else silence + 1
+                if silence >= silence_limit or len(voiced) >= 16000 * 2 * 12:
+                    break
+        finally:
+            stream.close()
+        return np.frombuffer(bytes(voiced), dtype=np.int16).astype(np.float32) / 32768.0
 
 
 def liga_no_visor(voz: "Voz", visor) -> "Voz":

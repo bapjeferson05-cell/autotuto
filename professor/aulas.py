@@ -56,6 +56,11 @@ TRAPEZIO: dict = {
              "angulos": [{"em": "P", "de": "B", "para": "Q", "reto": True}],
              "mostrar_pontos": False, "nomear_pontos": False}},
          "espera": "media"},
+        # beat PERGUNTA — o aluno pensa antes de a fórmula aparecer (self-explanation)
+        {"diz": "Antes de eu te dar a fórmula, me diz uma coisa: e se a base de cima fosse "
+                "encolhendo, até virar zero? Que figura o trapézio viraria?",
+         "figura": _trap(segmentos=[{"de": "D", "para": "C", "cor": "destaque", "lw": 5}]),
+         "pergunta": {"escuta_s": 12, "senao": "e_triangulo"}},
         {"diz": "A área do trapézio: soma as duas bases, multiplica pela altura, e divide por dois.",
          "calc": {"gerador": "area_trapezio", "params": {"B": 18, "b": 10, "h": 6}},
          "mostra_passos": True, "espera": "longa"},
@@ -117,8 +122,7 @@ TRAPEZIO: dict = {
         ],
         # "e se fosse um triângulo?"
         "e_triangulo": [
-            {"diz": "Imagina a base menor encolhendo. Nove... cinco... até virar um ponto só. "
-                    "O trapézio virou um triângulo.",
+            {"diz": "É isso: a base de cima encolhe até zero, e o trapézio vira um triângulo.",
              "figura": {"gerador": "figura", "spec": {
                  "pontos": {"A": _A, "B": _B, "T": [9, 6]},
                  "poligonos": [{"vs": ["A", "B", "T"], "preenche": True}],

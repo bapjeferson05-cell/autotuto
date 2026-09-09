@@ -47,12 +47,21 @@ def main():
             visor.aluno(fala)
         return fala
 
+    def ouvir(seg: float):
+        visor.estado("ouvindo")
+        r = voz.ouvir(seg)
+        if r:
+            visor.aluno(r)
+        visor.estado("falando")
+        return r
+
     voz.falar = falar
     visor.estado("pronto")
     print("\naula em 3s — fale à vontade pra interromper (Ctrl+C encerra)")
     time.sleep(3)
 
-    est = Tocador(falar=voz.falar, desenhar=visor.desenhar, pausas=True).toca(carregar(qual))
+    est = Tocador(falar=voz.falar, ouvir=ouvir, desenhar=visor.desenhar,
+                  pausas=True).toca(carregar(qual))
 
     visor.estado("pronto")
     visor.resumo(est.resumo())

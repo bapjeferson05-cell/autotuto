@@ -37,6 +37,8 @@ _FEWSHOT = json.dumps({
         {"diz": "Esse é um triângulo. A base mede oito, e a altura, cinco.",
          "figura": {"gerador": "triangulo", "params": {"tipo": "acutangulo"}},
          "espera": "media"},
+        {"diz": "Antes da fórmula: dentro de que figura o triângulo cabe exatamente duas vezes?",
+         "pergunta": {"escuta_s": 12, "senao": "por_que_div_2"}},
         {"diz": "A área do triângulo é base vezes altura, dividido por dois.",
          "calc": {"gerador": "area_triangulo", "params": {"base": 8, "altura": 5}},
          "mostra_passos": True, "espera": "longa"},
@@ -44,8 +46,8 @@ _FEWSHOT = json.dumps({
     ],
     "ramos": {
         "por_que_div_2": [
-            {"diz": "Porque o triângulo é metade de um retângulo de mesma base e altura. "
-                    "Encaixa dois triângulos iguais e vira um retângulo.",
+            {"diz": "É isso: o triângulo é metade de um retângulo de mesma base e altura. "
+                    "Dois triângulos iguais encaixam e viram um retângulo. Por isso divide por dois.",
              "figura": {"gerador": "quadrilatero", "params": {"tipo": "retangulo"}},
              "espera": "longa"}],
         "nao_entendi": [
@@ -104,10 +106,17 @@ Regras:
   ou rampa apoiada na parede, o comprimento da escada é "c"; a distância no chão e a
   altura são "a" e "b". Passe só os 2 valores que o problema dá.
 - Preencha "dados" com os números do enunciado (não deixe vazio).
-- "ramos" são desvios para quando o aluno interrompe. Gatilhos: "por_que_div_2"
-  (ou "por_que" genérico), "nao_entendi", e outros que fizerem sentido pro tópico
-  (ex.: "e_triangulo", "decompor"). Sempre inclua "nao_entendi" e um "por_que...".
-  Cada ramo com 1 a 3 blocos. A trilha principal retoma de onde parou.
+- UM beat pode ser uma PERGUNTA ao aluno, pra ele pensar antes de você dar a resposta:
+      {{"diz": "antes da fórmula, o que você acha que acontece se ...?",
+        "pergunta": {{"escuta_s": 12, "senao": "<nome de um ramo>"}}}}
+  O sistema espera a resposta e classifica ela nos ramos; se o aluno não responder,
+  vai pro ramo "senao". Ponha 1 beat "pergunta" logo antes do passo mais importante,
+  e faça o ramo "senao" ser o que responde essa pergunta.
+- "ramos" são desvios para quando o aluno interrompe OU responde uma pergunta.
+  Gatilhos: "por_que_div_2" (ou "por_que" genérico), "nao_entendi", e outros que
+  fizerem sentido pro tópico (ex.: "e_triangulo", "decompor"). Sempre inclua
+  "nao_entendi" e um "por_que...". Cada ramo com 1 a 3 blocos. A trilha principal
+  retoma de onde parou.
 - 4 a 8 blocos no plano principal. Frases curtas, faladas, como um bom professor.
 - Use SÓ os geradores do catálogo abaixo, com esses parâmetros.
 
