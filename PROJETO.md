@@ -139,12 +139,14 @@ cabem — é trocar o `client.py`.
 
 ---
 
-## 7. Decisões (você responde)
+## 7. Decisões — fechadas
 
-1. **Quando é a Maratona Tech?** — o prazo define tudo.
-2. **Nome do projeto.** "Matemática em Movimento" é o canal. Ideias pro professor:
-   **Mateus** (Matemática + tutor), **Tales** (o geômetra), **Régua** (simples/BR),
-   ou algo teu.
-3. **MVP: trapézio** (o teu exemplo) ou outro tópico?
-4. **Repositório:** começo em `~/professor-matematica/` (git desde o commit 1,
-   como no relógio). Ok?
+1. **Maratona Tech:** inscrição feita 24/08/2026 · Fase 1 encerra 20/09 · Fase 2 05/10.
+2. **Nome:** **AutoTuto**.
+3. **MVP:** o **Ciclo do Trapézio** (`professor/aulas.py::TRAPEZIO`). + Pitágoras,
+   equação do 1º grau e regra de três como aulas de ouro.
+4. **Repositório:** `github.com/bapjeferson05-cell/autotuto` (privado, branch `main`).
+5. **Cérebro:** demo = Claude/Gemini API (`PROF_LLM=claude`) · kit = `qwen2.5:7b`
+   local (venceu 8/8 o `cerebro_shootout.py`).
+6. **Áudio:** echo-cancel do PipeWire no default → barge-in com caixa de som, sem fone.
+   Contingência de teclado no visor pra mic ruim no palco.

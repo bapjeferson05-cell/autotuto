@@ -41,12 +41,16 @@ figura (PNG) + passos (LaTeX) + fala + espera                 │
 professor/visor.py                 a tela (http.server, zero dep)
 ```
 
-- **beats** `{diz, figura?, calc?, espera, pergunta?}` — worked-example, um passo por vez
+- **beats** `{diz, figura?, calc?, espera, pergunta?}` — worked-example, um passo por vez.
+  `calc` com `diz_passos` narra cada linha da conta enquanto ela aparece (dual coding).
 - **ramos** — mini-sequências indexadas por gatilho (`por_que_div_2`, `nao_entendi`,
   `e_triangulo`, `decompor`). O aluno interrompe → o agente escolhe um ramo → toca →
   o `EstadoAula` retoma o beat onde parou.
-- **beat `pergunta`** `{pergunta: {escuta_s, senao}}` — o professor devolve a pergunta
-  e **espera** o aluno tentar explicar antes de dar a resposta (*self-explanation*).
+- **beat `pergunta`** `{pergunta: {escuta_s, senao, confirma?}}` — o professor devolve a
+  pergunta e **espera** o aluno tentar explicar antes de dar a resposta
+  (*self-explanation*). Se o aluno acerta, `confirma` dá um retorno curto e **pula a
+  derivação** (*fading* — worked example atrapalha quem já sabe).
+- os 5 princípios que guiam tudo isso: `PESQUISA_matematica-de-gente.md`.
 
 ---
 
@@ -102,7 +106,7 @@ com **caixa de som, sem fone**. Cérebro: `PROF_LLM=claude` (rápido, ~4s) ou
 | `professor/tocador.py` | orquestra figura → fala → passos. `settle` 0.4s (figura antes da voz) |
 | `professor/classificador.py` | fala do aluno → gatilho de ramo (regex; LLM depois) |
 | `professor/fillers.py` | "estou aqui" instantâneo por gatilho (frase fixa — não precisa de "LLM pequeno") |
-| `professor/aulas.py` | **aulas de ouro** escritas à mão: `trapezio`, `pitagoras` — o MVP e o few-shot do prompt |
+| `professor/aulas.py` | **aulas de ouro** escritas à mão: `trapezio`, `pitagoras`, `eq_primeiro_grau` (balança), `regra_de_tres` (proporção) — o MVP e o few-shot dirigido do planejador |
 | `professor/voz.py` | ponte pro jarvis (Piper + faster-whisper + barge-in). `falar` com cão-de-guarda; `ouvir` limitado; injeção por teclado |
 | `professor/visor.py` | a tela: `http.server` stdlib, tema lousa, caixa de texto, teclas de contingência |
 | `PROJETO.md` | a arquitetura e o MVP em detalhe |
@@ -115,7 +119,8 @@ com **caixa de som, sem fone**. Cérebro: `PROF_LLM=claude` (rápido, ~4s) ou
 ## Estado
 
 - ✅ renderizador (97/98 figuras) · pipeline problema→aula · validador 2 níveis
-- ✅ máquina de estado (interrompe/retoma) · beat `pergunta` · classificador · fillers
-- ✅ aulas de ouro (trapézio, Pitágoras) · voz (Piper + faster-whisper + barge-in + AEC)
-- ✅ visor · modo voz / modo texto / o-aluno-começa · contingência de teclado
-- ⏳ mais aulas de ouro · LLM gerando o dict em produção · versão celular
+- ✅ máquina de estado (interrompe/retoma) · beat `pergunta` + fading · classificador · fillers
+- ✅ 4 aulas de ouro · passos narrados · few-shot dirigido por tópico
+- ✅ voz (Piper + faster-whisper + barge-in + AEC) · visor · modo voz / texto / o-aluno-começa
+- ✅ contingência de teclado (mic ruim no palco)
+- ⏳ mais aulas de ouro · renderer: caprichar toro + Arquimedes · versão celular
