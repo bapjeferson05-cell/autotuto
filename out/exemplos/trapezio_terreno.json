@@ -1,0 +1,135 @@
+{
+  "titulo": "Área do terreno trapézio",
+  "topico": "area_trapezio",
+  "dados": {
+    "base_maior": 20,
+    "base_menor": 12,
+    "altura": 8
+  },
+  "blocos": [
+    {
+      "diz": "Vamos calcular a área de um terreno trapézio.",
+      "figura": {
+        "gerador": "quadrilatero",
+        "params": {
+          "tipo": "trapezio_isosceles"
+        }
+      },
+      "espera": "curta"
+    },
+    {
+      "diz": "O terreno tem base maior de 20 metros, base menor de 12 metros e altura de 8 metros.",
+      "calc": {
+        "gerador": "area_trapezio",
+        "params": {
+          "B": 20,
+          "b": 12,
+          "h": 8
+        }
+      },
+      "mostra_passos": true
+    }
+  ],
+  "ramos": {
+    "por_que": [
+      {
+        "diz": "O terreno tem a forma de um trapézio isosceles, e a área é calculada usando as bases e a altura.",
+        "figura": {
+          "gerador": "figura",
+          "spec": {
+            "pontos": {
+              "A": [
+                0,
+                0
+              ],
+              "B": [
+                20,
+                0
+              ],
+              "C": [
+                12,
+                8
+              ],
+              "D": [
+                0,
+                8
+              ]
+            },
+            "segmentos": [
+              {
+                "de": "A",
+                "para": "B"
+              },
+              {
+                "de": "B",
+                "para": "C"
+              },
+              {
+                "de": "C",
+                "para": "D"
+              },
+              {
+                "de": "D",
+                "para": "A"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "nao_entendi": [
+      {
+        "diz": "O trapézio isosceles é um quadrilátero com as bases diferentes e segmentos iguais paralelos às bases. A altura é o segmento que liga a base maior ao menor.",
+        "figura": {
+          "gerador": "figura",
+          "spec": {
+            "pontos": {
+              "A": [
+                0,
+                0
+              ],
+              "B": [
+                20,
+                0
+              ],
+              "C": [
+                12,
+                0
+              ],
+              "D": [
+                0,
+                8
+              ]
+            },
+            "segmentos": [
+              {
+                "de": "A",
+                "para": "B"
+              },
+              {
+                "de": "B",
+                "para": "C"
+              },
+              {
+                "de": "C",
+                "para": "D"
+              },
+              {
+                "de": "D",
+                "para": "A"
+              }
+            ],
+            "cotas": [
+              {
+                "de": "B",
+                "para": "C",
+                "texto": "8",
+                "lado": 1
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

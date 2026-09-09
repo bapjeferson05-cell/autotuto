@@ -318,30 +318,33 @@ def _bipiramide(n=4):
     return V, E
 
 
+_FAMILIA_N = {"prisma": _prisma, "piramide": _piramide, "tronco_piramide": _tronco_piramide,
+              "antiprisma": _antiprisma, "bipiramide": _bipiramide}
+
+
 # ═══════════════════════════════════════════════════ API
-def solido(nome="cubo", *, legenda=None, **kw) -> bytes:
+def solido(nome="cubo", *, legenda=None, n=None, obliquo=False, **_ignora) -> bytes:
+    """n só vale para prisma/piramide/tronco_piramide/antiprisma/bipiramide.
+    obliquo só vale para prisma e cilindro. O resto é ignorado de propósito."""
     fig, ax = _fig(legenda or nome.replace("_", " "))
     if nome in _POLIEDROS:
         fn, tol = _POLIEDROS[nome]
         V = np.asarray(fn(), float)
         _poliedro(ax, V, _arestas(V, tol))
+    elif nome == "cilindro":
+        _cilindro(ax, obliquo=obliquo)
     elif nome in _REDONDOS:
-        _REDONDOS[nome](ax, **kw) if kw else _REDONDOS[nome](ax)
-    elif nome == "prisma":
-        _poliedro(ax, *_map(_prisma(**kw)))
-    elif nome == "piramide":
-        _poliedro(ax, *_map(_piramide(**kw)))
-    elif nome == "tronco_piramide":
-        _poliedro(ax, *_map(_tronco_piramide(**kw)))
-    elif nome == "antiprisma":
-        _poliedro(ax, *_map(_antiprisma(**kw)))
-    elif nome == "bipiramide":
-        _poliedro(ax, *_map(_bipiramide(**kw)))
+        _REDONDOS[nome](ax)
+    elif nome in _FAMILIA_N:
+        kw = {"n": int(n)} if n is not None else {}
+        if nome == "prisma" and obliquo:
+            kw["obliquo"] = True
+        _poliedro(ax, *_map(_FAMILIA_N[nome](**kw)))
     elif nome == "paralelepipedo":
         V = np.asarray([(x * 1.7, y * 1.15, z * 0.8) for x, y, z in _v_cubo()], float)
         _poliedro(ax, V, _arestas_caixa(V))
     else:
-        raise ValueError(nome)
+        raise ValueError(f"sólido desconhecido: {nome}")
     return _png(fig)
 
 

@@ -1,0 +1,56 @@
+{
+  "titulo": "Área de um círculo de raio 5",
+  "topico": "area_circulo",
+  "dados": {
+    "raio": 5
+  },
+  "blocos": [
+    {
+      "diz": "Vamos calcular a área de um círculo de raio 5.",
+      "figura": {
+        "gerador": "parte_circulo",
+        "params": {
+          "nome": "circulo",
+          "r": 5
+        }
+      },
+      "espera": "curta"
+    },
+    {
+      "diz": "A fórmula para calcular a área de um círculo é:",
+      "calc": {
+        "gerador": "area_circulo",
+        "params": {
+          "r": 5
+        }
+      },
+      "mostra_passos": true
+    }
+  ],
+  "ramos": {
+    "por_que": [
+      {
+        "diz": "Por que a fórmula para a área de um círculo é πr²?",
+        "figura": {
+          "gerador": "parte_circulo",
+          "params": {
+            "nome": "circulo",
+            "r": 5
+          }
+        }
+      }
+    ],
+    "nao_entendi": [
+      {
+        "diz": "O que é π e por que é multiplicado pelo quadrado do raio para obter a área?",
+        "figura": {
+          "gerador": "parte_circulo",
+          "params": {
+            "nome": "circulo",
+            "r": 5
+          }
+        }
+      }
+    ]
+  }
+}

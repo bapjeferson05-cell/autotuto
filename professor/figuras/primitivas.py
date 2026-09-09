@@ -248,4 +248,13 @@ def reta_numerica(x0=-5, x1=5, *, pontos=None, intervalo=None) -> bytes:
     return _png(fig)
 
 
-CATALOGO = {"figura": figura, "funcao": funcao, "reta_numerica": reta_numerica}
+# ═══════════════════════════════════════════════════════ PASSO (uma linha de conta)
+def passo(latex: str, *, tam=30, cor="giz") -> bytes:
+    fig, ax = plt.subplots(figsize=(7.4, 2.0), dpi=140)
+    ax.axis("off")
+    ax.text(0.5, 0.5, f"${latex}$", color=_cor(cor), fontsize=tam,
+            ha="center", va="center", transform=ax.transAxes)
+    return _png(fig)
+
+
+CATALOGO = {"figura": figura, "funcao": funcao, "reta_numerica": reta_numerica, "passo": passo}

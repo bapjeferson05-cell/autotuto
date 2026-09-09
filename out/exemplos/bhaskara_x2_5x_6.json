@@ -1,0 +1,93 @@
+{
+  "titulo": "Resolvendo equação quadrática com Bhaskara",
+  "topico": "equacao_quadratica",
+  "dados": {
+    "a": 1,
+    "b": -5,
+    "c": 6
+  },
+  "blocos": [
+    {
+      "diz": "Vamos resolver a equação x² - 5x + 6 = 0 usando a fórmula de Bhaskara.",
+      "figura": {
+        "gerador": "funcao",
+        "params": {
+          "expr": "x**2 - 5*x + 6",
+          "raiz": true,
+          "vertice": true,
+          "area": [
+            0,
+            0
+          ]
+        }
+      },
+      "espera": "curta"
+    },
+    {
+      "diz": "A fórmula de Bhaskara é:",
+      "calc": {
+        "gerador": "bhaskara",
+        "params": {
+          "a": 1,
+          "b": -5,
+          "c": 6
+        }
+      },
+      "mostra_passos": true
+    },
+    {
+      "diz": "Portanto, temos as raízes:",
+      "calc": {
+        "gerador": "bhaskara",
+        "params": {
+          "a": 1,
+          "b": -5,
+          "c": 6
+        }
+      },
+      "mostra_passos": true
+    },
+    {
+      "diz": "Verificando em x = 1 e x = 6, vemos que só a raiz 1 satisfaz a equação.",
+      "figura": {
+        "gerador": "funcao",
+        "params": {
+          "expr": "x**2 - 5*x + 6",
+          "raiz": true,
+          "vertice": true,
+          "ponto": 1
+        }
+      },
+      "espera": "curta"
+    }
+  ],
+  "ramos": {
+    "por_que": [
+      {
+        "diz": "Por que só a raiz 1 satisfaz a equação?",
+        "figura": {
+          "gerador": "funcao",
+          "params": {
+            "expr": "x**2 - 5*x + 6",
+            "raiz": true,
+            "vertice": true,
+            "ponto": 1
+          }
+        }
+      }
+    ],
+    "nao_entendi": [
+      {
+        "diz": "O que é a fórmula de Bhaskara e como ela é usada para resolver equações quadráticas?",
+        "figura": {
+          "gerador": "funcao",
+          "params": {
+            "expr": "x**2 - 5*x + 6",
+            "raiz": true,
+            "vertice": true
+          }
+        }
+      }
+    ]
+  }
+}

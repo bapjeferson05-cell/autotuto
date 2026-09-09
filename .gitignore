@@ -8,3 +8,5 @@ render/
 secrets.py
 out/treinar/2d/
 out/treinar/3d/
+out/exemplos/*/
+out/exemplos-run.log

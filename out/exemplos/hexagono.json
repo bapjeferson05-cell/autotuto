@@ -1,0 +1,58 @@
+{
+  "titulo": "Hexágono Regular",
+  "topico": "poligono_regular",
+  "dados": {
+    "n": 6,
+    "r": 4.0
+  },
+  "blocos": [
+    {
+      "diz": "Imaginem um polígono com 6 lados iguais e 6 ângulos internos iguais. Esse polígono é chamado de hexágono regular.",
+      "figura": {
+        "gerador": "poligono_regular",
+        "params": {
+          "n": 6,
+          "r": 4.0
+        }
+      },
+      "espera": "curta"
+    },
+    {
+      "diz": "O hexágono regular é um polígono com 6 lados iguais e 6 ângulos internos iguais. Ele é um dos polígonos regulares mais simples.",
+      "figura": {
+        "gerador": "poligono_regular",
+        "params": {
+          "n": 6,
+          "r": 4.0
+        }
+      },
+      "espera": "curta"
+    }
+  ],
+  "ramos": {
+    "por_que": [
+      {
+        "diz": "Por que os hexágonos regulares têm 6 lados iguais?",
+        "figura": {
+          "gerador": "poligono_regular",
+          "params": {
+            "n": 6,
+            "r": 4.0
+          }
+        }
+      }
+    ],
+    "nao_entendi": [
+      {
+        "diz": "O que significa 'regular' em relação a um hexágono?",
+        "figura": {
+          "gerador": "poligono_regular",
+          "params": {
+            "n": 6,
+            "r": 4.0
+          }
+        }
+      }
+    ]
+  }
+}

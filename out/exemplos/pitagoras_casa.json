@@ -1,0 +1,65 @@
+{
+  "titulo": "Altura da escada",
+  "topico": "trapezio",
+  "dados": {
+    "base_escada": 3,
+    "altura_escada": 5
+  },
+  "blocos": [
+    {
+      "diz": "Imagino uma escada apoiada em uma parede. A base da escada está a 3 metros do chão, e a escada mesma é de 5 metros de altura. O que a escada toca na parede?",
+      "figura": {
+        "gerador": "parte_circulo",
+        "params": {
+          "nome": "segmento",
+          "r": 5
+        }
+      },
+      "espera": "curta"
+    },
+    {
+      "diz": "Para encontrar a altura que a escada toca na parede, podemos usar a regra de três. Se a escada de 5 metros toca a parede a 3 metros de altura, o que toca a parede é 1/3 da escada. Então, a altura que a escada toca na parede é 1/3 de 5 metros.",
+      "calc": {
+        "gerador": "porcentagem",
+        "params": {
+          "parte": 5,
+          "todo": 3,
+          "pct": 1
+        }
+      },
+      "mostra_passos": true
+    }
+  ],
+  "ramos": {
+    "por_que": [
+      {
+        "diz": "Por que a regra de três funciona aqui?",
+        "figura": {
+          "gerador": "reta_numerica",
+          "params": {
+            "x0": -3,
+            "x1": 5,
+            "intervalo": {
+              "de": 0,
+              "para": 3,
+              "fechado_esq": false,
+              "fechado_dir": true
+            }
+          }
+        }
+      }
+    ],
+    "nao_entendi": [
+      {
+        "diz": "Por que a regra de três nos permite encontrar a altura que a escada toca na parede?",
+        "figura": {
+          "gerador": "parte_circulo",
+          "params": {
+            "nome": "segmento",
+            "r": 5
+          }
+        }
+      }
+    ]
+  }
+}
