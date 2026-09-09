@@ -134,7 +134,7 @@ class Voz:
             if t:
                 return t
         audio = self._record_ate(timeout if timeout else 3600.0)
-        if audio == "INJ":                      # teclado interrompeu a espera
+        if isinstance(audio, str):              # "INJ" — teclado interrompeu a espera
             return self._inj_pendente
         if audio is None or audio.size < _SR // 3:
             return None
