@@ -82,11 +82,15 @@ class Visor:
             self._png, self._frame = png, self._frame + 1
 
     def falar(self, texto: str) -> str | None:
-        with self._lock:
-            self._st["estado"], self._st["professor"] = "falando", texto
+        self.mostrar_fala(texto)
         if self.ritmo:
             time.sleep(min(len(texto) * self.ritmo, 8.0))
         return None
+
+    def mostrar_fala(self, texto: str) -> None:
+        """Só atualiza a tela (sem dormir). Pro modo voz, onde o TTS dá o tempo."""
+        with self._lock:
+            self._st["estado"], self._st["professor"] = "falando", texto
 
     def aluno(self, texto: str) -> None:
         with self._lock:
