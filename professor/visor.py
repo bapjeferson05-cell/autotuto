@@ -63,7 +63,7 @@ async function poll() {
     document.getElementById("resumo").textContent = s.resumo || "";
   } catch (e) {}
 }
-setInterval(poll, 150); poll();
+setInterval(poll, 120); poll();
 </script></body></html>"""
 
 

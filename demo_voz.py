@@ -1,15 +1,16 @@
-"""demo_voz.py — o Ciclo do Trapézio COM VOZ. Roda com o Python do jarvis (que tem
-Piper + faster-whisper; o matplotlib+pillow já foram instalados lá).
+"""demo_voz.py — o Ciclo do Trapézio COM VOZ, no visor.
+
+Roda com o Python do jarvis (Piper + faster-whisper; matplotlib+pillow já estão lá):
 
     PYTHONPATH=~/professor-matematica ~/jarvis/.venv/bin/python demo_voz.py
     PYTHONPATH=~/professor-matematica ~/jarvis/.venv/bin/python demo_voz.py pitagoras
 
-Abre o visor (http://localhost:8080), fala a aula pelo Piper, ouve o mic.
-Durante a fórmula, fale "por que que divide por dois?" e o professor entra no ramo.
+Abre http://localhost:8080. Fale "por que que divide por dois?" durante a fórmula,
+ou responda a pergunta ("vira um triângulo") — o professor reage.
 
-USE FONE DE OUVIDO. Sem fone, o mic capta o próprio Piper e o barge-in dispara
-sozinho. Se não tiver fone: JARVIS_BARGE_IN=0 desliga a interrupção (mas aí não dá
-pra testar o ciclo — só a fala).
+Áudio: usa o DEFAULT do sistema. Se o default tiver echo-cancel (recomendado com
+caixa de som), o barge-in funciona sem fone. Sem AEC e sem fone, o mic ouve o
+próprio Piper — aí rode com JARVIS_BARGE_IN=0 (só a fala, sem interrupção).
 """
 from __future__ import annotations
 
@@ -17,13 +18,16 @@ import os
 import sys
 import time
 
-from professor.aulas import carregar, disponiveis
-from professor.tocador import Tocador
-from professor.visor import Visor
-from professor.voz import Voz
+# voz calma de professor (o default 1.0 sai meio atropelado)
+os.environ.setdefault("JARVIS_TTS_LENGTH_SCALE", "1.1")
+
+from professor.aulas import carregar, disponiveis          # noqa: E402
+from professor.tocador import Tocador                       # noqa: E402
+from professor.visor import Visor                           # noqa: E402
+from professor.voz import Voz, liga_no_visor                # noqa: E402
 
 
-def main():
+def main() -> None:
     qual = sys.argv[1] if len(sys.argv) > 1 else "trapezio"
     if qual not in disponiveis():
         print(f"aulas: {disponiveis()}")
@@ -31,45 +35,42 @@ def main():
 
     visor = Visor(ritmo=0).start()
     visor.estado("pensando")
-    print("[voz] carregando Piper + faster-whisper… (~15s na 1ª vez)")
-    voz = Voz()
+    voz = liga_no_visor(Voz(), visor)          # carrega Piper + faster-whisper
+    visor.estado("pronto")
 
     # instrumentação: mede a latência do barge-in e mostra a transcrição
-    falar_cru = voz.falar
+    falar_visor = voz.falar
 
     def falar(texto: str):
-        visor.mostrar_fala(texto)
-        print(f"\n  🔊 {texto}")
+        print(f"\n  🔊 {texto}", flush=True)
         t0 = time.monotonic()
-        fala = falar_cru(texto)
+        fala = falar_visor(texto)
         if fala:
-            dt = time.monotonic() - t0
-            print(f"  ✋ barge-in em ~{dt:.1f}s  ·  transcrição: “{fala}”")
-            visor.aluno(fala)
+            print(f"  ✋ barge-in ~{time.monotonic() - t0:.1f}s  ·  “{fala}”", flush=True)
         return fala
 
     def ouvir(seg: float):
         visor.estado("ouvindo")
         r = voz.ouvir(seg)
+        visor.estado("falando")
         if r:
             visor.aluno(r)
-        visor.estado("falando")
+            print(f"  🎤 “{r}”", flush=True)
         return r
 
-    voz.falar = falar
-    visor.estado("pronto")
     espera = int(os.environ.get("DEMO_ESPERA", "3"))
-    print(f"\nvisor pronto. a aula começa em {espera}s — fale à vontade pra "
-          f"interromper ou responder (Ctrl+C encerra)")
+    print(f"\nvisor pronto em http://localhost:8080 — a aula começa em {espera}s "
+          f"(Ctrl+C encerra)", flush=True)
     time.sleep(espera)
 
-    est = Tocador(falar=voz.falar, ouvir=ouvir, desenhar=visor.desenhar,
-                  pausas=True).toca(carregar(qual))
+    # settle=0.5: a figura aparece e o visor pega no polling ANTES da fala
+    tocador = Tocador(falar=falar, ouvir=ouvir, desenhar=visor.desenhar,
+                      pausas=True, settle=0.5)
+    est = tocador.toca(carregar(qual))
 
     visor.estado("pronto")
     visor.resumo(est.resumo())
-    print(f"\n■ {est.resumo()}")
-    print("o visor segue no ar. Ctrl+C encerra.")
+    print(f"\n■ {est.resumo()}\no visor segue no ar. Ctrl+C encerra.", flush=True)
     try:
         while True:
             time.sleep(1)

@@ -32,13 +32,15 @@ _ESPERA = {"curta": 0.35, "media": 0.9, "longa": 1.8, None: 0.55}
 
 class Tocador:
     def __init__(self, falar: Callable | None = None, ouvir: Callable | None = None,
-                 desenhar: Callable | None = None, out_dir="out/tocador", pausas=True):
+                 desenhar: Callable | None = None, out_dir="out/tocador", pausas=True,
+                 settle: float = 0.4):
         self.falar = falar or self._falar_stub
         self.ouvir = ouvir or (lambda _s: None)
         self.desenhar = desenhar or self._desenhar_stub
         self.out = Path(out_dir)
         self.out.mkdir(parents=True, exist_ok=True)
         self.pausas = pausas
+        self.settle = settle          # s entre a figura aparecer e a fala começar
         self._n = 0
 
     # ---------------------------------------------------------------- stubs MVP
@@ -66,10 +68,13 @@ class Tocador:
           ("resposta", <fala>?)  — era um beat 'pergunta'; eis a resposta (None = calou)
           None                   — beat normal, seguiu
         """
-        if bloco.get("figura"):
+        tem_figura = bool(bloco.get("figura"))
+        if tem_figura:
             png, rot = self._figura_bytes(bloco["figura"])
             self.desenhar(png, rot)
         if bloco.get("diz"):
+            if tem_figura and self.settle and self.pausas:   # figura entra ANTES da fala
+                time.sleep(self.settle)
             fala = self.falar(bloco["diz"])
             if fala:
                 return ("barge", fala)
