@@ -23,6 +23,26 @@ só pedagogia, é seleção de método.
 
 ---
 
+## Shootout de cérebro local (2026-09-09) — `cerebro_shootout.py`
+
+8 problemas em que o método NÃO está na palavra ("escada na parede" → Pitágoras).
+Prompt com dica de *quando usar* cada ferramenta.
+
+| modelo | acertos | velocidade | veredito |
+|---|---|---|---|
+| **qwen2.5:7b** | **8/8** | 5–10 s (45 s frio) | **escolhido.** Já na máquina, menor e mais rápido que o hermes3 |
+| hermes3:8b | 6/8 | 10–15 s | erra `regra_de_tres`→`porcentagem` e um MMC |
+| llama3.1:8b | 6/8 | ~1 s (!) | mesmos erros, mas voa |
+| mistral-small:24b | não testado | 60 s+ | **14,8 GB de RAM — não cabe no 16 GB junto com STT/TTS. Fora.** |
+
+**Duas descobertas:**
+1. A dica de *quando usar* no catálogo (`esquema.py`) decide a escolha do método
+   MUITO mais que o tamanho do modelo. O hermes3:8b que usou `porcentagem` pra um
+   Pitágoras passou a acertar só porque a descrição virou "escada/rampa na parede,
+   diagonal de retângulo...". Idem regra no prompt: "a hipotenusa vai em `c`".
+2. `mistral-small:24b` está descartado por hardware, não por qualidade — resolve a
+   dúvida "Claude vs mistral local": é **Claude/Gemini API (demo) vs qwen2.5:7b (kit)**.
+
 ## O reframe que muda tudo — LearnLM (Google)
 
 [**LearnLM: Improving Gemini for Learning**](https://arxiv.org/abs/2412.16429) (arXiv 2412.16429).

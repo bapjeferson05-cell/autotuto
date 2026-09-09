@@ -23,7 +23,9 @@ from professor.esquema import Aula, catalogo_para_prompt
 
 PROVEDOR = os.environ.get("PROF_LLM", "ollama")
 OLLAMA = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-MODELO = os.environ.get("PROF_MODELO", "hermes3:8b")
+# qwen2.5:7b venceu o cerebro_shootout (8/8 na escolha de método, mais rápido e menor
+# que o hermes3:8b). mistral-small:24b = 14.8 GB, não cabe no 16 GB junto com STT/TTS.
+MODELO = os.environ.get("PROF_MODELO", "qwen2.5:7b")
 CLAUDE_MODELO = os.environ.get("PROF_CLAUDE_MODEL", "claude-sonnet-5")
 
 
@@ -98,6 +100,10 @@ Regras:
         "cotas": [{{"de": "A", "para": "B", "texto": "18", "lado": -1}}],
         "angulos": [{{"em": "A", "de": "B", "para": "D", "reto": true}}]}}
   Chaves válidas: pontos, poligonos, segmentos, circulos, angulos, marcas, cotas, rotulos.
+- Pitágoras: a HIPOTENUSA (lado maior, oposto ao ângulo reto) vai em "c". Numa escada
+  ou rampa apoiada na parede, o comprimento da escada é "c"; a distância no chão e a
+  altura são "a" e "b". Passe só os 2 valores que o problema dá.
+- Preencha "dados" com os números do enunciado (não deixe vazio).
 - "ramos" são desvios para quando o aluno interrompe. Gatilhos: "por_que_div_2"
   (ou "por_que" genérico), "nao_entendi", e outros que fizerem sentido pro tópico
   (ex.: "e_triangulo", "decompor"). Sempre inclua "nao_entendi" e um "por_que...".
