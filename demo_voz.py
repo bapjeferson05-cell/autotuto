@@ -13,6 +13,7 @@ pra testar o ciclo — só a fala).
 """
 from __future__ import annotations
 
+import os
 import sys
 import time
 
@@ -57,8 +58,10 @@ def main():
 
     voz.falar = falar
     visor.estado("pronto")
-    print("\naula em 3s — fale à vontade pra interromper (Ctrl+C encerra)")
-    time.sleep(3)
+    espera = int(os.environ.get("DEMO_ESPERA", "3"))
+    print(f"\nvisor pronto. a aula começa em {espera}s — fale à vontade pra "
+          f"interromper ou responder (Ctrl+C encerra)")
+    time.sleep(espera)
 
     est = Tocador(falar=voz.falar, ouvir=ouvir, desenhar=visor.desenhar,
                   pausas=True).toca(carregar(qual))

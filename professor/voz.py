@@ -58,14 +58,15 @@ class Voz:
         if not interrompido:
             return None
 
-        # onset capturado pelo monitor (int16 16k) + o resto da fala
+        # onset capturado pelo monitor (int16 16k) + o resto da fala.
+        # BOUND: se não vier uma fala com fim claro em ~4 s, era eco — não trava.
         onset = np.frombuffer(monitor.buffer, dtype=np.int16).astype(np.float32) / 32768.0
         try:
-            resto = capture.record_vad(self.vad)
+            resto = self._record_ate(capture, 4.0)
         except Exception:  # noqa: BLE001
-            resto = np.array([], dtype=np.float32)
-        audio = np.concatenate([onset, resto]) if resto.size else onset
-        if audio.size < self._onset_rate // 2:      # < 0,5 s: provavelmente eco
+            resto = None
+        audio = np.concatenate([onset, resto]) if resto is not None and resto.size else onset
+        if audio.size < self._onset_rate:           # < 1 s: quase certo que é eco do Piper
             return None
         texto_aluno = self.stt.transcribe(audio).text.strip()
         return texto_aluno or None
