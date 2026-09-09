@@ -19,7 +19,6 @@ import urllib.error
 import urllib.request
 
 from professor import validador
-from professor.aulas import TRAPEZIO
 from professor.esquema import Aula, catalogo_para_prompt
 
 PROVEDOR = os.environ.get("PROF_LLM", "ollama")
@@ -28,14 +27,35 @@ MODELO = os.environ.get("PROF_MODELO", "hermes3:8b")
 CLAUDE_MODELO = os.environ.get("PROF_CLAUDE_MODEL", "claude-sonnet-5")
 
 
+_FEWSHOT = json.dumps({
+    "titulo": "Área do triângulo",
+    "topico": "area_triangulo",
+    "dados": {"base": 8, "altura": 5},
+    "blocos": [
+        {"diz": "Esse é um triângulo. A base mede oito, e a altura, cinco.",
+         "figura": {"gerador": "triangulo", "params": {"tipo": "acutangulo"}},
+         "espera": "media"},
+        {"diz": "A área do triângulo é base vezes altura, dividido por dois.",
+         "calc": {"gerador": "area_triangulo", "params": {"base": 8, "altura": 5}},
+         "mostra_passos": True, "espera": "longa"},
+        {"diz": "Vinte. Essa é a área.", "espera": "media"},
+    ],
+    "ramos": {
+        "por_que_div_2": [
+            {"diz": "Porque o triângulo é metade de um retângulo de mesma base e altura. "
+                    "Encaixa dois triângulos iguais e vira um retângulo.",
+             "figura": {"gerador": "quadrilatero", "params": {"tipo": "retangulo"}},
+             "espera": "longa"}],
+        "nao_entendi": [
+            {"diz": "Sem pressa. Primeiro a base: oito. Depois a altura: cinco. Multiplica: "
+                    "quarenta. Divide por dois: vinte.",
+             "espera": "longa"}],
+    },
+}, ensure_ascii=False)
+
+
 def _fewshot() -> str:
-    """A aula de ouro do trapézio, enxugada — o LLM copia o padrão."""
-    ex = {"titulo": TRAPEZIO["titulo"], "topico": TRAPEZIO["topico"],
-          "dados": {k: TRAPEZIO["dados"][k] for k in ("B", "b", "h")},
-          "blocos": TRAPEZIO["blocos"][:4],
-          "ramos": {"por_que_div_2": TRAPEZIO["ramos"]["por_que_div_2"][:2],
-                    "nao_entendi": TRAPEZIO["ramos"]["nao_entendi"][:1]}}
-    return json.dumps(ex, ensure_ascii=False, indent=1)
+    return _FEWSHOT
 
 PROMPT = f"""Você é o planejador de um professor de matemática que fala e desenha ao vivo.
 
@@ -85,7 +105,7 @@ Regras:
 - 4 a 8 blocos no plano principal. Frases curtas, faladas, como um bom professor.
 - Use SÓ os geradores do catálogo abaixo, com esses parâmetros.
 
-EXEMPLO de um plano bom (área do trapézio):
+EXEMPLO de um plano bom (área do triângulo — copie a ESTRUTURA, não o conteúdo):
 {_fewshot()}
 
 CATÁLOGO:
@@ -93,13 +113,13 @@ CATÁLOGO:
 """
 
 
-def _ollama_json(mensagens: list[dict], *, timeout: float = 120) -> str:
+def _ollama_json(mensagens: list[dict], *, timeout: float = 200) -> str:
     corpo = json.dumps({
         "model": MODELO,
         "messages": mensagens,
         "stream": False,
         "format": "json",
-        "options": {"temperature": 0.2, "num_ctx": 12288},
+        "options": {"temperature": 0.2, "num_ctx": 8192},
     }).encode()
     req = urllib.request.Request(f"{OLLAMA}/api/chat", data=corpo,
                                  headers={"Content-Type": "application/json"})
@@ -107,7 +127,7 @@ def _ollama_json(mensagens: list[dict], *, timeout: float = 120) -> str:
         return json.loads(r.read())["message"]["content"]
 
 
-def _claude_json(mensagens: list[dict], *, timeout: float = 120) -> str:
+def _claude_json(mensagens: list[dict], *, timeout: float = 200) -> str:
     chave = os.environ.get("ANTHROPIC_API_KEY")
     if not chave:
         raise ConnectionError("PROF_LLM=claude mas ANTHROPIC_API_KEY não está definida")
@@ -129,7 +149,7 @@ def _claude_json(mensagens: list[dict], *, timeout: float = 120) -> str:
     return "".join(b.get("text", "") for b in d.get("content", []) if b.get("type") == "text")
 
 
-def _llm_json(mensagens: list[dict], *, timeout: float = 120) -> str:
+def _llm_json(mensagens: list[dict], *, timeout: float = 200) -> str:
     return (_claude_json if PROVEDOR == "claude" else _ollama_json)(mensagens, timeout=timeout)
 
 

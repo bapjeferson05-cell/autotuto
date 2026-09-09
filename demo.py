@@ -1,11 +1,12 @@
-"""demo.py — o Ciclo do Trapézio, ponta a ponta, sem voz (ainda).
+"""demo.py — o Ciclo do Trapézio, ponta a ponta, sem áudio (ainda).
 
-    .venv/bin/python demo.py                 # aluno pergunta "por que /2" no bloco 4
-    .venv/bin/python demo.py e_triangulo 3   # outro ramo, em outro ponto
+    .venv/bin/python demo.py                          # aluno fala "por que /2" no 4º "diz"
+    .venv/bin/python demo.py "e se fosse um triangulo?" 2
 
-Mostra: aula de ouro → tocador → figuras. O aluno "fala" (texto), o classificador
-escolhe o ramo, o EstadoAula empilha/desempilha, a trilha principal retoma.
-out/demo/*.png  +  out/demo-tira.png (a sequência)
+O `falar` aqui é um dublê: imprime a fala do professor e, no momento marcado,
+"ouve" o aluno (devolve a transcrição). O Tocador classifica, dá o filler, entra no
+ramo e retoma — a mesma máquina que o pipeline de voz vai usar.
+out/demo/*.png  +  out/demo-tira.png
 """
 from __future__ import annotations
 
@@ -15,17 +16,24 @@ import sys
 from PIL import Image, ImageDraw
 
 from professor.aulas import carregar
-from professor.classificador import classificar
 from professor.tocador import Tocador
 
-FALAS = {
-    "por_que_div_2": "Peraí… por que que divide por dois?",
-    "nao_entendi": "Calma, não entendi essa parte.",
-    "e_triangulo": "E se fosse um triângulo?",
-    "decompor": "Tem outro jeito? Não decorei essa fórmula.",
-}
-
 OUT = pathlib.Path("out/demo")
+
+
+def falar_dubla(quando: int, fala_aluno: str):
+    """Devolve um `falar` que, na n-ésima chamada, retorna a fala do aluno."""
+    n = [0]
+
+    def falar(texto: str):
+        n[0] += 1
+        print(f"  🔊 {texto}")
+        if n[0] == quando:
+            print(f'\n  🎤 aluno: "{fala_aluno}"')
+            return fala_aluno
+        return None
+
+    return falar
 
 
 def tira(titulo: str):
@@ -33,8 +41,8 @@ def tira(titulo: str):
     if not files:
         return
     th = 300
-    tiles = [Image.open(f).convert("RGB") for f in files]
-    tiles = [t.resize((int(t.width * th / t.height), th)) for t in tiles]
+    tiles = [Image.open(f).convert("RGB").resize(
+        (int(Image.open(f).width * th / Image.open(f).height), th)) for f in files]
     cw = max(t.width for t in tiles) + 10
     m = Image.new("RGB", (cw * len(tiles), th + 46), (8, 20, 16))
     d = ImageDraw.Draw(m)
@@ -47,23 +55,18 @@ def tira(titulo: str):
 
 
 def main():
-    gat = sys.argv[1] if len(sys.argv) > 1 else "por_que_div_2"
-    onde = int(sys.argv[2]) if len(sys.argv) > 2 else 4
-
-    aula = carregar("trapezio")
-    fala = FALAS.get(gat, "por quê?")
-    classificado = classificar(fala, aula.ramos)
-    print(f'aluno (no bloco {onde}): "{fala}"')
-    print(f"classificador → {classificado}\n")
+    fala = sys.argv[1] if len(sys.argv) > 1 else "peraí, por que que divide por dois?"
+    quando = int(sys.argv[2]) if len(sys.argv) > 2 else 4
 
     OUT.mkdir(parents=True, exist_ok=True)
     for f in OUT.glob("*.png"):
         f.unlink()
 
-    t = Tocador(out_dir=str(OUT), pausas=False)
-    est = t.toca(aula, interrupcoes={onde: classificado})
+    aula = carregar("trapezio")
+    t = Tocador(falar=falar_dubla(quando, fala), out_dir=str(OUT), pausas=False)
+    est = t.toca(aula)
     print(f"\nestado final: {est.resumo()}")
-    tira(f"Ciclo do Trapézio — aluno interrompe no bloco {onde}: {classificado}")
+    tira(f"Ciclo do Trapézio — aluno: “{fala}”")
 
 
 if __name__ == "__main__":
