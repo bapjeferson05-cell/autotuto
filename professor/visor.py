@@ -56,10 +56,19 @@ _PAGINA = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
           max-width:70ch; }
   #resumo { position:fixed; bottom:6px; right:10px; color:#ffffff18; font-size:.7rem; }
   #dicas { position:fixed; bottom:6px; left:10px; color:#ffffff14; font-size:.7rem; }
+  #cx { margin-top:.3rem; }
+  #txt { width:min(60ch,90vw); padding:.6rem .9rem; border-radius:.6rem;
+         border:1px solid #ffffff2a; background:#00000030; color:var(--giz);
+         font:inherit; outline:none; }
+  #txt:focus { border-color:var(--destaque); }
 </style></head><body>
 <header><span class="pill" id="pill"><span class="dot"></span><span id="rot">pronto</span></span></header>
 <main><img id="fig" alt=""></main>
-<footer><div id="aluno"></div><div id="prof"></div></footer>
+<footer>
+  <div id="aluno"></div><div id="prof"></div>
+  <form id="cx" hidden><input id="txt" autocomplete="off"
+    placeholder="Digite o assunto ou cole a questão… (Enter)"></form>
+</footer>
 <div id="resumo"></div>
 <div id="dicas">1 por quê · 2 não entendi · 3 triângulo · 0 responder</div>
 <script>
@@ -76,8 +85,20 @@ async function poll() {
     document.getElementById("prof").textContent = s.professor || "";
     document.getElementById("aluno").textContent = s.aluno || "";
     document.getElementById("resumo").textContent = s.resumo || "";
+    document.getElementById("cx").hidden = (s.estado !== "pronto" && s.estado !== "aguardando");
   } catch (e) {}
 }
+document.getElementById("cx").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const t = document.getElementById("txt").value.trim();
+  if (!t) return;
+  document.getElementById("txt").value = "";
+  document.getElementById("aluno").textContent = t;
+  document.getElementById("rot").textContent = "pensando";
+  document.getElementById("pill").className = "pill pensando";
+  fetch("/perguntar", {method:"POST", headers:{"Content-Type":"application/json"},
+                       body: JSON.stringify({texto: t})}).catch(()=>{});
+});
 document.addEventListener("keydown", (e) => {
   const t = TECLAS[e.key];
   if (!t) return;
@@ -99,7 +120,8 @@ class Visor:
         self._png = b""
         self._frame = 0
         self._st = {"estado": "pronto", "professor": "", "aluno": "", "resumo": ""}
-        self._injecao: str | None = None
+        self._injecao: str | None = None       # interrupção (teclas 1/2/3/0)
+        self._pergunta: str | None = None      # pergunta digitada (modo texto)
         self._srv: ThreadingHTTPServer | None = None
 
     # ------------------------------------------------ API pro tocador
@@ -135,6 +157,12 @@ class Visor:
             t, self._injecao = self._injecao, None
             return t
 
+    # modo texto: pergunta digitada na caixa
+    def pop_pergunta(self) -> str | None:
+        with self._lock:
+            t, self._pergunta = self._pergunta, None
+            return t
+
     def _payload(self) -> bytes:
         with self._lock:
             return json.dumps({"frame": self._frame, **self._st}).encode()
@@ -160,20 +188,24 @@ class Visor:
                     self._resp(404, "text/plain", b"nao")
 
             def do_POST(self):
-                if self.path == "/interromper":
-                    n = int(self.headers.get("Content-Length", 0))
-                    try:
-                        txt = json.loads(self.rfile.read(n) or b"{}").get("texto", "")
-                    except Exception:  # noqa: BLE001
-                        txt = ""
-                    if txt:
-                        with v._lock:
-                            v._injecao = txt
-                            v._st["aluno"] = txt
-                            v._st["estado"] = "ouvindo"
-                    self._resp(200, "text/plain", b"ok")
-                else:
+                if self.path not in ("/interromper", "/perguntar"):
                     self._resp(404, "text/plain", b"nao")
+                    return
+                n = int(self.headers.get("Content-Length", 0))
+                try:
+                    txt = json.loads(self.rfile.read(n) or b"{}").get("texto", "").strip()
+                except Exception:  # noqa: BLE001
+                    txt = ""
+                if txt:
+                    with v._lock:
+                        v._st["aluno"] = txt
+                        if self.path == "/interromper":
+                            v._injecao = txt
+                            v._st["estado"] = "ouvindo"
+                        else:
+                            v._pergunta = txt
+                            v._st["estado"] = "pensando"
+                self._resp(200, "text/plain", b"ok")
 
             def _resp(self, code, ctype, body):
                 self.send_response(code)
