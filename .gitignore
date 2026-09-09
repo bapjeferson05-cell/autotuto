@@ -6,3 +6,5 @@ render/
 *.wav
 .env
 secrets.py
+out/treinar/2d/
+out/treinar/3d/
