@@ -60,18 +60,26 @@ TRAPEZIO: dict = {
         {"diz": "Antes de eu te dar a fórmula, me diz uma coisa: e se a base de cima fosse "
                 "encolhendo, até virar zero? Que figura o trapézio viraria?",
          "figura": _trap(segmentos=[{"de": "D", "para": "C", "cor": "destaque", "lw": 5}]),
-         "pergunta": {"escuta_s": 12, "senao": "e_triangulo"}},
-        {"diz": "A área do trapézio: soma as duas bases, multiplica pela altura, e divide por dois.",
+         "pergunta": {"escuta_s": 12, "senao": "e_triangulo",
+                      "confirma": "Isso! Vira um triângulo. E guarda essa ideia — a fórmula "
+                                  "do trapézio já contém a do triângulo."}},
+        {"diz": "Então a fórmula é essa: soma das duas bases, vezes a altura, dividido "
+                "por dois — porque a gente quer a MÉDIA das bases.",
          "calc": {"gerador": "area_trapezio", "params": {"B": 18, "b": 10, "h": 6}},
-         "mostra_passos": True, "espera": "longa"},
-        {"diz": "Oitenta e quatro metros quadrados. Esse é o tamanho do terreno.",
+         "mostra_passos": True,
+         "diz_passos": ["Essa é a fórmula geral.",
+                        "Troco pelos números do terreno: dezoito mais dez, vezes seis.",
+                        "Dezoito mais dez é vinte e oito, vezes seis dá cento e sessenta e "
+                        "oito. Divido por dois: oitenta e quatro."],
+         "espera": "longa"},
+        {"diz": "Oitenta e quatro metros quadrados — esse é o tamanho do terreno.",
          "espera": "media"},
     ],
     "ramos": {
         # "por que dividido por dois?"
         "por_que_div_2": [
-            {"diz": "Boa pergunta. Se o terreno fosse um retângulo com a base maior — dezoito "
-                    "por seis — a área seria bem maior que a real.",
+            {"diz": "Pensa assim: se o terreno fosse um retângulo usando a base maior — "
+                    "dezoito por seis — daria área demais.",
              "figura": {"gerador": "figura", "spec": {
                  "pontos": {"A": _A, "B": _B, "C": _C, "D": _D, "R": [0, 6], "S": [18, 6]},
                  "poligonos": [{"vs": ["A", "B", "S", "R"], "preenche": False, "cor": "verm",
@@ -115,10 +123,13 @@ TRAPEZIO: dict = {
              "figura": _trap(segmentos=[{"de": "D", "para": "C", "cor": "destaque", "lw": 5}],
                              cotas=[{"de": "D", "para": "C", "texto": "10", "lado": 1}]),
              "espera": "media"},
-            {"diz": "Soma as duas: vinte e oito. Vezes a altura, seis: cento e sessenta e oito. "
-                    "Divide por dois: oitenta e quatro.",
+            {"diz": "Agora junta tudo — devagar.",
              "calc": {"gerador": "area_trapezio", "params": {"B": 18, "b": 10, "h": 6}},
-             "mostra_passos": True, "espera": "longa"},
+             "mostra_passos": True,
+             "diz_passos": ["A fórmula.",
+                            "Os números: dezoito mais dez, vezes seis.",
+                            "Vinte e oito vezes seis é cento e sessenta e oito. Metade: oitenta e quatro."],
+             "espera": "longa"},
         ],
         # "e se fosse um triângulo?"
         "e_triangulo": [
@@ -129,10 +140,13 @@ TRAPEZIO: dict = {
                  "cotas": [{"de": "A", "para": "B", "texto": "18", "lado": -1}],
                  "mostrar_pontos": False, "nomear_pontos": False}},
              "espera": "media"},
-            {"diz": "E a fórmula continua valendo: a base menor virou zero. Dezoito mais zero, "
-                    "vezes seis, sobre dois. Que é base vezes altura sobre dois — a fórmula do triângulo.",
+            {"diz": "E olha por que a mesma fórmula serve: com a base menor igual a zero, "
+                    "sobra base maior vezes altura, sobre dois. É a fórmula do triângulo.",
              "calc": {"gerador": "area_triangulo", "params": {"base": 18, "altura": 6}},
-             "mostra_passos": True, "espera": "longa"},
+             "mostra_passos": True,
+             "diz_passos": ["Base vezes altura, sobre dois.",
+                            "Dezoito vezes seis é cento e oito. Metade: cinquenta e quatro."],
+             "espera": "longa"},
         ],
         # "tem outro jeito? / não decorei a fórmula"
         "decompor": [
@@ -203,11 +217,14 @@ PITAGORAS: dict = {
                         {"de": "P", "para": "B", "rotulo": "3", "cor": "azul"},
                         {"de": "P", "para": "T", "rotulo": "?", "cor": "verm"}]),
          "espera": "media"},
-        {"diz": "O teorema de Pitágoras diz: a hipotenusa ao quadrado é igual à soma dos "
-                "outros dois lados ao quadrado. Cinco ao quadrado é três ao quadrado mais a "
-                "altura ao quadrado.",
+        {"diz": "O teorema de Pitágoras: a hipotenusa ao quadrado é a soma dos outros dois "
+                "lados ao quadrado. Como a gente quer a altura, isola ela.",
          "calc": {"gerador": "pitagoras", "params": {"a": 3, "c": 5}},
-         "mostra_passos": True, "espera": "longa"},
+         "mostra_passos": True,
+         "diz_passos": ["Altura ao quadrado é hipotenusa ao quadrado menos o chão ao quadrado.",
+                        "Cinco ao quadrado é vinte e cinco; três ao quadrado é nove. Vinte e cinco menos nove: dezesseis.",
+                        "A altura é a raiz de dezesseis: quatro."],
+         "espera": "longa"},
         {"diz": "A altura é quatro metros. A escada toca a parede a quatro metros do chão.",
          "figura": _tri_escada(
              segmentos=[{"de": "B", "para": "T", "rotulo": "5", "cor": "destaque", "lw": 5},
@@ -249,23 +266,29 @@ PITAGORAS: dict = {
              "figura": _tri_escada(
                  segmentos=[{"de": "B", "para": "T", "rotulo": "5", "cor": "destaque", "lw": 5}]),
              "espera": "media"},
-            {"diz": "Aí a conta: cinco ao quadrado, vinte e cinco. Menos três ao quadrado, "
-                    "nove. Sobra dezesseis. Raiz de dezesseis: quatro.",
+            {"diz": "Aí é só a conta.",
              "calc": {"gerador": "pitagoras", "params": {"a": 3, "c": 5}},
-             "mostra_passos": True, "espera": "longa"},
+             "mostra_passos": True,
+             "diz_passos": ["A altura ao quadrado é o que sobra.",
+                            "Vinte e cinco menos nove: dezesseis.",
+                            "Raiz de dezesseis: quatro."],
+             "espera": "longa"},
         ],
         "achar_hipotenusa": [
             {"diz": "Se fosse o contrário — você sabe o chão e a altura, e quer a escada — é "
-                    "a mesma fórmula. Três ao quadrado mais quatro ao quadrado.",
+                    "a mesma fórmula, só que agora você SOMA os dois lados.",
              "figura": _tri_escada(
                  segmentos=[{"de": "P", "para": "B", "rotulo": "3", "cor": "azul"},
                             {"de": "P", "para": "T", "rotulo": "4", "cor": "verde"},
                             {"de": "B", "para": "T", "rotulo": "?", "cor": "destaque", "lw": 5}]),
              "espera": "media"},
-            {"diz": "Nove mais dezesseis, vinte e cinco. Raiz de vinte e cinco: cinco. A escada "
-                    "tem cinco metros.",
+            {"diz": "Escada ao quadrado é três ao quadrado mais quatro ao quadrado.",
              "calc": {"gerador": "pitagoras", "params": {"a": 3, "b": 4}},
-             "mostra_passos": True, "espera": "longa"},
+             "mostra_passos": True,
+             "diz_passos": ["Some os catetos ao quadrado.",
+                            "Nove mais dezesseis: vinte e cinco.",
+                            "Raiz de vinte e cinco: cinco. A escada tem cinco metros."],
+             "espera": "longa"},
         ],
     },
 }

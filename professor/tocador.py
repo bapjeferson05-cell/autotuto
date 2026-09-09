@@ -88,10 +88,15 @@ class Tocador:
             c = bloco["calc"]
             r = GERADORES[c["gerador"]].fn(**(c.get("params") or {}))
             passos = r.passos if bloco.get("mostra_passos") else r.passos[-1:]
+            narra = bloco.get("diz_passos") or []        # 1 frase curta por passo (opcional)
             for i, latex in enumerate(passos):
                 self.desenhar(primitivas.passo(latex), f"passo{i + 1}")
-                if self.pausas:
-                    time.sleep(0.5)
+                if i < len(narra) and narra[i]:          # worked example: vê o passo E ouve o porquê
+                    fala = self.falar(narra[i])
+                    if fala:
+                        return ("barge", fala)
+                elif self.pausas:                        # sem narração: pausa pra o passo assentar
+                    time.sleep(1.1 if i < len(passos) - 1 else 0.7)
             bloco["_resultado"] = r.valor
         if self.pausas:
             time.sleep(_ESPERA.get(bloco.get("espera"), 0.55))
@@ -120,14 +125,22 @@ class Tocador:
                 print(f'  ✋ "{r[1]}"  →  {gat}')
             elif r and r[0] == "resposta":
                 dita = r[1]
-                senao = bloco["pergunta"].get("senao")
+                pg = bloco["pergunta"]
+                senao = pg.get("senao")
                 if dita:
                     print(f'  🎤 "{dita}"')
-                    gat = classificar(dita, est.aula.ramos) or senao
+                    achou = classificar(dita, est.aula.ramos)
+                    if achou == senao and pg.get("confirma"):   # acertou → fading: confirma curto
+                        print("  ✓ acertou — pula a derivação (fading)")
+                        self.falar(pg["confirma"])
+                        gat = None
+                    else:
+                        gat = achou or senao
                 else:
                     print("  (sem resposta)")
                     gat = senao
-                print(f"  →  {gat}")
+                if gat:
+                    print(f"  →  {gat}")
             elif est.na_principal and n_princ in script:
                 gat = script.pop(n_princ)
                 print(f"  ✋ (script) → {gat}")

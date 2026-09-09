@@ -39,10 +39,13 @@ _FEWSHOT = json.dumps({
          "espera": "media"},
         {"diz": "Antes da fórmula: dentro de que figura o triângulo cabe exatamente duas vezes?",
          "pergunta": {"escuta_s": 12, "senao": "por_que_div_2"}},
-        {"diz": "A área do triângulo é base vezes altura, dividido por dois.",
+        {"diz": "Por isso a fórmula divide por dois: o triângulo é metade do retângulo.",
          "calc": {"gerador": "area_triangulo", "params": {"base": 8, "altura": 5}},
-         "mostra_passos": True, "espera": "longa"},
-        {"diz": "Vinte. Essa é a área.", "espera": "media"},
+         "mostra_passos": True,
+         "diz_passos": ["Base vezes altura, sobre dois.",
+                        "Oito vezes cinco é quarenta. Metade: vinte."],
+         "espera": "longa"},
+        {"diz": "Vinte metros quadrados — essa é a área.", "espera": "media"},
     ],
     "ramos": {
         "por_que_div_2": [
@@ -93,6 +96,12 @@ Formato exato (responda SÓ com esse objeto JSON, nada antes ou depois):
 
 Regras:
 - Todo bloco tem "diz" (texto falado, sem LaTeX). "figura" e "calc" são opcionais.
+- NARRE A DECISÃO, não o passo. Ruim: "divide por dois". Bom: "divide por dois
+  PORQUE a gente quer a média das bases". Todo "diz" carrega o porquê, não só o quê.
+- Bloco com "calc" pode ter "diz_passos": uma frase curta por passo da conta, dita
+  enquanto cada linha aparece (o aluno vê E ouve). Ex.:
+      {{"diz": "A fórmula da área:", "calc": {{...}}, "mostra_passos": true,
+        "diz_passos": ["Essa é a fórmula.", "Troco pelos números.", "Faço a conta: dá 84."]}}
 - PREFIRA os geradores específicos: parte_circulo, poligono_regular, triangulo,
   quadrilatero, curva, funcao, solido. Use "figura" SÓ quando precisar de uma
   composição própria (pontos nomeados, cotas, ângulos marcados) que os outros não dão.
