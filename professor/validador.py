@@ -135,9 +135,9 @@ def _valida_spec_figura(spec: dict) -> list[str]:
                  "'poligonos'/'segmentos'/'circulos'. Para uma forma simples, use antes "
                  "um gerador específico (parte_circulo, poligono_regular, triangulo, curva…).")
     for pg in spec.get("poligonos", []) if isinstance(spec.get("poligonos"), list) else []:
-        faltando = [v for v in pg.get("vs", []) if v not in pts]
+        faltando = [v for v in pg.get("vs", []) if not isinstance(v, str) or v not in pts]
         if faltando:
-            e.append(f"polígono referencia pontos que não existem: {faltando}")
+            e.append(f"polígono.vs deve ser nomes de pontos definidos; problema em: {faltando}")
     for s in spec.get("segmentos", []) if isinstance(spec.get("segmentos"), list) else []:
         for lado in ("de", "para"):
             if s.get(lado) not in pts:

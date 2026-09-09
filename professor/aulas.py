@@ -293,7 +293,162 @@ PITAGORAS: dict = {
     },
 }
 
-_CATALOGO = {"trapezio": TRAPEZIO, "pitagoras": PITAGORAS}
+# ═══════════════════════════════════════════════════ EQUAÇÃO DO 1º GRAU — a balança
+# "pensei num número, multipliquei por 3, somei 5, deu 20" → 3x + 5 = 20 → x = 5.
+# âncora concreta: uma balança de dois pratos (concreteness fading → símbolo).
+def _balanca(esq: str, dir: str, *, nivel=True):
+    dy = 0.0 if nivel else 0.7
+    return {"gerador": "figura", "spec": {
+        "pontos": {"P": [0, 1.6], "F1": [-1.3, -1.1], "F2": [1.3, -1.1],
+                   "L": [-6, 1.6 + dy], "R": [6, 1.6 - dy],
+                   "PL": [-6, -0.9 + dy], "PR": [6, -0.9 - dy]},
+        "poligonos": [{"vs": ["P", "F1", "F2"], "preenche": True, "cor": "fraco"}],
+        "segmentos": [{"de": "L", "para": "R", "cor": "giz", "lw": 4},
+                      {"de": "L", "para": "PL", "cor": "fraco", "lw": 1.5},
+                      {"de": "R", "para": "PR", "cor": "fraco", "lw": 1.5}],
+        "circulos": [{"centro": "PL", "r": 2.2, "cor": "azul", "centro_ponto": False},
+                     {"centro": "PR", "r": 2.2, "cor": "destaque", "centro_ponto": False}],
+        "rotulos": [{"xy": [-6, -1.5 + dy], "texto": esq, "cor": "azul", "tam": 15},
+                    {"xy": [6, -1.5 - dy], "texto": dir, "cor": "destaque", "tam": 15}],
+        "mostrar_pontos": False, "nomear_pontos": False}}
+
+
+EQ_PRIMEIRO_GRAU: dict = {
+    "titulo": "Equação do 1º grau — a balança",
+    "topico": "eq_primeiro_grau",
+    "dados": {"a": 3, "b": 5, "resultado": 20, "x": 5},
+    "blocos": [
+        {"diz": "Pensei num número. Multipliquei por três, somei cinco, e deu vinte. "
+                "Qual é o número?",
+         "figura": _balanca(r"3x + 5", r"20"),
+         "espera": "media"},
+        {"diz": "Chama o número de x. De um lado da balança: três x mais cinco. "
+                "Do outro: vinte. Ela está em equilíbrio — os dois lados são iguais.",
+         "figura": _balanca(r"3x + 5", r"20"),
+         "espera": "media"},
+        {"diz": "Antes de resolver: se eu tiro cinco do lado esquerdo, o que preciso "
+                "fazer pra balança não desequilibrar?",
+         "figura": _balanca(r"3x + 5", r"20"),
+         "pergunta": {"escuta_s": 12, "senao": "por_que",
+                      "confirma": "Exato — tiro cinco dos DOIS lados. É a regra: o que "
+                                  "faço de um lado, faço do outro."}},
+        {"diz": "Então: tiro cinco dos dois lados, depois divido os dois lados por três.",
+         "calc": {"gerador": "eq_primeiro_grau", "params": {"a": 3, "b": -15}},
+         "mostra_passos": True,
+         "diz_passos": ["Três x mais cinco igual a vinte vira três x menos quinze igual a zero.",
+                        "Passo o quinze pro outro lado: três x igual a quinze.",
+                        "Divido por três: x igual a cinco."],
+         "espera": "longa"},
+        {"diz": "O número é cinco. Confere: cinco vezes três é quinze, mais cinco, vinte.",
+         "figura": _balanca(r"3\cdot 5 + 5", r"20"),
+         "espera": "media"},
+    ],
+    "ramos": {
+        "por_que": [
+            {"diz": "A balança só fica reta se os dois lados pesam igual. Se eu mexo só "
+                    "num lado, ela pende. Por isso toda operação vai nos DOIS lados ao "
+                    "mesmo tempo.",
+             "figura": _balanca(r"3x + 5", r"20", nivel=False),
+             "espera": "longa"},
+            {"diz": "Tirando cinco dos dois: sobra três x de um lado, quinze do outro. "
+                    "Ainda em equilíbrio.",
+             "figura": _balanca(r"3x", r"15"),
+             "espera": "media"},
+        ],
+        "nao_entendi": [
+            {"diz": "Devagar. A igualdade é uma balança: três x mais cinco pesa o mesmo "
+                    "que vinte.",
+             "figura": _balanca(r"3x + 5", r"20"), "espera": "media"},
+            {"diz": "Primeiro passo, só um: tiro cinco de cada lado. Fica três x igual a quinze.",
+             "figura": _balanca(r"3x", r"15"), "espera": "media"},
+            {"diz": "Segundo passo: três x é quinze, então x é quinze dividido por três. Cinco.",
+             "calc": {"gerador": "eq_primeiro_grau", "params": {"a": 3, "b": -15}},
+             "mostra_passos": True, "espera": "longa"},
+        ],
+        "outro_numero": [
+            {"diz": "Se em vez de vinte desse oito: três x mais cinco igual a oito. Tira "
+                    "cinco: três x igual a três. Divide: x igual a um.",
+             "calc": {"gerador": "eq_primeiro_grau", "params": {"a": 3, "b": -3}},
+             "mostra_passos": True, "espera": "longa"},
+        ],
+    },
+}
+
+
+# ═══════════════════════════════════════════════════ REGRA DE TRÊS — a proporção
+# "3 cadernos custam 24 reais. Quanto custam 5?" → 3/24 = 5/x → x = 40.
+def _tabela_prop(v22: str):
+    return {"gerador": "figura", "spec": {
+        "pontos": {"A": [0, 0], "B": [6, 0], "C": [0, 3], "D": [6, 3],
+                   "M": [3, 0], "N": [3, 3], "P": [0, 1.5], "Q": [6, 1.5]},
+        "segmentos": [{"de": "A", "para": "B"}, {"de": "C", "para": "D"},
+                      {"de": "A", "para": "C"}, {"de": "B", "para": "D"},
+                      {"de": "M", "para": "N", "cor": "fraco"}, {"de": "P", "para": "Q", "cor": "fraco"}],
+        "rotulos": [{"xy": [1.5, 3.5], "texto": r"\text{cadernos}", "tam": 13},
+                    {"xy": [4.5, 3.5], "texto": r"\text{reais}", "tam": 13},
+                    {"xy": [1.5, 2.2], "texto": "3", "tam": 18},
+                    {"xy": [4.5, 2.2], "texto": "24", "tam": 18},
+                    {"xy": [1.5, 0.7], "texto": "5", "tam": 18},
+                    {"xy": [4.5, 0.7], "texto": v22, "cor": "destaque", "tam": 18}],
+        "mostrar_pontos": False, "nomear_pontos": False}}
+
+
+REGRA_DE_TRES: dict = {
+    "titulo": "Regra de três — a proporção",
+    "topico": "regra_de_tres",
+    "dados": {"a": 3, "b": 24, "c": 5, "x": 40},
+    "blocos": [
+        {"diz": "Três cadernos iguais custam vinte e quatro reais. Quanto custam cinco?",
+         "figura": _tabela_prop("?"),
+         "espera": "media"},
+        {"diz": "Monto uma tabela: cadernos de um lado, reais do outro. Três pra vinte "
+                "e quatro, cinco pra o que eu quero achar.",
+         "figura": _tabela_prop("?"),
+         "espera": "media"},
+        {"diz": "Antes da conta: se cinco cadernos é mais que três, o preço vai ser "
+                "maior ou menor que vinte e quatro?",
+         "figura": _tabela_prop("?"),
+         "pergunta": {"escuta_s": 12, "senao": "por_que",
+                      "confirma": "Isso — mais cadernos, mais caro. É proporção direta: "
+                                  "as duas coisas crescem juntas."}},
+        {"diz": "Como as duas colunas crescem juntas, eu multiplico em cruz e divido.",
+         "calc": {"gerador": "regra_de_tres", "params": {"a": 3, "b": 24, "c": 5}},
+         "mostra_passos": True,
+         "diz_passos": ["Três está para vinte e quatro assim como cinco está para x.",
+                        "Multiplico cruzado: x igual a vinte e quatro vezes cinco, sobre três.",
+                        "Cento e vinte sobre três: quarenta reais."],
+         "espera": "longa"},
+        {"diz": "Quarenta reais. Cada caderno custa oito, e cinco vezes oito é quarenta.",
+         "figura": _tabela_prop("40"),
+         "espera": "media"},
+    ],
+    "ramos": {
+        "por_que": [
+            {"diz": "Os cadernos são todos iguais, então o preço por caderno é fixo. "
+                    "Vinte e quatro dividido por três dá oito reais cada.",
+             "figura": _tabela_prop("?"), "espera": "media"},
+            {"diz": "Aí cinco cadernos é só cinco vezes oito. Quarenta. A regra de três "
+                    "faz essa mesma conta de uma vez.",
+             "figura": _tabela_prop("40"), "espera": "longa"},
+        ],
+        "nao_entendi": [
+            {"diz": "Vou pelo caminho simples. Um caderno primeiro: vinte e quatro "
+                    "dividido por três, oito reais.",
+             "espera": "media"},
+            {"diz": "Agora cinco cadernos: oito vezes cinco. Quarenta reais.",
+             "espera": "longa"},
+        ],
+        "e_se_menos": [
+            {"diz": "Se fosse o contrário — vinte e quatro reais dão pra quantos "
+                    "cadernos, se cada um é oito? Vinte e quatro sobre oito: três. "
+                    "A proporção funciona nos dois sentidos.",
+             "espera": "longa"},
+        ],
+    },
+}
+
+_CATALOGO = {"trapezio": TRAPEZIO, "pitagoras": PITAGORAS,
+             "eq_primeiro_grau": EQ_PRIMEIRO_GRAU, "regra_de_tres": REGRA_DE_TRES}
 
 
 def carregar(nome: str) -> Aula:
