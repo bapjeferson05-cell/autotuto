@@ -163,7 +163,110 @@ TRAPEZIO: dict = {
     },
 }
 
-_CATALOGO = {"trapezio": TRAPEZIO}
+# ═══════════════════════════════════════════════════ PITÁGORAS — a escada na parede
+# triângulo retângulo: chão 3 (P→B), parede ? (P→B... P→T), escada 5 (B→T). altura = 4.
+_P, _Bp, _T = [0, 0], [3, 0], [0, 4]
+
+
+def _tri_escada(**mais):
+    base = {"pontos": {"P": _P, "B": _Bp, "T": _T},
+            "poligonos": [{"vs": ["P", "B", "T"], "preenche": True}],
+            "angulos": [{"em": "P", "de": "B", "para": "T", "reto": True}],
+            "mostrar_pontos": False, "nomear_pontos": False}
+    base.update(mais)
+    return {"gerador": "figura", "spec": base}
+
+
+PITAGORAS: dict = {
+    "titulo": "Teorema de Pitágoras — a escada na parede",
+    "topico": "pitagoras",
+    "dados": {"chao": 3, "escada": 5, "altura": 4},
+    "blocos": [
+        {"diz": "Uma escada de cinco metros encostada na parede. O pé dela está a três "
+                "metros da parede. A gente quer saber a que altura ela chega.",
+         "figura": _tri_escada(
+             segmentos=[{"de": "B", "para": "T", "rotulo": "5", "cor": "destaque", "lw": 5},
+                        {"de": "P", "para": "B", "rotulo": "3", "cor": "azul"},
+                        {"de": "P", "para": "T", "rotulo": "?", "cor": "verm"}],
+             rotulos=[{"xy": [-1.3, 2], "texto": r"\text{parede}", "tam": 13},
+                      {"xy": [1.5, -0.9], "texto": r"\text{chão}", "tam": 13}]),
+         "espera": "media"},
+        {"diz": "Repara: a parede e o chão fazem um ângulo reto. Isso é um triângulo "
+                "retângulo. E a escada, que fica na frente do ângulo reto, é a hipotenusa "
+                "— o lado maior.",
+         "figura": _tri_escada(
+             segmentos=[{"de": "B", "para": "T", "rotulo": "5", "cor": "destaque", "lw": 5},
+                        {"de": "P", "para": "B", "rotulo": "3", "cor": "azul"},
+                        {"de": "P", "para": "T", "rotulo": "?", "cor": "verm"}]),
+         "espera": "media"},
+        {"diz": "O teorema de Pitágoras diz: a hipotenusa ao quadrado é igual à soma dos "
+                "outros dois lados ao quadrado. Cinco ao quadrado é três ao quadrado mais a "
+                "altura ao quadrado.",
+         "calc": {"gerador": "pitagoras", "params": {"a": 3, "c": 5}},
+         "mostra_passos": True, "espera": "longa"},
+        {"diz": "A altura é quatro metros. A escada toca a parede a quatro metros do chão.",
+         "figura": _tri_escada(
+             segmentos=[{"de": "B", "para": "T", "rotulo": "5", "cor": "destaque", "lw": 5},
+                        {"de": "P", "para": "B", "rotulo": "3", "cor": "azul"},
+                        {"de": "P", "para": "T", "rotulo": "4", "cor": "verde", "lw": 5}]),
+         "espera": "media"},
+    ],
+    "ramos": {
+        "por_que": [
+            {"diz": "Olha o desenho clássico. Um quadrado em cada lado do triângulo. O do "
+                    "chão tem área nove, o da parede tem dezesseis.",
+             "figura": {"gerador": "figura", "spec": {
+                 "pontos": {"P": _P, "B": _Bp, "T": _T,
+                            "c1": [3, -3], "c2": [0, -3], "w1": [-4, 4], "w2": [-4, 0]},
+                 "poligonos": [{"vs": ["P", "B", "c1", "c2"], "preenche": True, "cor": "azul", "alpha": 0.15},
+                               {"vs": ["P", "T", "w1", "w2"], "preenche": True, "cor": "verm", "alpha": 0.15},
+                               {"vs": ["P", "B", "T"], "preenche": True}],
+                 "rotulos": [{"xy": [1.5, -1.5], "texto": "9", "tam": 20},
+                             {"xy": [-2, 2], "texto": "16", "tam": 20}],
+                 "mostrar_pontos": False, "nomear_pontos": False}},
+             "espera": "media"},
+            {"diz": "E o quadrado da hipotenusa, da escada, tem área vinte e cinco. Nove mais "
+                    "dezesseis dá vinte e cinco. É sempre assim: os dois menores somados dão o maior.",
+             "figura": {"gerador": "figura", "spec": {
+                 "pontos": {"P": _P, "B": _Bp, "T": _T, "h1": [4, 7], "h2": [7, 3]},
+                 "poligonos": [{"vs": ["B", "T", "h1", "h2"], "preenche": True, "cor": "destaque", "alpha": 0.18},
+                               {"vs": ["P", "B", "T"], "preenche": True}],
+                 "rotulos": [{"xy": [3.5, 3.5], "texto": "25", "tam": 20}],
+                 "mostrar_pontos": False, "nomear_pontos": False}},
+             "espera": "longa"},
+        ],
+        "nao_entendi": [
+            {"diz": "Devagar. Primeiro: onde está o ângulo reto? No canto, onde a parede "
+                    "encontra o chão.",
+             "figura": _tri_escada(),
+             "espera": "media"},
+            {"diz": "A hipotenusa é sempre o lado da frente do ângulo reto, e é sempre o maior. "
+                    "Aqui é a escada: cinco metros.",
+             "figura": _tri_escada(
+                 segmentos=[{"de": "B", "para": "T", "rotulo": "5", "cor": "destaque", "lw": 5}]),
+             "espera": "media"},
+            {"diz": "Aí a conta: cinco ao quadrado, vinte e cinco. Menos três ao quadrado, "
+                    "nove. Sobra dezesseis. Raiz de dezesseis: quatro.",
+             "calc": {"gerador": "pitagoras", "params": {"a": 3, "c": 5}},
+             "mostra_passos": True, "espera": "longa"},
+        ],
+        "achar_hipotenusa": [
+            {"diz": "Se fosse o contrário — você sabe o chão e a altura, e quer a escada — é "
+                    "a mesma fórmula. Três ao quadrado mais quatro ao quadrado.",
+             "figura": _tri_escada(
+                 segmentos=[{"de": "P", "para": "B", "rotulo": "3", "cor": "azul"},
+                            {"de": "P", "para": "T", "rotulo": "4", "cor": "verde"},
+                            {"de": "B", "para": "T", "rotulo": "?", "cor": "destaque", "lw": 5}]),
+             "espera": "media"},
+            {"diz": "Nove mais dezesseis, vinte e cinco. Raiz de vinte e cinco: cinco. A escada "
+                    "tem cinco metros.",
+             "calc": {"gerador": "pitagoras", "params": {"a": 3, "b": 4}},
+             "mostra_passos": True, "espera": "longa"},
+        ],
+    },
+}
+
+_CATALOGO = {"trapezio": TRAPEZIO, "pitagoras": PITAGORAS}
 
 
 def carregar(nome: str) -> Aula:

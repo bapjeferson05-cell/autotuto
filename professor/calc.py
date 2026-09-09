@@ -78,12 +78,13 @@ def pitagoras(a=None, b=None, c=None) -> Resultado:
             rf"c^2 = {_n(a)}^2 + {_n(b)}^2 = {_n(a*a + b*b)}",
             rf"c = \sqrt{{{_n(a*a + b*b)}}} = {c:.4g}",
         ])
-    cat = math.sqrt(c * c - (a if a is not None else b) ** 2)
-    known = a if a is not None else b
+    conhecido, incog = (a, "b") if a is not None else (b, "a")
+    cat = math.sqrt(c * c - conhecido ** 2)
+    outro = "b" if incog == "a" else "a"
     return Resultado(round(cat, 4), [
-        r"a^2 = c^2 - b^2",
-        rf"a^2 = {_n(c)}^2 - {_n(known)}^2 = {_n(c*c - known*known)}",
-        rf"a = \sqrt{{{_n(c*c - known*known)}}} = {cat:.4g}",
+        rf"{incog}^2 = c^2 - {outro}^2",
+        rf"{incog}^2 = {_n(c)}^2 - {_n(conhecido)}^2 = {_n(c * c - conhecido * conhecido)}",
+        rf"{incog} = \sqrt{{{_n(c * c - conhecido * conhecido)}}} = {cat:.4g}",
     ])
 
 
