@@ -1,6 +1,6 @@
-"""demo_voz.py — o Ciclo do Trapézio COM VOZ. Precisa do stack de áudio do jarvis.
+"""demo_voz.py — o Ciclo do Trapézio COM VOZ. Roda com o Python do jarvis (que tem
+Piper + faster-whisper; o matplotlib+pillow já foram instalados lá).
 
-    ~/jarvis/.venv/bin/python -m pip install matplotlib        # se faltar
     PYTHONPATH=~/professor-matematica ~/jarvis/.venv/bin/python demo_voz.py
     PYTHONPATH=~/professor-matematica ~/jarvis/.venv/bin/python demo_voz.py pitagoras
 
