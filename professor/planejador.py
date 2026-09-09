@@ -64,6 +64,36 @@ _FEWSHOT = json.dumps({
 def _fewshot() -> str:
     return _FEWSHOT
 
+
+# palavras → tópico da aula de ouro mais parecida (few-shot dirigido)
+_PISTAS = {
+    "trapezio": ("trapézio", "trapezio", "terreno"),
+    "pitagoras": ("pitágoras", "pitagoras", "hipotenusa", "escada", "rampa", "diagonal",
+                  "triângulo retângulo", "cateto"),
+    "eq_primeiro_grau": ("equação", "equacao", "pensei num número", "primeiro grau",
+                         "x +", "resolva", "incógnita", "incognita"),
+    "regra_de_tres": ("regra de três", "regra de tres", "proporção", "proporcao",
+                      "quanto custam", "se .* custa", "receita para", "velocidade"),
+}
+
+
+def _exemplo_dirigido(problema: str) -> str | None:
+    """A aula de ouro cujo tópico casa com o problema, enxugada — melhor que o
+    exemplo genérico quando o tipo bate."""
+    import re
+
+    from professor.aulas import _CATALOGO
+
+    p = problema.lower()
+    for topico, pistas in _PISTAS.items():
+        if any(re.search(k, p) for k in pistas) and topico in _CATALOGO:
+            a = _CATALOGO[topico]
+            enx = {"titulo": a["titulo"], "topico": a["topico"], "dados": a["dados"],
+                   "blocos": a["blocos"][:4],
+                   "ramos": {k: v[:1] for k, v in list(a["ramos"].items())[:2]}}
+            return json.dumps(enx, ensure_ascii=False)
+    return None
+
 PROMPT = f"""Você é o planejador de um professor de matemática que fala e desenha ao vivo.
 
 Você NÃO desenha e NÃO faz contas. Você escreve um PLANO em JSON. Quem desenha é o
@@ -246,7 +276,15 @@ def planeja(problema: str, *, tentativas: int = 4, sanear: bool = True,
             verbose: bool = True) -> tuple[Aula, validador.Relatorio]:
     """Devolve (aula, relatorio). Se `sanear`, a aula volta sempre utilizável
     (blocos/ramos ruins removidos); relatorio.avisos conta o que foi mexido."""
-    msgs = [{"role": "system", "content": PROMPT}, {"role": "user", "content": problema}]
+    msgs = [{"role": "system", "content": PROMPT}]
+    dirigido = _exemplo_dirigido(problema)
+    if dirigido:
+        if verbose:
+            print("  (few-shot dirigido: aula de ouro do mesmo tipo)")
+        msgs += [{"role": "user", "content": "Exemplo de um plano bom pra um problema "
+                  "parecido — copie a ESTRUTURA e o TOM, não os números:\n" + dirigido},
+                 {"role": "assistant", "content": "Entendi o padrão. Manda o problema."}]
+    msgs.append({"role": "user", "content": problema})
     ultima = Aula("(vazia)", [])
     rel = validador.Relatorio(["não rodou"])
     for t in range(1, tentativas + 1):
