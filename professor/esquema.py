@@ -169,41 +169,59 @@ def _p(*names, tipo="float"):
     return {n: Param(tipo) for n in names}
 
 
+# o `resumo` traz "QUANDO usar" — o shootout mostrou que isso decide a escolha do
+# método muito mais que o tamanho do modelo.
 CALCULOS: dict[str, Gerador] = {
     "area_trapezio": Gerador("area_trapezio", "calc", calc.area_trapezio,
-                             _p("B", "b", "h"), "área do trapézio",
+                             _p("B", "b", "h"),
+                             "área de trapézio — terreno/figura de 4 lados com duas bases paralelas",
                              {"gerador": "area_trapezio", "params": {"B": 18, "b": 10, "h": 10}}),
     "area_triangulo": Gerador("area_triangulo", "calc", calc.area_triangulo,
-                              _p("base", "altura"), "área do triângulo",
+                              _p("base", "altura"),
+                              "área de triângulo — terreno/vela/telhado triangular; base × altura ÷ 2",
                               {"gerador": "area_triangulo", "params": {"base": 8, "altura": 5}}),
     "area_circulo": Gerador("area_circulo", "calc", calc.area_circulo,
-                            _p("r"), "área do círculo",
+                            _p("r"), "área de círculo — pizza, roda, canteiro redondo; π r²",
                             {"gerador": "area_circulo", "params": {"r": 4}}),
     "area_retangulo": Gerador("area_retangulo", "calc", calc.area_retangulo,
-                              _p("base", "altura"), "área do retângulo",
+                              _p("base", "altura"),
+                              "área de retângulo ou quadrado — piso, parede, pátio, terreno "
+                              "retangular; quanto de piso/grama/tinta para cobrir",
                               {"gerador": "area_retangulo", "params": {"base": 6, "altura": 4}}),
     "pitagoras": Gerador("pitagoras", "calc", calc.pitagoras,
                          {"a": Param("float", False), "b": Param("float", False),
                           "c": Param("float", False, nota="hipotenusa; passe 2 dos 3")},
-                         "teorema de Pitágoras (passe 2 dos 3 lados)",
+                         "triângulo retângulo — escada/rampa apoiada na parede, diagonal de "
+                         "um retângulo ou tela, distância na horizontal+vertical. c = hipotenusa, "
+                         "passe 2 dos 3 lados",
                          {"gerador": "pitagoras", "params": {"a": 3, "b": 4}}),
     "eq_primeiro_grau": Gerador("eq_primeiro_grau", "calc", calc.eq_primeiro_grau,
-                                _p("a", "b"), "resolve a·x + b = 0",
+                                _p("a", "b"),
+                                "resolve a·x + b = 0 — 'pensei num número, fiz tais operações e "
+                                "deu tanto'; achar um valor desconhecido numa igualdade linear",
                                 {"gerador": "eq_primeiro_grau", "params": {"a": 2, "b": -10}}),
     "bhaskara": Gerador("bhaskara", "calc", calc.bhaskara,
-                        _p("a", "b", "c"), "resolve a·x² + b·x + c = 0",
+                        _p("a", "b", "c"),
+                        "resolve a·x² + b·x + c = 0 — equação do 2º grau, quando aparece x²",
                         {"gerador": "bhaskara", "params": {"a": 1, "b": -2, "c": -3}}),
     "porcentagem": Gerador("porcentagem", "calc", calc.porcentagem,
                            {"parte": Param("float", False), "todo": Param("float", False),
                             "pct": Param("float", False)},
-                           "porcentagem (passe 2 dos 3: parte, todo, pct)",
+                           "porcentagem — desconto, acréscimo, juro, 'x% de y', 'quanto por cento "
+                           "é'. Passe 2 dos 3: parte, todo, pct",
                            {"gerador": "porcentagem", "params": {"todo": 240, "pct": 15}}),
     "regra_de_tres": Gerador("regra_de_tres", "calc", calc.regra_de_tres,
-                             _p("a", "b", "c"), "regra de três: a/b = c/x",
+                             _p("a", "b", "c"),
+                             "regra de três (proporção direta) — 'se N unidades custam/rendem X, "
+                             "quanto para M unidades'; receita, velocidade, preço proporcional",
                              {"gerador": "regra_de_tres", "params": {"a": 3, "b": 12, "c": 5}}),
-    "mdc": Gerador("mdc", "calc", calc.mdc, _p("a", "b", tipo="int"), "máximo divisor comum",
+    "mdc": Gerador("mdc", "calc", calc.mdc, _p("a", "b", tipo="int"),
+                   "máximo divisor comum — cortar em pedaços iguais os MAIORES possíveis, "
+                   "distribuir sem sobra",
                    {"gerador": "mdc", "params": {"a": 12, "b": 18}}),
-    "mmc": Gerador("mmc", "calc", calc.mmc, _p("a", "b", tipo="int"), "mínimo múltiplo comum",
+    "mmc": Gerador("mmc", "calc", calc.mmc, _p("a", "b", tipo="int"),
+                   "mínimo múltiplo comum — 'daqui a quantos dias/voltas coincidem de novo', "
+                   "menor quantidade que serve para os dois",
                    {"gerador": "mmc", "params": {"a": 4, "b": 6}}),
 }
 
