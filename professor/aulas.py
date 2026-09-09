@@ -306,10 +306,10 @@ def _balanca(esq: str, dir: str, *, nivel=True):
         "segmentos": [{"de": "L", "para": "R", "cor": "giz", "lw": 4},
                       {"de": "L", "para": "PL", "cor": "fraco", "lw": 1.5},
                       {"de": "R", "para": "PR", "cor": "fraco", "lw": 1.5}],
-        "circulos": [{"centro": "PL", "r": 2.2, "cor": "azul", "centro_ponto": False},
-                     {"centro": "PR", "r": 2.2, "cor": "destaque", "centro_ponto": False}],
-        "rotulos": [{"xy": [-6, -1.5 + dy], "texto": esq, "cor": "azul", "tam": 15},
-                    {"xy": [6, -1.5 - dy], "texto": dir, "cor": "destaque", "tam": 15}],
+        "circulos": [{"centro": "PL", "r": 2.4, "cor": "azul", "centro_ponto": False},
+                     {"centro": "PR", "r": 2.4, "cor": "destaque", "centro_ponto": False}],
+        "rotulos": [{"xy": [-6, -1.0 + dy], "texto": esq, "cor": "azul", "tam": 16},
+                    {"xy": [6, -1.0 - dy], "texto": dir, "cor": "destaque", "tam": 16}],
         "mostrar_pontos": False, "nomear_pontos": False}}
 
 

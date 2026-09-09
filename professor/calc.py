@@ -94,8 +94,9 @@ def eq_primeiro_grau(a, b) -> Resultado:
     if a == 0:
         return Resultado("sem solução" if b else "infinitas", [r"a = 0"])
     x = Fraction(-b).limit_denominator() / Fraction(a).limit_denominator()
+    termo_b = f"+ {_n(b)}" if b >= 0 else f"- {_n(-b)}"     # "3x - 15", não "3x + -15"
     return Resultado(_n(x), [
-        rf"{_n(a)}x + {_n(b)} = 0",
+        rf"{_n(a)}x {termo_b} = 0",
         rf"{_n(a)}x = {_n(-b)}",
         rf"x = \dfrac{{{_n(-b)}}}{{{_n(a)}}} = {_n(x)}",
     ])
