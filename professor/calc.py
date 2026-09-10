@@ -64,6 +64,24 @@ def area_circulo(r) -> Resultado:
     ], "u²")
 
 
+def comprimento_circunferencia(r=None, d=None) -> Resultado:
+    """A volta do círculo. Passe o raio OU o diâmetro."""
+    raio = r if r is not None else d / 2
+    v = 2 * math.pi * raio
+    return Resultado(round(v, 2), [
+        r"C = 2\pi r",
+        rf"C = 2\pi \cdot {_n(raio)} = {_n(2 * raio)}\pi \approx {v:.2f}",
+    ])
+
+
+def perimetro_poligono_regular(n, lado) -> Resultado:
+    v = n * lado
+    return Resultado(v, [
+        r"P = n \cdot \ell",
+        rf"P = {_n(n)} \cdot {_n(lado)} = {_n(v)}",
+    ])
+
+
 def area_retangulo(base, altura) -> Resultado:
     return Resultado(base * altura, [rf"A = b \cdot h = {_n(base)} \cdot {_n(altura)} = {_n(base * altura)}"], "u²")
 
@@ -181,4 +199,6 @@ CATALOGO = {
     "bhaskara": bhaskara, "porcentagem": porcentagem, "regra_de_tres": regra_de_tres,
     "mdc": mdc, "mmc": mmc,
     "media": media, "velocidade_media": velocidade_media, "juros_simples": juros_simples,
+    "comprimento_circunferencia": comprimento_circunferencia,
+    "perimetro_poligono_regular": perimetro_poligono_regular,
 }

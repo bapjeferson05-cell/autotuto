@@ -234,7 +234,8 @@ def primitivas_env():
 
 
 _NAO_NEGATIVOS = {"area_trapezio", "area_triangulo", "area_circulo", "area_retangulo",
-                  "mmc", "mdc", "velocidade_media", "juros_simples"}
+                  "mmc", "mdc", "velocidade_media", "juros_simples",
+                  "comprimento_circunferencia", "perimetro_poligono_regular"}
 
 
 def _mat_calc(nome: str, params: dict) -> list[str]:

@@ -18,7 +18,10 @@ from professor.aulas import carregar
 from professor.tocador import Tocador
 
 OUT = pathlib.Path("out/demo")
-RESP = "acho que vira um triângulo"        # resposta à pergunta do beat 'pergunta'
+RESP = {"trapezio": "acho que vira um triângulo",
+        "eq_primeiro_grau": "tenho que fazer nos dois lados",
+        "regra_de_tres": "vai ficar maior",
+        "pitagoras": "a escada"}                # resposta certa à pergunta (dispara o fading)
 
 
 def tira(titulo: str):
@@ -40,8 +43,12 @@ def tira(titulo: str):
 
 
 def main():
-    fala = sys.argv[1] if len(sys.argv) > 1 else "peraí, por que que divide por dois?"
-    quando = int(sys.argv[2]) if len(sys.argv) > 2 else 6
+    aula = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] in (
+        "trapezio", "pitagoras", "eq_primeiro_grau", "regra_de_tres") else "trapezio"
+    fala = next((a for a in sys.argv[1:] if a not in
+                 ("trapezio", "pitagoras", "eq_primeiro_grau", "regra_de_tres")),
+                "peraí, por que que divide por dois?")
+    quando = 99   # sem interrupção por padrão — o foco é o beat pergunta + fading
 
     OUT.mkdir(parents=True, exist_ok=True)
     for f in OUT.glob("*.png"):
@@ -58,13 +65,14 @@ def main():
         return None
 
     def ouvir(_seg: float):
-        print(f'  🎤 aluno (responde): "{RESP}"')
-        return RESP
+        r = RESP.get(aula, "")
+        print(f'  🎤 aluno (responde): "{r}"')
+        return r
 
     t = Tocador(falar=falar, ouvir=ouvir, out_dir=str(OUT), pausas=False)
-    est = t.toca(carregar("trapezio"))
+    est = t.toca(carregar(aula))
     print(f"\nestado final: {est.resumo()}")
-    tira(f"Ciclo do Trapézio — pergunta respondida + interrupção “{fala}”")
+    tira(f"{aula} — beat pergunta respondido")
 
 
 if __name__ == "__main__":

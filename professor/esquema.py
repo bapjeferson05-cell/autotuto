@@ -236,6 +236,18 @@ CALCULOS: dict[str, Gerador] = {
                              "juros simples — empréstimo/poupança a taxa fixa. taxa em % ao período. "
                              "J = C·i·t; devolve também o montante (C + J)",
                              {"gerador": "juros_simples", "params": {"capital": 1000, "taxa": 2, "tempo": 6}}),
+    "comprimento_circunferencia": Gerador(
+        "comprimento_circunferencia", "calc", calc.comprimento_circunferencia,
+        {"r": Param("float", False), "d": Param("float", False, nota="diâmetro; passe r OU d")},
+        "comprimento (volta) da circunferência — cerca de canteiro redondo, quanto anda uma "
+        "roda numa volta. C = 2πr",
+        {"gerador": "comprimento_circunferencia", "params": {"r": 4}}),
+    "perimetro_poligono_regular": Gerador(
+        "perimetro_poligono_regular", "calc", calc.perimetro_poligono_regular,
+        {"n": Param("int"), "lado": Param("float")},
+        "perímetro de polígono regular — quanto de cerca/moldura em volta de um "
+        "hexágono, pentágono... P = n·lado",
+        {"gerador": "perimetro_poligono_regular", "params": {"n": 6, "lado": 5}}),
 }
 
 GERADORES: dict[str, Gerador] = {**FIGURAS, **CALCULOS}
