@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autotuto"
+version = "0.2.0"
+requires-python = ">=3.13"
+dependencies = ["matplotlib", "numpy", "pillow", "piper-tts", "faster-whisper"]
+
+[tool.setuptools]
+packages = ["autotuto", "autotuto.figuras"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
