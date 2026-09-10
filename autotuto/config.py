@@ -12,6 +12,8 @@ PLANEJADOR_TIMEOUT_S = 120.0
 # Voz
 STT_MODELO     = env("AUTOTUTO_STT", "base")         # tiny | base | small
 STT_DEVICE     = "cpu"
+TTS_VOICE      = env("AUTOTUTO_TTS_VOICE", os.path.expanduser("~/jarvis/models/piper/pt_BR-faber-medium.onnx"))
+STT_CACHE      = env("AUTOTUTO_STT_CACHE", os.path.expanduser("~/jarvis/models/faster-whisper"))
 BARGE_IN       = env("AUTOTUTO_BARGE_IN", "0") == "1" # mic interrompe? padrão NÃO
 FALA_TIMEOUT_S = 12.0                                # cão-de-guarda do Piper
 GRAVA_RESTO_S  = 2.0                                 # quanto grava após o corte
