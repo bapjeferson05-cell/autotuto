@@ -34,6 +34,7 @@ def test_falar_sem_barge_devolve_none(monkeypatch):
 
 
 def test_injecao_de_teclado_tem_prioridade(monkeypatch):
+    monkeypatch.setattr(_voz, "BARGE_IN", False)
     monkeypatch.setattr(_voz, "_tocar_pcm", lambda pcm, rate: None)
     v = _voz.Voz.__new__(_voz.Voz)
     v.piper, v.stt = _PiperFake(), _STTFake()

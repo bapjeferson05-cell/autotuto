@@ -172,7 +172,8 @@ class Voz:
         # A 1ª inferência de cada modelo é a mais lenta — paga esse custo AGORA.
         try:
             t1 = time.monotonic()
-            self.stt.transcribe(np.zeros(8000, dtype=np.float32))
+            segs, _ = self.stt.transcribe(np.zeros(8000, dtype=np.float32))
+            list(segs)                              # consome: aquece o decode, não só a extração
             for _ in self.piper.synthesize("um dois três"):
                 pass
             print(f"[voz] pré-aquecido em {time.monotonic() - t1:.1f}s", flush=True)
