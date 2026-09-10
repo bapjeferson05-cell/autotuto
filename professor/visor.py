@@ -177,6 +177,12 @@ class Visor:
             def log_message(self, *a):
                 pass
 
+            def handle_one_request(self):
+                try:
+                    super().handle_one_request()
+                except (BrokenPipeError, ConnectionResetError):
+                    self.close_connection = True   # browser largou o poll — normal, não é erro
+
             def do_GET(self):
                 if self.path == "/":
                     self._resp(200, "text/html; charset=utf-8", _PAGINA.encode())

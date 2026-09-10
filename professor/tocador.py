@@ -17,10 +17,12 @@ Tipos de beat:
 """
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 from typing import Callable
 
+from professor.cerebro import com_ramos_genericos, roteia_interrupcao
 from professor.classificador import _norm, classificar
 from professor.esquema import GERADORES, Aula
 from professor.estado import EstadoAula
@@ -29,19 +31,29 @@ from professor.figuras import primitivas
 
 _ESPERA = {"curta": 0.35, "media": 0.9, "longa": 1.8, None: 0.55}
 
+# "não sei" e primos — no beat 'pergunta' isso NÃO é resposta errada, é o aluno
+# pedindo ajuda. A gente reconhece e leva pro 'senao' com uma transição gentil.
+_NAO_SABE = re.compile(
+    r"\b(nao sei|sei la|sla|nao faco ideia|nem ideia|nao lembro|"
+    r"(pode|deve|acho que e) ser|talvez|sei nao|nao manjo)\b")
+
+_HONESTO = "Essa eu não tinha preparado agora — vou seguir daqui, e a gente volta nisso."
+
 
 class Tocador:
     def __init__(self, falar: Callable | None = None, ouvir: Callable | None = None,
                  desenhar: Callable | None = None, out_dir="out/tocador", pausas=True,
-                 settle: float = 0.4):
+                 settle: float = 0.4, cerebro: Callable | None = roteia_interrupcao):
         self.falar = falar or self._falar_stub
         self.ouvir = ouvir or (lambda _s: None)
         self.desenhar = desenhar or self._desenhar_stub
+        self.cerebro = cerebro        # camada 2 da interrupção; None = só regex + fallback
         self.out = Path(out_dir)
         self.out.mkdir(parents=True, exist_ok=True)
         self.pausas = pausas
         self.settle = settle          # s entre a figura aparecer e a fala começar
         self._n = 0
+        self._falas: list[str] = []   # últimos 'diz' ditos — contexto pro cérebro
 
     # ---------------------------------------------------------------- stubs MVP
     def _falar_stub(self, txt: str) -> None:
@@ -73,6 +85,8 @@ class Tocador:
             png, rot = self._figura_bytes(bloco["figura"])
             self.desenhar(png, rot)
         if bloco.get("diz"):
+            self._falas.append(bloco["diz"])
+            del self._falas[:-3]                              # guarda só os 3 últimos
             if tem_figura and self.settle and self.pausas:   # figura entra ANTES da fala
                 time.sleep(self.settle)
             fala = self.falar(bloco["diz"])
@@ -107,8 +121,10 @@ class Tocador:
     def toca(self, aula: Aula, *, interrupcoes: dict[int, str] | None = None,
              respostas: dict[int, str] | None = None) -> EstadoAula:
         est = EstadoAula(aula)
+        est.aula.ramos = com_ramos_genericos(est.aula.ramos)   # B: por_que/nao_entendi/repete sempre existem
         script = dict(interrupcoes or {})
         resp_script = dict(respostas or {})
+        self._falas.clear()
         print(f"\n═══ {aula.titulo} ═══")
         n_princ = 0
         while (bloco := est.proximo()) is not None:
@@ -122,13 +138,21 @@ class Tocador:
 
             gat = None
             if r and r[0] == "barge":
-                gat = classificar(r[1], est.aula.ramos) or "por_que"
-                print(f'  ✋ "{r[1]}"  →  {gat}')
+                gat = self._resolve_interrupcao(r[1], est)     # 3 camadas; None = fallback honesto
+                if gat:
+                    print(f'  ✋ "{r[1]}"  →  {gat}')
+                else:
+                    print(f'  ✋ "{r[1]}"  →  (nenhum ramo — segue honesto)')
+                    self.falar(_HONESTO)                       # não mexe no EstadoAula; retoma a trilha
             elif r and r[0] == "resposta":
                 dita = r[1]
                 pg = bloco["pergunta"]
                 senao = pg.get("senao")
-                if dita:
+                if dita and _NAO_SABE.search(_norm(dita)):
+                    print('  🤷 "não sei" — leva pro senao com transição gentil')
+                    self.falar("Tranquilo não saber — é pra isso que a gente tá aqui. Olha:")
+                    gat = senao
+                elif dita:
                     print(f'  🎤 "{dita}"')
                     achou = classificar(dita, est.aula.ramos)
                     # acertou = SÓ se casa uma palavra da lista 'acerta' (senao é o
@@ -164,11 +188,20 @@ class Tocador:
         print(f"\n■ fim — {est.resumo()}")
         return est
 
+    def _resolve_interrupcao(self, fala: str, est: EstadoAula) -> str | None:
+        """3 camadas: regex → cérebro (LLM curto) → None. Nunca devolve ramo ausente."""
+        ramos = est.aula.ramos
+        gat = classificar(fala, ramos)                         # camada 1
+        if gat or self.cerebro is None:
+            return gat
+        gat = self.cerebro(fala, " / ".join(self._falas), ramos)   # camada 2
+        return gat if gat in ramos else None
+
     def _entra_ramo(self, est: EstadoAula, gat: str, *, filler: bool = True) -> None:
         if filler:
             self.falar(filler_para(gat))
-        if not est.entra_ramo(gat):
-            self.falar("Boa pergunta. Deixa eu achar um jeito melhor de mostrar isso.")
+        if not est.entra_ramo(gat):                            # rede de segurança (não deve disparar)
+            self.falar(_HONESTO)
             return
         for rb in est.drena_ramo():
             print(f"  └ ramo {est.trilha.posicao}")

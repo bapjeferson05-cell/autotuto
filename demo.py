@@ -70,7 +70,7 @@ def main():
         print(f'  🎤 aluno (responde): "{r}"')
         return r
 
-    t = Tocador(falar=falar, ouvir=ouvir, out_dir=str(OUT), pausas=False)
+    t = Tocador(falar=falar, ouvir=ouvir, out_dir=str(OUT), pausas=False, cerebro=None)
     est = t.toca(carregar(aula))
     print(f"\nestado final: {est.resumo()}")
     tira(f"{aula} — beat pergunta respondido")

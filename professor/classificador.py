@@ -27,9 +27,12 @@ _REGRAS: list[tuple[str, tuple[str, ...]]] = [
                      r"\btriangulo\b")),
     ("decompor", (r"outr[oa] (jeito|forma|maneira)", r"n[aã]o (decorei|lembro|sei).*(formula|conta)",
                   r"sem (a )?formula", r"sem decorar")),
-    ("nao_entendi", (r"n[aã]o (entend|peguei|ficou claro|to entendendo|consegui)",
-                     r"\b(de novo|mais devagar|repete|repetir|como assim|me perdi|confus)",
-                     r"explica (melhor|de novo)", r"n[aã]o captei")),
+    ("repete", (r"\b(repete|repetir|repetiu|de novo|outra vez|mais uma vez)\b",
+                r"\b(n[aã]o ouvi|n[aã]o escutei|n[aã]o deu pra ouvir|fala de novo|manda de novo)\b",
+                r"^\s*(que|h[aã]n?|como|oi|hein)\s*\??\s*$")),
+    ("nao_entendi", (r"n[aã]o (entend|peguei|ficou claro|to entendendo|consegui|captei)",
+                     r"\b(mais devagar|como assim|me perdi|confus|perdid)",
+                     r"explica (melhor|diferente|de outro jeito)")),
     ("por_que", (r"\b(por ?que|pq|porqu[eê])\b", r"qual (o|e o) motivo", r"por qual (razao|motivo)")),
 ]
 _COMPILADAS = [(g, [re.compile(p) for p in ps]) for g, ps in _REGRAS]
@@ -44,8 +47,9 @@ def classificar(fala: str, ramos: list[str] | dict | None = None) -> str | None:
     for gat, res in _COMPILADAS:
         alvo = gat
         if disp is not None and gat not in disp:
-            if gat == "por_que":
-                alvo = next((r for r in disp if r.startswith("por_que")), None)
+            # só o "por que" genérico é rebaixado (ex.: -> "por_que_div_2"); qualquer
+            # outro gatilho ausente é IGNORADO — nunca se força um ramo que não existe.
+            alvo = next((r for r in disp if r.startswith("por_que")), None) if gat == "por_que" else None
             if alvo is None:
                 continue
         if any(r.search(t) for r in res):

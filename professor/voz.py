@@ -17,6 +17,7 @@ Import tardio: o venv do professor não precisa das libs de áudio. Rode assim:
 from __future__ import annotations
 
 import collections
+import os
 import sys
 import threading
 import time
@@ -25,8 +26,14 @@ from typing import Callable
 
 import numpy as np
 
+# STT "base" é ~3x mais rápido que "small" e chega pra PT-BR curto de sala de aula.
+# (só define se ninguém pediu outro no ambiente)
+os.environ.setdefault("JARVIS_STT_MODEL", "base")
+
 _JARVIS = Path.home() / "jarvis"
-_TIMEOUT_FALA = 30.0            # cão-de-guarda: nenhuma frase demora mais que isso
+_TIMEOUT_FALA = 12.0           # cão-de-guarda: nenhuma frase demora mais que isso
+_RESTO_S = 2.0                 # quanto grava DEPOIS do corte (era 4.0 — encurta a resposta)
+_SILENCIO_MS = 400            # silêncio que fecha a gravação (era 700)
 _CHUNK = 512
 _SR = 16000
 
@@ -50,11 +57,23 @@ class Voz:
         self.on_inicio_fala: Callable[[str], None] | None = None   # visor mostra o texto
         self.on_injecao: Callable[[], str | None] | None = None    # contingência: teclado → texto
         self._inj_pendente: str | None = None
+        self._preaquece()
+
+    def _preaquece(self) -> None:
+        """A 1ª inferência de cada modelo é a mais lenta. Paga esse custo AGORA,
+        no boot, e não no meio da aula."""
+        try:
+            t0 = time.monotonic()
+            self.stt.transcribe(np.zeros(_SR // 2, dtype=np.float32))   # 0.5 s de silêncio
+            self.piper.synth("um dois três")                            # gera PCM, não toca
+            print(f"[voz] pré-aquecido em {time.monotonic() - t0:.1f}s", flush=True)
+        except Exception as e:  # noqa: BLE001
+            print(f"[voz] pré-aquecimento pulado ({e})", file=sys.stderr, flush=True)
 
     # ------------------------------------------------------------------ falar
     def falar(self, texto: str) -> str | None:
         """Fala `texto`. Devolve a transcrição se o aluno cortou, senão None.
-        Blindado: exceção do Piper → segue em silêncio; travada → abandona em 30 s."""
+        Blindado: exceção do Piper → segue em silêncio; travada → abandona em _TIMEOUT_FALA."""
         if self.on_inicio_fala:
             try:
                 self.on_inicio_fala(texto)
@@ -105,7 +124,7 @@ class Voz:
         # cortou (mic): junta o onset + o resto (limitado a 4 s — eco não trava)
         onset = np.frombuffer(monitor.buffer, dtype=np.int16).astype(np.float32) / 32768.0
         try:
-            resto = self._record_ate(4.0)
+            resto = self._record_ate(_RESTO_S)
         except Exception:  # noqa: BLE001
             resto = None
         if isinstance(resto, str):              # "INJ" — teclado; ignora aqui
@@ -148,7 +167,7 @@ class Voz:
 
         frame_ms = _CHUNK * 1000 // _SR
         limite = int(timeout * 1000 / frame_ms)
-        silence_limit = max(1, 700 // frame_ms)
+        silence_limit = max(1, _SILENCIO_MS // frame_ms)
         preroll = collections.deque(maxlen=max(1, 300 // frame_ms))
         voiced = bytearray()
         triggered = False

@@ -19,6 +19,9 @@ import sys
 import time
 
 os.environ.setdefault("JARVIS_TTS_LENGTH_SCALE", "1.1")   # voz calma de professor
+# Teclado é o caminho PRINCIPAL (teclas 1/2/3/0 + caixa de texto no visor). O
+# barge-in por mic entra só se você pedir: JARVIS_BARGE_IN=1 demo_voz.py …
+os.environ.setdefault("JARVIS_BARGE_IN", "0")
 
 from professor.aulas import carregar, disponiveis          # noqa: E402
 from professor.fillers import filler_para                  # noqa: E402
