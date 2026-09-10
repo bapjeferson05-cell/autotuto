@@ -1,0 +1,431 @@
+"""aulas.py — as 4 aulas de ouro, escritas à mão.
+
+Não são geradas por LLM. São a referência: a pedagogia que a gente QUER, no
+schema do projeto. Servem pra três coisas:
+  1. o MVP da Maratona (o Ciclo do Trapézio roda daqui);
+  2. few-shot no prompt do planejador (o LLM copia o padrão);
+  3. teste de fogo do renderizador — se `figura(spec)` desenha isso, desenha o resto.
+
+    from autotuto.aulas import carregar
+    aula = carregar("trapezio")
+
+Convenções destes dicts:
+  - beat de desenho: `"figura": {"gerador": "figura", "spec": {<spec inline>}}`
+    (spec = pontos/segmentos/poligonos/angulos/marcas/rotulos — o que
+    `figuras.canvas.figura` consome). NÃO usa geradores nomeados.
+  - beat de conta: `"calc": {"gerador": "<nome em calc.CATALOGO>", "params": {...}}`.
+  - `diz` narra a DECISÃO ("divide por dois porque é a média"), nunca o passo
+    cru, nunca LaTeX.
+
+Dependência: só `autotuto.schema`. Nomes de gerador/calc entram como string.
+"""
+from __future__ import annotations
+
+from autotuto.schema import Aula
+
+# ───────────────────────────────────────────────────────── ramos genéricos
+# Todo `carregar()` mergeia isto na aula (a aula sobrescreve por chave). É a
+# garantia da SPEC §7: o fallback honesto sempre tem pra onde ir.
+RAMOS_GENERICOS: dict = {
+    "por_que": [
+        {"diz": "Boa pergunta. A ideia por trás disso é simples: cada passo aqui "
+                "só existe pra deixar a conta mais fácil, sem mudar o valor. "
+                "Se algum passo te incomodou, me diz qual que eu abro ele."},
+    ],
+    "nao_entendi": [
+        {"diz": "Sem problema, a culpa é da explicação. Vou de novo, mais devagar "
+                "e por partes menores — pode me parar em qualquer ponto."},
+    ],
+    "repete": [
+        {"diz": "Claro, deixa eu repetir. Presta atenção só na última parte, "
+                "que é onde costuma escapar."},
+    ],
+}
+
+
+def _com_genericos(aula: dict) -> dict:
+    """Devolve a aula com os ramos genéricos mergeados (a aula vence por chave)."""
+    return {**aula, "ramos": {**RAMOS_GENERICOS, **aula.get("ramos", {})}}
+
+
+# ═══════════════════════════════════════════════ TRAPÉZIO — o terreno (o MVP)
+# trapézio isósceles: base maior 18 embaixo, base menor 10 em cima, altura 6.
+_TA, _TB, _TC, _TD = [0, 0], [18, 0], [14, 6], [4, 6]
+
+_TRAP_SPEC = {
+    "pontos": {"A": _TA, "B": _TB, "C": _TC, "D": _TD},
+    "poligonos": [{"vs": ["A", "B", "C", "D"], "preenche": True}],
+    "marcas": [{"tipo": "par", "de": "A", "para": "B"},
+               {"tipo": "par", "de": "D", "para": "C"}],
+    "rotulos": [{"xy": [9, -1.2], "texto": "18"},
+                {"xy": [9, 6.9], "texto": "10"},
+                {"xy": [-1.3, 3], "texto": "6"}],
+}
+
+TRAPEZIO: dict = {
+    "titulo": "Área do trapézio — o terreno",
+    "topico": "area_trapezio",
+    "dados": {"B": 18, "b": 10, "h": 6, "area": 84},
+    "blocos": [
+        {"diz": "Olha esse terreno. Quatro lados, e o de baixo corre paralelo ao de "
+                "cima. Sempre que dois lados são paralelos assim, a figura é um trapézio.",
+         "figura": {"gerador": "figura", "spec": _TRAP_SPEC},
+         "espera": "media"},
+        {"diz": "As duas bases são esses lados paralelos: a de baixo tem dezoito "
+                "metros, a de cima tem dez. E a distância entre elas, medida em linha "
+                "reta, é a altura: seis metros.",
+         "figura": {"gerador": "figura", "spec": {
+             "pontos": {"A": _TA, "B": _TB, "C": _TC, "D": _TD,
+                        "P": [9, 0], "Q": [9, 6]},
+             "poligonos": [{"vs": ["A", "B", "C", "D"], "preenche": True}],
+             "segmentos": [["P", "Q"]],
+             "angulos": [{"vertice": "P", "de": "B", "para": "Q"}],
+             "rotulos": [{"xy": [9, -1.2], "texto": "18"},
+                         {"xy": [9, 6.9], "texto": "10"},
+                         {"xy": [10.2, 3], "texto": "6"}]}},
+         "espera": "media"},
+        # beat PERGUNTA — o aluno pensa antes de a fórmula aparecer (self-explanation)
+        {"diz": "Antes de eu te dar a fórmula, pensa comigo: e se a base de cima "
+                "fosse encolhendo, até virar zero? Que figura o trapézio viraria?",
+         "figura": {"gerador": "figura", "spec": _TRAP_SPEC},
+         "pergunta": {"escuta_s": 12, "senao": "e_triangulo",
+                      "acerta": ["triangulo", "triângulo"],
+                      "confirma": "Isso, vira um triângulo. Guarda essa ideia: a "
+                                  "fórmula do trapézio já traz a do triângulo dentro."}},
+        {"diz": "A fórmula soma as duas bases, multiplica pela altura e divide por "
+                "dois. Esse dividir por dois é o coração: a gente quer a MÉDIA das "
+                "bases, não a soma delas.",
+         "calc": {"gerador": "area_trapezio", "params": {"B": 18, "b": 10, "h": 6}},
+         "mostra_passos": True,
+         "diz_passos": ["Essa é a fórmula geral, valendo pra qualquer trapézio.",
+                        "Agora entram os números do terreno: dezoito e dez nas bases, "
+                        "seis na altura.",
+                        "Vinte e oito vezes seis dá cento e sessenta e oito, e a "
+                        "metade disso é oitenta e quatro."],
+         "espera": "longa"},
+        {"diz": "Oitenta e quatro metros quadrados. Esse é o tamanho do terreno.",
+         "espera": "media"},
+    ],
+    "ramos": {
+        # "por que divide por dois?" — os dois retângulos
+        "por_que_div_2": [
+            {"diz": "Divide por dois porque a gente troca o trapézio por um retângulo "
+                    "de mesma área. Um retângulo na base maior, dezoito por seis, "
+                    "seria área demais; na base menor, dez por seis, seria de menos.",
+             "figura": {"gerador": "figura", "spec": {
+                 "pontos": {"A": [0, 0], "B": [10, 0], "C": [10, 6], "D": [0, 6],
+                            "E": [16, 0], "F": [24, 0], "G": [24, 6], "H": [16, 6]},
+                 "poligonos": [{"vs": ["A", "B", "C", "D"], "preenche": True},
+                               {"vs": ["E", "F", "G", "H"], "preenche": True}],
+                 "rotulos": [{"xy": [5, 3], "texto": "10 x 6"},
+                             {"xy": [20, 3], "texto": "8 x 6"},
+                             {"xy": [13, 3], "texto": "+"}]}},
+             "espera": "media"},
+            {"diz": "A média fica no meio: dezoito mais dez dá vinte e oito, dividido "
+                    "por dois dá quatorze. Um retângulo de quatorze por seis tem "
+                    "exatamente a área do trapézio.",
+             "figura": {"gerador": "figura", "spec": {
+                 "pontos": {"A": _TA, "B": _TB, "C": _TC, "D": _TD,
+                            "G": [2, 0], "H": [16, 0], "I": [16, 6], "J": [2, 6]},
+                 "poligonos": [{"vs": ["G", "H", "I", "J"], "preenche": True},
+                               {"vs": ["A", "B", "C", "D"], "preenche": False}],
+                 "rotulos": [{"xy": [9, -1.2], "texto": "14"},
+                             {"xy": [9, 3], "texto": "14 x 6"}]}},
+             "espera": "longa"},
+        ],
+        # "e se fosse um triângulo?"
+        "e_triangulo": [
+            {"diz": "É isso: a base de cima encolhe até zero e o trapézio vira um "
+                    "triângulo, com a mesma base de dezoito e a mesma altura de seis.",
+             "figura": {"gerador": "figura", "spec": {
+                 "pontos": {"A": [0, 0], "B": [18, 0], "T": [9, 6]},
+                 "poligonos": [{"vs": ["A", "B", "T"], "preenche": True}],
+                 "rotulos": [{"xy": [9, -1.2], "texto": "18"},
+                             {"xy": [3.5, 3], "texto": "6"}]}},
+             "espera": "media"},
+            {"diz": "E a fórmula do trapézio continua certa: com a base menor igual a "
+                    "zero, sobra só base maior vezes altura dividido por dois. Que é, "
+                    "letra por letra, a fórmula do triângulo.",
+             "calc": {"gerador": "area_triangulo", "params": {"base": 18, "altura": 6}},
+             "mostra_passos": True,
+             "diz_passos": ["Base vezes altura, sobre dois.",
+                            "Dezoito vezes seis dá cento e oito, e a metade é cinquenta "
+                            "e quatro."],
+             "espera": "longa"},
+        ],
+    },
+}
+
+# ═══════════════════════════════════════════════ PITÁGORAS — a escada na parede
+# triângulo retângulo: canto P na quina parede/chão, B é o pé da escada (chão 3),
+# T é onde a escada toca a parede (altura 4). Hipotenusa B→T = escada = 5.
+_PP, _PB, _PT = [0, 0], [3, 0], [0, 4]
+
+_ESCADA_SPEC = {
+    "pontos": {"P": _PP, "B": _PB, "T": _PT},
+    "poligonos": [{"vs": ["P", "B", "T"], "preenche": True}],
+    "angulos": [{"vertice": "P", "de": "B", "para": "T"}],
+    "rotulos": [{"xy": [1.5, -0.5], "texto": "3"},
+                {"xy": [-0.6, 2], "texto": "?"},
+                {"xy": [2.1, 2.4], "texto": "5"}],
+}
+
+PITAGORAS: dict = {
+    "titulo": "Teorema de Pitágoras — a escada na parede",
+    "topico": "pitagoras",
+    "dados": {"chao": 3, "escada": 5, "altura": 4},
+    "blocos": [
+        {"diz": "Uma escada de cinco metros encostada na parede. O pé dela está a "
+                "três metros da parede. A pergunta é a que altura ela chega.",
+         "figura": {"gerador": "figura", "spec": _ESCADA_SPEC},
+         "espera": "media"},
+        {"diz": "A parede e o chão se encontram num ângulo reto, então esse é um "
+                "triângulo retângulo. A escada fica de frente pro ângulo reto: ela é "
+                "a hipotenusa, o lado mais comprido dos três.",
+         "figura": {"gerador": "figura", "spec": _ESCADA_SPEC},
+         "espera": "media"},
+        {"diz": "O teorema de Pitágoras diz que a hipotenusa ao quadrado é a soma "
+                "dos quadrados dos outros dois lados. Como o que falta é a altura, "
+                "a gente vira a conta pra isolar ela.",
+         "calc": {"gerador": "pitagoras", "params": {"a": 3, "c": 5}},
+         "mostra_passos": True,
+         "diz_passos": ["A altura ao quadrado é o quadrado da escada menos o quadrado "
+                        "do chão.",
+                        "Vinte e cinco menos nove dá dezesseis.",
+                        "A altura é a raiz de dezesseis, que é quatro."],
+         "espera": "longa"},
+        {"diz": "Quatro metros. A escada toca a parede a quatro metros do chão.",
+         "figura": {"gerador": "figura", "spec": {
+             "pontos": {"P": _PP, "B": _PB, "T": _PT},
+             "poligonos": [{"vs": ["P", "B", "T"], "preenche": True}],
+             "angulos": [{"vertice": "P", "de": "B", "para": "T"}],
+             "rotulos": [{"xy": [1.5, -0.5], "texto": "3"},
+                         {"xy": [-0.6, 2], "texto": "4"},
+                         {"xy": [2.1, 2.4], "texto": "5"}]}},
+         "espera": "media"},
+    ],
+    "ramos": {
+        # override do genérico: por que a2 + b2 = c2
+        "por_que": [
+            {"diz": "Desenha um quadrado sobre cada lado. O quadrado do chão tem área "
+                    "nove, o da parede tem área dezesseis.",
+             "figura": {"gerador": "figura", "spec": {
+                 "pontos": {"P": _PP, "B": _PB, "T": _PT,
+                            "c1": [3, -3], "c2": [0, -3],
+                            "w1": [-4, 0], "w2": [-4, 4]},
+                 "poligonos": [{"vs": ["P", "B", "c1", "c2"], "preenche": True},
+                               {"vs": ["P", "T", "w2", "w1"], "preenche": True},
+                               {"vs": ["P", "B", "T"], "preenche": True}],
+                 "rotulos": [{"xy": [1.5, -1.5], "texto": "9"},
+                             {"xy": [-2, 2], "texto": "16"}]}},
+             "espera": "media"},
+            {"diz": "O quadrado sobre a escada tem área vinte e cinco. E nove mais "
+                    "dezesseis dá vinte e cinco. Isso não é coincidência: nesse "
+                    "triângulo os dois quadrados menores sempre enchem o maior.",
+             "figura": {"gerador": "figura", "spec": {
+                 "pontos": {"P": _PP, "B": _PB, "T": _PT,
+                            "h1": [7, 3], "h2": [4, 7]},
+                 "poligonos": [{"vs": ["B", "T", "h2", "h1"], "preenche": True},
+                               {"vs": ["P", "B", "T"], "preenche": True}],
+                 "rotulos": [{"xy": [3.7, 3.3], "texto": "25"}]}},
+             "espera": "longa"},
+        ],
+        # "e pra achar a escada (a hipotenusa)?"
+        "achar_hipotenusa": [
+            {"diz": "Se o que falta fosse a escada, e você já tivesse o chão e a "
+                    "altura, é o mesmo teorema — só que agora você SOMA os dois "
+                    "quadrados em vez de subtrair.",
+             "figura": {"gerador": "figura", "spec": {
+                 "pontos": {"P": _PP, "B": _PB, "T": _PT},
+                 "poligonos": [{"vs": ["P", "B", "T"], "preenche": True}],
+                 "angulos": [{"vertice": "P", "de": "B", "para": "T"}],
+                 "rotulos": [{"xy": [1.5, -0.5], "texto": "3"},
+                             {"xy": [-0.6, 2], "texto": "4"},
+                             {"xy": [2.1, 2.4], "texto": "?"}]}},
+             "espera": "media"},
+            {"diz": "Some os quadrados dos catetos e tire a raiz.",
+             "calc": {"gerador": "pitagoras", "params": {"a": 3, "b": 4}},
+             "mostra_passos": True,
+             "diz_passos": ["A escada ao quadrado é nove mais dezesseis.",
+                            "Isso dá vinte e cinco.",
+                            "A raiz de vinte e cinco é cinco: a escada tem cinco metros."],
+             "espera": "longa"},
+        ],
+    },
+}
+
+# ═══════════════════════════════════════════════ EQUAÇÃO DO 1º GRAU — a balança
+# "pensei num número, multipliquei por 3, somei 5, deu 20" → 3x + 5 = 20.
+# resolvido como 3x - 15 = 0 → x = 5. Âncora concreta: balança de dois pratos.
+def _balanca(esq: str, dir_: str) -> dict:
+    return {"gerador": "figura", "spec": {
+        "pontos": {"P": [0, 0], "T": [0, 2],
+                   "L": [-4, 2], "R": [4, 2],
+                   "LP": [-4, 0.6], "RP": [4, 0.6],
+                   "F1": [-1.3, -1.2], "F2": [1.3, -1.2]},
+        "segmentos": [["P", "T"], ["L", "R"],
+                      ["L", "LP"], ["R", "RP"], ["P", "F1"], ["P", "F2"]],
+        "poligonos": [{"vs": ["LP", [-5.1, 0.1], [-2.9, 0.1]], "preenche": True},
+                      {"vs": ["RP", [5.1, 0.1], [2.9, 0.1]], "preenche": True}],
+        "rotulos": [{"xy": [-4, -0.6], "texto": esq},
+                    {"xy": [4, -0.6], "texto": dir_},
+                    {"xy": [0, 2.6], "texto": "="}],
+    }}
+
+
+EQ_PRIMEIRO_GRAU: dict = {
+    "titulo": "Equação do 1º grau — a balança",
+    "topico": "eq_primeiro_grau",
+    "dados": {"a": 3, "b": 5, "resultado": 20, "x": 5},
+    "blocos": [
+        {"diz": "Pensei num número, multipliquei por três, somei cinco, e deu vinte. "
+                "Qual era o número?",
+         "figura": _balanca("3x + 5", "20"),
+         "espera": "media"},
+        {"diz": "Chama o número de x. De um lado da balança fica três x mais cinco, "
+                "do outro fica vinte. A balança está equilibrada porque os dois "
+                "lados valem a mesma coisa: é isso que o sinal de igual quer dizer.",
+         "figura": _balanca("3x + 5", "20"),
+         "espera": "media"},
+        # beat PERGUNTA — self-explanation antes de resolver
+        {"diz": "Pra achar o x eu quero tirar esse mais cinco da esquerda. Se eu "
+                "tiro cinco só de um lado, o que eu preciso fazer pra balança não "
+                "desequilibrar?",
+         "figura": _balanca("3x + 5", "20"),
+         "pergunta": {"escuta_s": 12, "senao": "por_que",
+                      "acerta": ["dois lados", "nos dois", "dos dois", "os dois",
+                                 "ambos", "outro lado", "mesma coisa", "tira dos dois",
+                                 "tirar dos dois"],
+                      "confirma": "Exato: tiro cinco dos DOIS lados ao mesmo tempo. "
+                                  "O que eu faço de um lado, faço do outro."}},
+        {"diz": "Então tiro cinco dos dois lados e depois divido os dois lados por "
+                "três. Cada operação mantém a igualdade porque atinge os dois lados "
+                "igual.",
+         "calc": {"gerador": "eq_primeiro_grau", "params": {"a": 3, "b": -15}},
+         "mostra_passos": True,
+         "diz_passos": ["Tirando cinco dos dois lados, três x mais cinco igual a "
+                        "vinte vira três x menos quinze igual a zero.",
+                        "Isso é o mesmo que três x igual a quinze.",
+                        "Dividindo os dois lados por três, x é igual a cinco."],
+         "espera": "longa"},
+        {"diz": "O número era cinco. Confere: cinco vezes três é quinze, mais cinco "
+                "dá vinte.",
+         "figura": _balanca("3 . 5 + 5", "20"),
+         "espera": "media"},
+    ],
+    "ramos": {
+        # override do genérico: por que mexer nos dois lados
+        "por_que": [
+            {"diz": "A balança só fica reta enquanto os dois pratos pesam igual. "
+                    "Se eu mexo em um prato só, ela pende, e a igualdade quebra. "
+                    "Por isso toda operação vai nos dois lados junto.",
+             "figura": _balanca("3x + 5", "20"),
+             "espera": "media"},
+            {"diz": "Tirando cinco de cada lado sobra três x de um lado e quinze do "
+                    "outro. Ainda equilibrado, e agora bem mais fácil de resolver.",
+             "figura": _balanca("3x", "15"),
+             "espera": "longa"},
+        ],
+        # "e se o resultado fosse outro número?"
+        "outro_numero": [
+            {"diz": "Se em vez de vinte tivesse dado oito, muda só o número da "
+                    "direita: três x mais cinco igual a oito. Tira cinco dos dois "
+                    "lados, sobra três x igual a três, e dividindo por três o x é um. "
+                    "O caminho é sempre o mesmo.",
+             "calc": {"gerador": "eq_primeiro_grau", "params": {"a": 3, "b": -3}},
+             "mostra_passos": True,
+             "diz_passos": ["Três x igual a três.",
+                            "Dividindo por três, x é igual a um."],
+             "espera": "longa"},
+        ],
+    },
+}
+
+# ═══════════════════════════════════════════════ REGRA DE TRÊS — a proporção
+# "3 cadernos custam 24 reais. Quanto custam 5?" → 24 * 5 / 3 = 40.
+def _tabela(v_x: str) -> dict:
+    return {"gerador": "figura", "spec": {
+        "pontos": {"A": [0, 0], "B": [6, 0], "C": [0, 3], "D": [6, 3],
+                   "M": [3, 0], "N": [3, 3], "P": [0, 1.5], "Q": [6, 1.5]},
+        "segmentos": [["A", "B"], ["C", "D"], ["A", "C"], ["B", "D"],
+                      ["M", "N"], ["P", "Q"]],
+        "rotulos": [{"xy": [1.5, 3.4], "texto": "cadernos"},
+                    {"xy": [4.5, 3.4], "texto": "reais"},
+                    {"xy": [1.5, 2.25], "texto": "3"},
+                    {"xy": [4.5, 2.25], "texto": "24"},
+                    {"xy": [1.5, 0.75], "texto": "5"},
+                    {"xy": [4.5, 0.75], "texto": v_x}],
+    }}
+
+
+REGRA_DE_TRES: dict = {
+    "titulo": "Regra de três — a proporção",
+    "topico": "regra_de_tres",
+    "dados": {"a": 3, "b": 24, "c": 5, "x": 40},
+    "blocos": [
+        {"diz": "Três cadernos iguais custam vinte e quatro reais. Quanto custam cinco?",
+         "figura": _tabela("?"),
+         "espera": "media"},
+        {"diz": "Monto uma tabela com duas colunas: cadernos de um lado, reais do "
+                "outro. Três linha com vinte e quatro, cinco linha com o preço que "
+                "eu quero achar.",
+         "figura": _tabela("?"),
+         "espera": "media"},
+        # beat PERGUNTA — antecipa o sentido da proporção
+        {"diz": "Antes da conta, um palpite: como cinco cadernos é mais que três, o "
+                "preço vai dar maior ou menor que vinte e quatro?",
+         "figura": _tabela("?"),
+         "pergunta": {"escuta_s": 12, "senao": "por_que",
+                      "acerta": ["maior", "mais caro", "aumenta", "cresce", "sobe",
+                                 "mais", "fica caro"],
+                      "confirma": "Isso: mais cadernos, mais caro. As duas colunas "
+                                  "crescem juntas — é proporção direta."}},
+        {"diz": "Como as duas colunas crescem juntas, eu multiplico em cruz e divido: "
+                "vinte e quatro vezes cinco, sobre três.",
+         "calc": {"gerador": "regra_de_tres", "params": {"a": 3, "b": 24, "c": 5}},
+         "mostra_passos": True,
+         "diz_passos": ["Três está pra vinte e quatro assim como cinco está pro preço "
+                        "que eu quero.",
+                        "Multiplicando cruzado, o preço é vinte e quatro vezes cinco "
+                        "dividido por três.",
+                        "Cento e vinte sobre três dá quarenta reais."],
+         "espera": "longa"},
+        {"diz": "Quarenta reais. Dá pra conferir pelo preço de um caderno: vinte e "
+                "quatro sobre três é oito, e cinco vezes oito é quarenta.",
+         "figura": _tabela("40"),
+         "espera": "media"},
+    ],
+    "ramos": {
+        # override do genérico: por que a proporção funciona
+        "por_que": [
+            {"diz": "Os cadernos são todos iguais, então o preço de cada um é fixo. "
+                    "Vinte e quatro dividido por três dá oito reais por caderno.",
+             "figura": _tabela("?"),
+             "espera": "media"},
+            {"diz": "Sabendo que cada um custa oito, cinco cadernos é só cinco vezes "
+                    "oito, quarenta. A regra de três faz esse mesmo raciocínio de "
+                    "uma vez só, sem precisar achar o preço de um.",
+             "figura": _tabela("40"),
+             "espera": "longa"},
+        ],
+        # "e se fosse menos cadernos / o caminho inverso?"
+        "e_se_menos": [
+            {"diz": "Funciona nos dois sentidos. Se a pergunta fosse quantos cadernos "
+                    "dá pra comprar com vinte e quatro reais, sendo cada um oito, é "
+                    "vinte e quatro dividido por oito: três cadernos.",
+             "espera": "longa"},
+        ],
+    },
+}
+
+_CATALOGO = {"trapezio": TRAPEZIO, "pitagoras": PITAGORAS,
+             "eq_primeiro_grau": EQ_PRIMEIRO_GRAU, "regra_de_tres": REGRA_DE_TRES}
+
+
+def carregar(nome: str) -> Aula:
+    """A aula de ouro `nome`, já com os ramos genéricos mergeados."""
+    return Aula.de_json(_com_genericos(_CATALOGO[nome]))
+
+
+def disponiveis() -> list[str]:
+    return ["trapezio", "pitagoras", "eq_primeiro_grau", "regra_de_tres"]
