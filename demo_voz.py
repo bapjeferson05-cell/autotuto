@@ -1,9 +1,10 @@
 """demo_voz.py — o professor COM VOZ, no visor.
 
-    ~/jarvis/.venv/bin/python demo_voz.py                 # aula pronta (trapézio), loop opcional
+    ~/jarvis/.venv/bin/python demo_voz.py                 # padrão: o ALUNO começa — descreve o
+                                                          # problema, o planejador monta a aula
+                                                          # na hora (é a proposta do projeto)
+    ~/jarvis/.venv/bin/python demo_voz.py trapezio loop   # aula de ouro fixa, só se pedida por nome
     ~/jarvis/.venv/bin/python demo_voz.py pitagoras loop
-    ~/jarvis/.venv/bin/python demo_voz.py aluno           # o ALUNO começa: descreve o problema,
-                                                          # o planejador monta a aula na hora
 (sempre com  PYTHONPATH=~/professor-matematica  na frente)
 
 Abre http://localhost:8080. Interrompe por voz ("por que divide por dois?") ou por
@@ -74,9 +75,15 @@ def _aula_do_aluno(voz: Voz, visor: Visor):
 
 def main() -> None:
     args = sys.argv[1:]
-    modo_aluno = "aluno" in args
     loop = "loop" in args
-    qual = next((a for a in args if a in disponiveis()), "trapezio")
+    nomeados = [a for a in args if a not in ("aluno", "loop")]
+    qual = next((a for a in nomeados if a in disponiveis()), None)
+    if nomeados and qual is None:
+        print(f"[aviso] '{nomeados[0]}' não é uma aula conhecida "
+              f"({', '.join(disponiveis())}) — o aluno vai começar a conversa.", flush=True)
+    # por padrão o ALUNO começa (é a proposta do projeto). Só toca uma aula fixa
+    # se ela for pedida explicitamente por nome.
+    modo_aluno = "aluno" in args or qual is None
 
     visor = Visor(ritmo=0).start()
     visor.estado("pensando")
