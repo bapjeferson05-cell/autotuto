@@ -1,0 +1,30 @@
+import os
+
+env = lambda k, d: os.environ.get(k, d)
+
+# LLM
+LLM_PROVEDOR   = env("AUTOTUTO_LLM", "ollama")      # ollama | claude
+LLM_MODELO     = env("AUTOTUTO_MODELO", "qwen2.5:7b")
+LLM_CLAUDE     = "claude-sonnet-5"
+CEREBRO_TIMEOUT_S = 8.0                              # LLM curto da interrupção
+PLANEJADOR_TIMEOUT_S = 120.0
+
+# Voz
+STT_MODELO     = env("AUTOTUTO_STT", "base")         # tiny | base | small
+STT_DEVICE     = "cpu"
+BARGE_IN       = env("AUTOTUTO_BARGE_IN", "0") == "1" # mic interrompe? padrão NÃO
+FALA_TIMEOUT_S = 12.0                                # cão-de-guarda do Piper
+GRAVA_RESTO_S  = 2.0                                 # quanto grava após o corte
+SILENCIO_MS    = 400                                 # silêncio que fecha a gravação
+TTS_LENGTH_SCALE = 1.0
+
+# Ritmo / visor
+SETTLE_S       = 0.4                                 # figura aparece ANTES da fala
+RITMO_S_POR_CHAR = 0.045                             # "fala" sem TTS (modo texto)
+PAUSA = {"curta": 0.35, "media": 0.9, "longa": 1.8, None: 0.55}
+VISOR_PORTA    = 8080
+VISOR_POLL_MS  = 120
+
+# Lousa (tema)
+COR_FUNDO="#0E2A22"; COR_GIZ="#EAEAEA"; COR_FRACO="#8FA79C"
+COR_DESTAQUE="#F2B134"; COR_AZUL="#5AB1E0"; COR_VERDE="#7BD88F"
