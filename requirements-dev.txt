@@ -1,0 +1,6 @@
+# dependências pra rodar os testes de professor/ (tests/) — o backend tem as dele
+# próprias em backend/requirements-dev.txt
+matplotlib>=3.8
+numpy>=1.26
+pillow>=10.0
+pytest>=8.0

@@ -44,8 +44,7 @@ def classificar(fala: str, ramos: list[str] | dict | None = None) -> str | None:
     for gat, res in _COMPILADAS:
         alvo = gat
         if disp is not None and gat not in disp:
-            if gat == "por_que":
-                alvo = next((r for r in disp if r.startswith("por_que")), None)
+            alvo = next((r for r in disp if r.startswith("por_que")), None) if gat == "por_que" else None
             if alvo is None:
                 continue
         if any(r.search(t) for r in res):
