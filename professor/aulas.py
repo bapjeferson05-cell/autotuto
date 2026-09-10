@@ -61,6 +61,7 @@ TRAPEZIO: dict = {
                 "encolhendo, até virar zero? Que figura o trapézio viraria?",
          "figura": _trap(segmentos=[{"de": "D", "para": "C", "cor": "destaque", "lw": 5}]),
          "pergunta": {"escuta_s": 12, "senao": "e_triangulo",
+                      "acerta": ["triangulo", "triângulo"],
                       "confirma": "Isso! Vira um triângulo. E guarda essa ideia — a fórmula "
                                   "do trapézio já contém a do triângulo."}},
         {"diz": "Então a fórmula é essa: soma das duas bases, vezes a altura, dividido "

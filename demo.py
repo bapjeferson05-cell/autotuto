@@ -1,10 +1,11 @@
-"""demo.py — o Ciclo do Trapézio, ponta a ponta, sem áudio.
+"""demo.py — as aulas de ouro, ponta a ponta, sem áudio.
 
-    .venv/bin/python demo.py                 # aluno responde a pergunta + interrompe
-    .venv/bin/python demo.py "não entendi" 3 # fala isso no 3º "diz"
+    .venv/bin/python demo.py                      # trapézio; aluno responde a pergunta (fading)
+    .venv/bin/python demo.py regra_de_tres        # outra aula
+    .venv/bin/python demo.py "não entendi" 3      # aluno interrompe na 3ª fala
 
-Dublês de `falar`/`ouvir`: no beat 'pergunta' o aluno "responde" (RESP); num
-outro ponto ele "interrompe" a fala (FALA @ QUANDO). Mesma máquina do pipeline de voz.
+Dublês de `falar`/`ouvir`: no beat 'pergunta' o aluno "responde" (RESP[aula]); se
+passar um número, ele "interrompe" a fala nessa posição. Mesma máquina da voz.
 out/demo/*.png + out/demo-tira.png
 """
 from __future__ import annotations
@@ -45,10 +46,10 @@ def tira(titulo: str):
 def main():
     aula = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] in (
         "trapezio", "pitagoras", "eq_primeiro_grau", "regra_de_tres") else "trapezio"
-    fala = next((a for a in sys.argv[1:] if a not in
-                 ("trapezio", "pitagoras", "eq_primeiro_grau", "regra_de_tres")),
-                "peraí, por que que divide por dois?")
-    quando = 99   # sem interrupção por padrão — o foco é o beat pergunta + fading
+    resto = [a for a in sys.argv[1:] if a not in
+             ("trapezio", "pitagoras", "eq_primeiro_grau", "regra_de_tres")]
+    fala = next((a for a in resto if not a.isdigit()), "peraí, por que que divide por dois?")
+    quando = next((int(a) for a in resto if a.isdigit()), 99)   # 99 = sem interrupção
 
     OUT.mkdir(parents=True, exist_ok=True)
     for f in OUT.glob("*.png"):

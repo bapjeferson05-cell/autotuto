@@ -66,6 +66,8 @@ def area_circulo(r) -> Resultado:
 
 def comprimento_circunferencia(r=None, d=None) -> Resultado:
     """A volta do círculo. Passe o raio OU o diâmetro."""
+    if r is None and d is None:
+        raise ValueError("comprimento_circunferencia: passe r ou d")
     raio = r if r is not None else d / 2
     v = 2 * math.pi * raio
     return Resultado(round(v, 2), [
@@ -166,7 +168,9 @@ def mmc(a, b) -> Resultado:
 
 # ──────────────────────────────────────────────── cálculos simples do dia a dia
 def media(valores) -> Resultado:
-    vs = [float(v) for v in valores]
+    vs = [float(v) for v in (valores or [])]
+    if not vs:
+        raise ValueError("media: passe a lista de valores")
     s, n = sum(vs), len(vs)
     return Resultado(round(s / n, 4), [
         r"\bar{x} = \dfrac{\text{soma}}{\text{quantidade}}",

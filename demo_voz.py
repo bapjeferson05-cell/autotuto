@@ -83,11 +83,11 @@ def main() -> None:
     voz = liga_no_visor(Voz(), visor)
     voz.on_injecao = visor.pop_injecao          # contingência: teclas da página
 
-    if modo_aluno:                              # pré-aquece o LLM do planejador
+    from professor import planejador
+    if modo_aluno and planejador.PROVEDOR == "ollama":   # só faz sentido pro Ollama frio
         try:
-            from professor.planejador import _llm_json
             print("[llm] pré-aquecendo o planejador…", flush=True)
-            _llm_json([{"role": "user", "content": "responda só: ok"}], timeout=90)
+            planejador._llm_json([{"role": "user", "content": "responda só: ok"}], timeout=90)
         except Exception as e:  # noqa: BLE001
             print(f"[llm] pré-aquecimento pulado ({e})", flush=True)
 

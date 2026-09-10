@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
-from professor.classificador import classificar
+from professor.classificador import _norm, classificar
 from professor.esquema import GERADORES, Aula
 from professor.estado import EstadoAula
 from professor.fillers import filler_para
@@ -130,9 +130,14 @@ class Tocador:
                 if dita:
                     print(f'  🎤 "{dita}"')
                     achou = classificar(dita, est.aula.ramos)
-                    d = dita.lower()
-                    acertou = achou == senao or any(k in d for k in pg.get("acerta", []))
-                    if acertou and pg.get("confirma"):           # acertou → fading: confirma curto
+                    # acertou = SÓ se casa uma palavra da lista 'acerta' (senao é o
+                    # destino de quem errou/calou — nunca conta como acerto). E se a
+                    # resposta não é uma pergunta de volta ('...?', 'não sei').
+                    d = _norm(dita)
+                    pergunta_de_volta = dita.rstrip().endswith("?") or "nao sei" in d
+                    acertou = (not pergunta_de_volta
+                               and any(_norm(k) in d for k in pg.get("acerta", [])))
+                    if acertou and pg.get("confirma"):           # fading: confirma curto, pula a derivação
                         print("  ✓ acertou — pula a derivação (fading)")
                         self.falar(pg["confirma"])
                         gat = None

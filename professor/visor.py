@@ -18,13 +18,6 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-_TECLAS = {
-    "1": "por que que divide por dois?",
-    "2": "não entendi essa parte",
-    "3": "e se fosse um triângulo?",
-    "0": "acho que vira um triângulo",
-}
-
 _PAGINA = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Professor</title>
@@ -100,6 +93,7 @@ document.getElementById("cx").addEventListener("submit", (e) => {
                        body: JSON.stringify({texto: t})}).catch(()=>{});
 });
 document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
   const t = TECLAS[e.key];
   if (!t) return;
   e.preventDefault();
@@ -130,9 +124,15 @@ class Visor:
             self._png, self._frame = png, self._frame + 1
 
     def falar(self, texto: str) -> str | None:
+        """No modo texto/sem-TTS: fala pelo `ritmo` e devolve a fala do aluno se
+        ele apertar uma tecla de contingência no meio (o Tocador trata como barge-in)."""
         self.mostrar_fala(texto)
-        if self.ritmo:
-            time.sleep(min(len(texto) * self.ritmo, 8.0))
+        fim = time.monotonic() + min(len(texto) * self.ritmo, 8.0)
+        while self.ritmo and time.monotonic() < fim:
+            t = self.pop_injecao()
+            if t:
+                return t
+            time.sleep(0.12)
         return None
 
     def mostrar_fala(self, texto: str) -> None:

@@ -73,9 +73,9 @@ _PISTAS = {
     "pitagoras": ("pitágoras", "pitagoras", "hipotenusa", "escada", "rampa", "diagonal",
                   "triângulo retângulo", "cateto"),
     "eq_primeiro_grau": ("equação", "equacao", "pensei num número", "primeiro grau",
-                         "x +", "resolva", "incógnita", "incognita"),
+                         r"\dx\s*[+\-=]", "incógnita", "incognita"),
     "regra_de_tres": ("regra de três", "regra de tres", "proporção", "proporcao",
-                      "quanto custam", "se .* custa", "receita para", "velocidade"),
+                      "quanto custam", r"se .* custa", "receita para", "quantos .* precisa"),
 }
 
 
