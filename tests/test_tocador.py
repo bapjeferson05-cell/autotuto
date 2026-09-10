@@ -67,10 +67,14 @@ def test_pergunta_resposta_certa_faz_fading():
 
 
 def test_modo_gravacao_scriptado():
+    # o beat de pergunta do trapézio é o 3º beat principal (n_princ == 3).
     est = Tocador(pausas=False, cerebro=None).toca(
         carregar("trapezio"),
-        interrupcoes={2: "por_que_div_2"}, respostas={4: "vira um triângulo"})
-    assert "por_que_div_2" in est.historico
+        interrupcoes={2: "por_que_div_2"},
+        respostas={3: "acho que vira um triângulo"})
+    # interrupção scriptada dispara o ramo; a resposta certa à pergunta faz
+    # fading (confirma + pula a derivação) -> nenhum ramo a mais.
+    assert est.historico == ["por_que_div_2"]
 
 
 def test_desenha_figura_e_passos_do_calc():

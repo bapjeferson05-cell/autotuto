@@ -149,11 +149,13 @@ class Tocador:
 
     # ─────────────────────────────────────────────────────────────── entra/sai
     def _entra_ramo(self, est: EstadoAula, gat: str, *, filler: bool = True) -> None:
-        if filler:
-            self.falar(_FILLER.get(gat, _FILLER_DEFAULT))
         if not est.entra_ramo(gat):          # rede de segurança (não deve disparar)
             self.falar(HONESTO)
             return
+        # filler só depois de saber que o ramo existe (senão o aluno ouviria
+        # "Deixa eu ver." e logo em seguida "Essa eu não preparei...").
+        if filler:
+            self.falar(_FILLER.get(gat, _FILLER_DEFAULT))
         for rb in est.drena_ramo():
             r = self._toca_bloco(rb)
             if r and r[0] == "barge":
