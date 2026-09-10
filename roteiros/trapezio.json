@@ -1,0 +1,7 @@
+{
+  "aula": "trapezio",
+  "ritmo": 0.06,
+  "espera": 4,
+  "interrupcoes": {"2": "por_que_div_2"},
+  "respostas": {"3": "acho que vira um triângulo"}
+}
