@@ -12,8 +12,8 @@ Sem LLM (ConnectionError etc.) ou tentativas esgotadas com erro → cai na aula 
 ouro do trapézio e devolve `Relatorio(ok=False, ...)`. Nunca mente pro aluno: ou
 entrega um plano que valida, ou admite que caiu no fallback.
 
-Dependência: só `json`, `re`, `autotuto.llm`, `autotuto.schema`, `autotuto.validador`,
-`autotuto.aulas`.
+Dependência: só `json`, `re`, `autotuto.config`, `autotuto.llm`, `autotuto.schema`,
+`autotuto.validador`, `autotuto.aulas`.
 """
 from __future__ import annotations
 
@@ -22,9 +22,9 @@ import re
 from dataclasses import dataclass, field
 
 from autotuto import aulas, llm, schema, validador
+from autotuto.config import PLANEJADOR_TIMEOUT_S
 
-# espelha config.PLANEJADOR_TIMEOUT_S (planejador não importa config — regra de dep.)
-_TIMEOUT_S = 120.0
+# RULING: todo módulo PODE importar autotuto.config (é a raiz, não importa nada).
 
 
 @dataclass
@@ -143,8 +143,8 @@ GERADORES DE CÁLCULO (use no "calc", campo "gerador"):
 GERADORES DE FIGURA (use no "figura", campo "gerador"):
   trapezio · triangulo · retangulo · dois_retangulos · balanca · tabela_prop ·
   reta_numerica  — cada um aceita "params". Para uma composição própria (pontos
-  nomeados, cotas, ângulos marcados) use {"gerador": "figura", "spec": {...}} com as
-  chaves: pontos, poligonos, segmentos, circulos, angulos, marcas, cotas, rotulos.
+  nomeados, ângulos marcados) use {"gerador": "figura", "spec": {...}} com as
+  chaves: pontos, poligonos, segmentos, angulos, marcas, rotulos.
 
 RESPONDA SÓ com o objeto JSON do plano — nada antes, nada depois, sem cercas de código.
 """
@@ -195,7 +195,7 @@ def planeja(
 
     for _ in range(max(1, tentativas)):
         try:
-            bruto = perguntar(mensagens, timeout=_TIMEOUT_S, json_mode=True)
+            bruto = perguntar(mensagens, timeout=PLANEJADOR_TIMEOUT_S, json_mode=True)
         except Exception as e:  # ConnectionError, URLError, TimeoutError...
             return _fallback([f"LLM indisponível: {e!r}"])
 

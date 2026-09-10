@@ -60,6 +60,26 @@ def test_figura_spec_vazio_nao_quebra():
     assert figura({})[:4] == b"\x89PNG"
 
 
+def test_contorno_do_poligono_preenchido_fica_opaco():
+    # F4: o `alpha` do preenchimento NÃO pode apagar o traço de giz. Com o bug
+    # antigo (alpha no patch inteiro) a borda saía ~cinza-escuro sobre o fundo.
+    png = figura({
+        "pontos": {"A": [0, 0], "B": [4, 0], "C": [2, 3]},
+        "poligonos": [{"vs": ["A", "B", "C"], "preenche": True}],
+    })
+    mais_claro = Image.open(io.BytesIO(png)).convert("L").getextrema()[1]
+    assert mais_claro > 200, mais_claro       # existe traço quase branco (giz cheio)
+
+
+def test_segmento_tracejado_renderiza():
+    # F5: suporte a segmento em forma de dict com "tracejado"
+    png = figura({
+        "pontos": {"D": [4, 6], "H": [4, 0]},
+        "segmentos": [{"de": "D", "para": "H", "tracejado": True}],
+    })
+    assert png[:4] == b"\x89PNG"
+
+
 def test_todos_os_geradores_desenham():
     # "figura" recebe um spec posicional; os geradores nomeados recebem kwargs
     spec_minimo = {"pontos": {"A": [0, 0], "B": [1, 0], "C": [0, 1]},

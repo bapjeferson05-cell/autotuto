@@ -66,6 +66,69 @@ def test_pergunta_resposta_certa_faz_fading():
     assert est.historico == []                       # pulou a derivação, sem ramo
 
 
+def test_acerto_hedgeado_nao_vira_nao_sei():
+    # F8: "deve ser" casa o regex _NAO_SABE, mas a resposta está CERTA -> fading,
+    # não "Tranquilo não saber".
+    est, L = roda("trapezio", resp="deve ser um triângulo")
+    assert est.historico == []
+    assert not any("não saber" in x.lower() for x in L)
+
+
+def test_barge_no_beat_da_formula_nao_perde_o_calc():
+    # F1: interromper o `diz` do beat da fórmula (que tem `calc`) não pode fazer
+    # a fórmula + a narração do resultado sumirem.
+    rotulos, L = [], []
+
+    def falar(t):
+        L.append(t)
+        return "quanto custa o pedreiro" if t.startswith("A fórmula soma") else None
+
+    Tocador(falar=falar, ouvir=lambda s: "triângulo",
+            desenhar=lambda png, rot: rotulos.append(rot),
+            pausas=False, cerebro=None).toca(carregar("trapezio"))
+    assert any(HONESTO in x for x in L)               # não casou nada -> honesto
+    assert any(r.startswith("passo") for r in rotulos)   # a fórmula voltou pra lousa
+    assert any("oitenta e quatro" in x.lower() for x in L)  # o resultado foi dito
+
+
+def test_barge_dentro_do_ramo_sem_match_e_honesto():
+    # F2: interrupção dentro de um ramo que não casa em nenhuma camada -> HONESTO
+    # falado e o ramo termina (não troca de ramo, não ignora o aluno).
+    seen = []
+
+    def falar(t):
+        seen.append(t)
+        if t.startswith("A parede e o chão"):
+            return "mas por que isso funciona?"       # entra no ramo por_que
+        if t.startswith("Desenha um quadrado"):
+            return "quanto ganha o pedreiro por hora"  # barge dentro do ramo
+        return None
+
+    est = Tocador(falar=falar, ouvir=lambda s: None,
+                  pausas=False, cerebro=None).toca(carregar("pitagoras"))
+    assert any(HONESTO in x for x in seen)
+    assert est.historico == ["por_que"]              # o ramo terminou, sem desvio
+
+
+def test_gerador_torto_nao_derruba_a_sessao():
+    # F7: aula gerada com gerador/params inválidos -> loga e pula, a aula segue.
+    from autotuto.schema import Aula
+    aula = Aula.de_json({
+        "titulo": "torta", "topico": "t", "dados": {},
+        "blocos": [
+            {"diz": "um", "figura": {"gerador": "nao_existe", "params": {}}},
+            {"diz": "dois", "calc": {"gerador": "area_trapezio", "params": {"x": 1}},
+             "mostra_passos": True},
+            {"diz": "tres"},
+        ],
+        "ramos": {},
+    })
+    L = []
+    Tocador(falar=lambda t: L.append(t) or None, ouvir=lambda s: None,
+            desenhar=lambda p, r: None, pausas=False, cerebro=None).toca(aula)
+    assert L == ["um", "dois", "tres"]
+
+
 def test_modo_gravacao_scriptado():
     # o beat de pergunta do trapézio é o 3º beat principal (n_princ == 3).
     est = Tocador(pausas=False, cerebro=None).toca(

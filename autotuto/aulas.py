@@ -55,13 +55,16 @@ def _com_genericos(aula: dict) -> dict:
 _TA, _TB, _TC, _TD = [0, 0], [18, 0], [14, 6], [4, 6]
 
 _TRAP_SPEC = {
-    "pontos": {"A": _TA, "B": _TB, "C": _TC, "D": _TD},
+    "pontos": {"A": _TA, "B": _TB, "C": _TC, "D": _TD, "H": [4, 0]},
     "poligonos": [{"vs": ["A", "B", "C", "D"], "preenche": True}],
+    # linha de altura tracejada (D->base), pra o "6" cotar a ALTURA e não o lado oblíquo
+    "segmentos": [{"de": "D", "para": "H", "tracejado": True}],
+    "angulos": [{"vertice": "H", "de": "A", "para": "D"}],
     "marcas": [{"tipo": "par", "de": "A", "para": "B"},
                {"tipo": "par", "de": "D", "para": "C"}],
     "rotulos": [{"xy": [9, -1.2], "texto": "18"},
                 {"xy": [9, 6.9], "texto": "10"},
-                {"xy": [-1.3, 3], "texto": "6"}],
+                {"xy": [3.3, 3], "texto": "6"}],
 }
 
 TRAPEZIO: dict = {

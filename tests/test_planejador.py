@@ -5,7 +5,17 @@ Todos usam um `perguntar` fake: NENHUMA chamada de rede real.
 import json
 
 from autotuto.aulas import carregar
-from autotuto.planejador import _exemplo_dirigido, planeja
+from autotuto.planejador import _SISTEMA, _exemplo_dirigido, planeja
+
+
+def test_sistema_so_promete_chaves_de_figura_que_o_canvas_implementa():
+    # F6: o prompt prometia `circulos` e `cotas`, que canvas.figura ignora em
+    # silêncio. As chaves citadas têm que ser um subconjunto do que é implementado.
+    implementadas = {"pontos", "poligonos", "segmentos", "angulos", "marcas", "rotulos"}
+    linha = next(l for l in _SISTEMA.splitlines() if "chaves:" in l)
+    citadas = {c.strip(" .") for c in linha.split("chaves:")[1].split(",")}
+    assert citadas <= implementadas, citadas - implementadas
+    assert "circulos" not in _SISTEMA and "cotas" not in _SISTEMA
 
 
 def test_pista_de_equacao():

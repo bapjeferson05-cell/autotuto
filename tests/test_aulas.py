@@ -106,6 +106,13 @@ def test_nenhuma_fala_tem_latex(nome):
             assert "\\" not in f and "^" not in f and "frac" not in f, (nome, f)
 
 
+def test_trap_spec_tem_linha_de_altura():
+    # F5: o "6" só pode aparecer junto de uma linha de altura de verdade
+    from autotuto.aulas import _TRAP_SPEC
+    assert _TRAP_SPEC.get("segmentos"), "sem linha de altura, o '6' cota o lado oblíquo"
+    assert figura(_TRAP_SPEC)[:4] == b"\x89PNG"
+
+
 def test_carregar_nao_vaza_mutacao_entre_execucoes():
     # o tocador escreve nos beats; cada carregar() tem que dar um objeto novo
     a1 = carregar("trapezio")

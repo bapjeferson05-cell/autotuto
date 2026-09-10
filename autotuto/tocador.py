@@ -19,7 +19,9 @@ genéricos mergeados por `carregar`/`planeja`).
 """
 from __future__ import annotations
 
+import os
 import re
+import sys
 import time
 from pathlib import Path
 
@@ -28,6 +30,15 @@ from autotuto.classificador import classificar
 from autotuto.estado import EstadoAula
 from autotuto.figuras import lousa
 from autotuto.figuras.catalogo import GERADORES
+
+# log de debug pro stdout só quando AUTOTUTO_LOG=1 (senão polui a gravação/os testes).
+_LOG = os.environ.get("AUTOTUTO_LOG") == "1"
+
+
+def _log(msg: str) -> None:
+    if _LOG:
+        print(msg)
+
 
 # camada 3: a frase que o professor fala quando não preparou aquilo.
 HONESTO = "Essa eu não preparei agora — sigo daqui, e a gente volta nisso."
@@ -78,7 +89,7 @@ class Tocador:
 
     # ───────────────────────────────────────────── stubs (quando nada é injetado)
     def _falar_padrao(self, txt: str):
-        print(f"[falar] {txt}")
+        _log(f"[falar] {txt}")
         return None
 
     def _desenhar_padrao(self, png: bytes, rotulo: str) -> None:
@@ -88,22 +99,31 @@ class Tocador:
         (d / f"{self._n_png:02d}_{rotulo}.png").write_bytes(png)
 
     # ───────────────────────────────────────────────────────────────── um beat
-    def _toca_bloco(self, bloco: dict):
+    def _toca_bloco(self, bloco: dict, *, retomar: bool = False):
         """Toca um beat. Devolve:
         ("barge", fala)      -> o aluno interrompeu
         ("resposta", fala|None) -> resposta a um beat de pergunta
         None                 -> seguiu normal
+
+        `retomar=True`: o beat foi interrompido durante o `diz` e a gente já
+        voltou do ramo. Pula a figura (já está na tela) e o `diz` (já foi dito),
+        e roda SÓ o `calc` (com o `diz_passos`) + o `espera` — pra fórmula/conta
+        do beat não sumir. Ver F1.
         """
         fig = bloco.get("figura")
-        if fig:
-            gerador = fig["gerador"]
-            if gerador == "figura":
-                png = GERADORES["figura"](fig["spec"])
-            else:
-                png = GERADORES[gerador](**(fig.get("params") or {}))
-            self.desenhar(png, gerador)
+        if fig and not retomar:
+            try:
+                gerador = fig["gerador"]
+                if gerador == "figura":
+                    png = GERADORES["figura"](fig["spec"])
+                else:
+                    png = GERADORES[gerador](**(fig.get("params") or {}))
+                self.desenhar(png, gerador)
+            except Exception as e:  # gerador desconhecido / params ruins numa aula do LLM
+                print(f"[tocador] figura {fig.get('gerador')!r} falhou, pulando: {e!r}",
+                      file=sys.stderr)
 
-        if bloco.get("diz"):
+        if bloco.get("diz") and not retomar:
             self._falas.append(bloco["diz"])
             del self._falas[:-3]
             # a figura aparece ANTES da fala (SETTLE_S)
@@ -114,7 +134,7 @@ class Tocador:
                 # responder DURANTE a pergunta conta como a resposta, não interrupção
                 return ("resposta" if bloco.get("pergunta") else "barge", fala)
 
-        if bloco.get("pergunta"):
+        if bloco.get("pergunta") and not retomar:
             if "_resp_scriptada" in bloco:
                 return ("resposta", bloco["_resp_scriptada"])
             seg = int(bloco["pergunta"].get("escuta_s", 12))
@@ -122,20 +142,26 @@ class Tocador:
 
         if bloco.get("calc"):
             c = bloco["calc"]
-            r = calc.CATALOGO[c["gerador"]](**(c.get("params") or {}))
-            passos = r.passos if bloco.get("mostra_passos") else r.passos[-1:]
-            diz_passos = bloco.get("diz_passos") or []
-            for i, latex in enumerate(passos):
-                self.desenhar(lousa.passo_latex(latex), f"passo{i + 1}")
-                if diz_passos and i < len(diz_passos) and diz_passos[i]:
-                    fala = self.falar(diz_passos[i])
-                    if fala:
-                        return ("barge", fala)
-                elif self.pausas:
-                    time.sleep(1.1 if i < len(passos) - 1 else 0.7)
+            try:
+                r = calc.CATALOGO[c["gerador"]](**(c.get("params") or {}))
+            except Exception as e:  # gerador desconhecido / params ruins numa aula do LLM
+                print(f"[tocador] calc {c.get('gerador')!r} falhou, pulando: {e!r}",
+                      file=sys.stderr)
+                r = None
+            if r is not None:
+                passos = r.passos if bloco.get("mostra_passos") else r.passos[-1:]
+                diz_passos = bloco.get("diz_passos") or []
+                for i, latex in enumerate(passos):
+                    self.desenhar(lousa.passo_latex(latex), f"passo{i + 1}")
+                    if diz_passos and i < len(diz_passos) and diz_passos[i]:
+                        fala = self.falar(diz_passos[i])
+                        if fala:
+                            return ("barge", fala)
+                    elif self.pausas:
+                        time.sleep(1.1 if i < len(passos) - 1 else 0.7)
 
         if self.pausas:
-            time.sleep(config.PAUSA.get(bloco.get("espera")))
+            time.sleep(config.PAUSA.get(bloco.get("espera"), config.PAUSA[None]))
         return None
 
     # ─────────────────────────────────────────────── as 3 camadas da interrupção
@@ -159,11 +185,15 @@ class Tocador:
         for rb in est.drena_ramo():
             r = self._toca_bloco(rb)
             if r and r[0] == "barge":
-                g2 = classificar(r[1], est.aula.ramos)
+                # mesma política da trilha principal: as 3 camadas, e honesto se
+                # nada casar — nunca ignorar o aluno em silêncio (F2).
+                g2 = self._resolve_interrupcao(r[1], est)
                 if g2 and g2 != gat:
                     est.sai_ramo()
                     self._entra_ramo(est, g2)
                     return
+                if g2 is None:
+                    self.falar(HONESTO)
         self.falar(_VOLTA)
 
     # ──────────────────────────────────────────────────────────────────── o loop
@@ -183,23 +213,23 @@ class Tocador:
 
             r = self._toca_bloco(bloco)
             gat = None
+            # beat interrompido no `diz` que TAMBÉM tem `calc`: depois do ramo a
+            # gente reexecuta só o calc, senão a fórmula some (F1).
+            retomar_calc = bool(r and r[0] == "barge" and bloco.get("calc"))
 
             if r and r[0] == "barge":
                 gat = self._resolve_interrupcao(r[1], est)
                 if gat is None:                 # camada 3: honesto, sem tocar o estado
                     self.falar(HONESTO)
-                    print(f"[tocador] honesto: {r[1]!r} não casou com ramo nenhum")
+                    _log(f"[tocador] honesto: {r[1]!r} não casou com ramo nenhum")
                 else:
-                    print(f"[tocador] interrupção {r[1]!r} -> ramo {gat!r}")
+                    _log(f"[tocador] interrupção {r[1]!r} -> ramo {gat!r}")
 
             elif r and r[0] == "resposta":
                 pg = bloco["pergunta"]
                 senao = pg.get("senao")
                 dita = r[1]
-                if dita and _NAO_SABE.search(classificador._norm(dita)):
-                    self.falar(_ACOLHE)         # acolhe e vai pro `senao` (que ensina)
-                    gat = senao
-                elif dita:
+                if dita:
                     achou = classificar(dita, est.aula.ramos)
                     d = classificador._norm(dita)
                     eco = "nao sei" in d or (
@@ -213,6 +243,11 @@ class Tocador:
                     if acertou and pg.get("confirma"):
                         self.falar(pg["confirma"])   # fading: pula a derivação
                         gat = None
+                    elif _NAO_SABE.search(d):
+                        # só depois de descartar o acerto: acolhe e vai pro `senao`
+                        # (que ENSINA) — um acerto hedgeado NÃO é "não saber" (F8).
+                        self.falar(_ACOLHE)
+                        gat = senao
                     else:
                         gat = achou or senao
                 else:
@@ -223,5 +258,7 @@ class Tocador:
 
             if gat:
                 self._entra_ramo(est, gat, filler=(not r or r[0] == "barge"))
+            if retomar_calc:
+                self._toca_bloco(bloco, retomar=True)
 
         return est

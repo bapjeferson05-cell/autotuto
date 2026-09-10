@@ -3,6 +3,7 @@
 `spec` (todas as chaves opcionais):
   pontos     {nome: [x, y]}
   segmentos  [[a, b], ...]            a/b = nome de ponto ou [x, y] cru
+             ou {"de": a, "para": b, "tracejado": bool}   (traço pontilhado)
   poligonos  [{"vs": [nomes/coords], "preenche": bool}]
   angulos    [{"vertice", "de", "para"}]   arco (ou quadradinho se ~90°)
   marcas     [{"tipo": "cong"|"par", "de", "para"}]   ticks de congruência/paralelismo
@@ -32,14 +33,22 @@ def _desenha_poligono(ax, spec, pol):
         return
     xs = [p[0] for p in pts]
     ys = [p[1] for p in pts]
-    preenche = pol.get("preenche", False)
-    ax.fill(xs, ys, color=config.COR_AZUL, alpha=0.12 if preenche else 0.0,
-            edgecolor=config.COR_GIZ, lw=2, zorder=2)
+    # o `alpha` de um patch dilui a face E a borda — então o preenchimento vai
+    # sem borda e o contorno de giz é desenhado à parte, opacidade cheia (F4).
+    if pol.get("preenche", False):
+        ax.fill(xs, ys, facecolor=config.COR_AZUL, alpha=0.12,
+                edgecolor="none", zorder=2)
+    ax.plot(xs + [xs[0]], ys + [ys[0]], color=config.COR_GIZ, lw=2, zorder=3)
 
 
 def _desenha_segmento(ax, spec, seg):
-    a, b = _resolver(spec, seg[0]), _resolver(spec, seg[1])
-    ax.plot([a[0], b[0]], [a[1], b[1]], color=config.COR_GIZ, lw=2, zorder=3)
+    if isinstance(seg, dict):
+        a, b = _resolver(spec, seg["de"]), _resolver(spec, seg["para"])
+        ls = "--" if seg.get("tracejado") else "-"
+    else:
+        a, b = _resolver(spec, seg[0]), _resolver(spec, seg[1])
+        ls = "-"
+    ax.plot([a[0], b[0]], [a[1], b[1]], color=config.COR_GIZ, lw=2, ls=ls, zorder=3)
 
 
 def _desenha_angulo(ax, spec, ang):
