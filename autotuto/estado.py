@@ -25,14 +25,14 @@ class Trilha:
 @dataclass
 class EstadoAula:
     """Máquina de estado para navegação em uma aula com ramos."""
-    _aula: Aula
+    aula: Aula
     _pilha: list[Trilha] = field(default_factory=list)
     _historico: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         """Inicializa a pilha com a trilha principal."""
         if not self._pilha:
-            self._pilha = [Trilha(self._aula.blocos, rotulo="principal")]
+            self._pilha = [Trilha(self.aula.blocos, rotulo="principal")]
 
     def proximo(self) -> dict | None:
         """Retorna o próximo beat da trilha no topo da pilha."""
@@ -45,10 +45,10 @@ class EstadoAula:
         e retorna a lista de blocos.
         Retorna [] se o ramo não existe.
         """
-        if gatilho not in self._aula.ramos:
+        if gatilho not in self.aula.ramos:
             return []
 
-        blocos = self._aula.ramos[gatilho]
+        blocos = self.aula.ramos[gatilho]
         self._pilha.append(Trilha(blocos, rotulo=f"ramo:{gatilho}"))
         self._historico.append(gatilho)
         return blocos
@@ -56,8 +56,10 @@ class EstadoAula:
     def drena_ramo(self):
         """
         Generator que rende o resto dos beats da trilha no topo
-        e depois desempilha.
+        e depois desempilha. No-op se já está na trilha principal.
         """
+        if self.na_principal:
+            return
         trilha = self.trilha
         while True:
             beat = trilha.proximo()
@@ -65,8 +67,7 @@ class EstadoAula:
                 break
             yield beat
         # Desempilha após render todos
-        if not self.na_principal:
-            self._pilha.pop()
+        self._pilha.pop()
 
     def sai_ramo(self) -> None:
         """Remove o ramo do topo se não estiver na trilha principal."""
@@ -85,8 +86,8 @@ class EstadoAula:
 
     @property
     def historico(self) -> list[str]:
-        """Retorna a lista de gatilhos de ramos visitados."""
-        return self._historico
+        """Retorna uma cópia da lista de gatilhos de ramos visitados."""
+        return list(self._historico)
 
     def resumo(self) -> str:
         """
@@ -96,8 +97,8 @@ class EstadoAula:
         - posição atual
         - histórico de gatilhos (se houver)
         """
-        label = self._aula.topico or self._aula.titulo
-        dados_str = f"dados={self._aula.dados}" if self._aula.dados else ""
+        label = self.aula.topico or self.aula.titulo
+        dados_str = f"dados={self.aula.dados}" if self.aula.dados else ""
         posicao = self.trilha.posicao
         historico_str = f"historico={self._historico}" if self._historico else ""
 

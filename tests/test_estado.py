@@ -27,3 +27,30 @@ def test_historico_registra_gatilhos():
     e = EstadoAula(A)
     e.proximo(); e.entra_ramo("por_que"); list(e.drena_ramo())
     assert e.historico == ["por_que"]
+
+def test_aula_public():
+    """aula deve ser público (Task 11 acessa est.aula.ramos e est.aula.titulo)."""
+    e = EstadoAula(A)
+    assert e.aula is A
+
+def test_drena_ramo_noop_na_principal():
+    """drena_ramo() deve ser no-op quando já está na trilha principal."""
+    e = EstadoAula(A)
+    # Chamar drena_ramo() sem entra_ramo() anterior (já está na principal)
+    resultado = list(e.drena_ramo())
+    assert resultado == []  # yields nothing
+    assert e.na_principal   # ainda está na principal
+    assert e.proximo()["diz"] == "p1"  # proximo() retorna o primeiro beat
+
+def test_historico_returns_copy():
+    """historico property deve retornar uma cópia, não a lista interna."""
+    e = EstadoAula(A)
+    e.proximo(); e.entra_ramo("por_que"); list(e.drena_ramo())
+    h1 = e.historico
+    h2 = e.historico
+    assert h1 == ["por_que"]
+    assert h2 == ["por_que"]
+    assert h1 is not h2  # são objetos diferentes
+    # Tentar mutar a cópia não deve afetar o estado interno
+    h1.append("fake")
+    assert e.historico == ["por_que"]  # não foi afetado
