@@ -21,6 +21,15 @@ def test_pitagoras_cateto():
     assert r.passos[0] == "b^2 = c^2 - a^2"
     assert "3^2" in r.passos[1] and "5^2" in r.passos[1]
 
+
+def test_pitagoras_cateto_b_conhecido():
+    # F5: com `b` conhecido, a incógnita é `a` — a equação não pode mentir que
+    # o conhecido era `a`.
+    r = pitagoras(b=4, c=5)
+    assert round(r.valor, 4) == 3.0
+    assert r.passos[0] == "a^2 = c^2 - b^2"
+    assert "4^2" in r.passos[1] and "5^2" in r.passos[1]
+
 def test_eq_render_negativo():
     r = eq_primeiro_grau(3, -15)                 # 3x - 15 = 0
     assert "3x - 15 = 0" in r.passos[0].replace("\\", "")

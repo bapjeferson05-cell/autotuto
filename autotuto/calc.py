@@ -36,12 +36,17 @@ def pitagoras(a=None, b=None, c=None) -> Resultado:
             r"c^2 = a^2 + b^2",
             rf"c^2 = {_n(a)}^2 + {_n(b)}^2 = {_n(a*a + b*b)}",
             rf"c = \sqrt{{{_n(a*a + b*b)}}} = {c:.4g}"])
-    con = a if a is not None else b          # cateto conhecido = a; incógnita = b
+    # F5: rotula a incógnita conforme o cateto que veio na chamada — antes
+    # sempre escrevia "b^2 = c^2 - a^2" mesmo quando o conhecido era `b`.
+    if a is not None:                        # a conhecido, resolve b
+        con, incog, outro = a, "b", "a"
+    else:                                    # b conhecido, resolve a
+        con, incog, outro = b, "a", "b"
     cat = math.sqrt(c * c - con ** 2)
     return Resultado(round(cat, 4), [
-        r"b^2 = c^2 - a^2",
-        rf"b^2 = {_n(c)}^2 - {_n(con)}^2 = {_n(c*c - con*con)}",
-        rf"b = \sqrt{{{_n(c*c - con*con)}}} = {cat:.4g}"])
+        rf"{incog}^2 = c^2 - {outro}^2",
+        rf"{incog}^2 = {_n(c)}^2 - {_n(con)}^2 = {_n(c*c - con*con)}",
+        rf"{incog} = \sqrt{{{_n(c*c - con*con)}}} = {cat:.4g}"])
 
 def eq_primeiro_grau(a, b) -> Resultado:
     x = Fraction(-b).limit_denominator() / Fraction(a).limit_denominator()

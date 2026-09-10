@@ -4,7 +4,7 @@ O coração do sistema: o professor ou responde de verdade, ou admite que não
 preparou aquilo. Nunca finge. Estes testes travam esse comportamento.
 """
 from autotuto.aulas import carregar
-from autotuto.tocador import Tocador, HONESTO
+from autotuto.tocador import Tocador, HONESTO, _FILLER, _VOLTA
 
 
 def roda(nome, *, barge=None, quando=2, resp=None, cerebro=None):
@@ -127,6 +127,95 @@ def test_gerador_torto_nao_derruba_a_sessao():
     Tocador(falar=lambda t: L.append(t) or None, ouvir=lambda s: None,
             desenhar=lambda p, r: None, pausas=False, cerebro=None).toca(aula)
     assert L == ["um", "dois", "tres"]
+
+
+_P0 = "Essa é a fórmula geral, valendo pra qualquer trapézio."
+_P1 = ("Agora entram os números do terreno: dezoito e dez nas bases, "
+       "seis na altura.")
+_P2 = ("Vinte e oito vezes seis dá cento e sessenta e oito, e a metade "
+       "disso é oitenta e quatro.")
+
+
+def test_retomada_do_calc_nao_rele_passos_ja_narrados():
+    # F4: barge no 1º passo narrado da fórmula -> depois do desvio, os passos
+    # seguintes são narrados UMA vez cada, a partir de onde parou (não do zero).
+    L = []
+
+    def falar(t):
+        L.append(t)
+        return "por que divide por dois?" if t == _P0 else None
+
+    Tocador(falar=falar, ouvir=lambda s: None, desenhar=lambda p, r: None,
+            pausas=False, cerebro=None).toca(carregar("trapezio"))
+    assert L.count(_P0) == 1          # dito só antes do barge, não re-narrado
+    assert L.count(_P1) == 1          # narrado uma vez, na retomada
+    assert L.count(_P2) == 1
+    assert all(L.count(p) <= 2 for p in (_P0, _P1, _P2))
+
+
+def test_barge_de_novo_na_retomada_e_honesto_e_segue():
+    # F2/F4: interromper DE NOVO durante a retomada do calc -> exatamente um
+    # HONESTO e a aula continua até o valor final (sem recursão de recuperação).
+    L = []
+
+    def falar(t):
+        L.append(t)
+        if t == _P0:
+            return "por que divide por dois?"
+        if t == _P1:
+            return "quanto custa o pedreiro"      # 2º barge, no meio da retomada
+        return None
+
+    Tocador(falar=falar, ouvir=lambda s: None, desenhar=lambda p, r: None,
+            pausas=False, cerebro=None).toca(carregar("trapezio"))
+    assert sum(HONESTO in x for x in L) == 1
+    assert any("oitenta e quatro" in x.lower() for x in L)   # chegou no valor final
+
+
+def test_re_pergunta_mesmo_ramo_recebe_filler_nao_silencio():
+    # F3: aluno JÁ no ramo `por_que` interrompe com algo que re-classifica pro
+    # mesmo `por_que` -> filler falado (não silêncio), sem re-entrar no ramo,
+    # e o ramo termina normal com _VOLTA.
+    seen = []
+
+    def falar(t):
+        seen.append(t)
+        if t.startswith("A parede e o chão"):
+            return "mas por que isso funciona?"       # entra no por_que
+        if t.startswith("Desenha um quadrado"):
+            return "por quê?"                          # re-classifica pro mesmo ramo
+        return None
+
+    est = Tocador(falar=falar, ouvir=lambda s: None,
+                  pausas=False, cerebro=None).toca(carregar("pitagoras"))
+    assert seen.count(_FILLER["por_que"]) >= 2         # entrada + o ack da re-pergunta
+    assert _VOLTA in seen                              # o ramo terminou normal
+    assert est.historico == ["por_que"]               # não re-entrou no ramo
+
+
+def test_figura_calc_string_crua_nao_derruba(tmp_path, monkeypatch):
+    # F7: um plano do LLM com figura/calc como STRING (não objeto) não pode
+    # estourar. Antes: fig["gerador"] -> TypeError -> fig.get(...) no print ->
+    # AttributeError não tratado -> aborta toca().
+    monkeypatch.chdir(tmp_path)
+    t = Tocador(falar=lambda x: None, ouvir=lambda s: None,
+                desenhar=lambda p, r: None, pausas=False, cerebro=None)
+    assert t._toca_bloco({"diz": "x", "figura": "trapezio",
+                          "calc": "area_trapezio"}) is None
+
+    from autotuto.schema import Aula
+    aula = Aula.de_json({
+        "titulo": "torta", "topico": "t", "dados": {},
+        "blocos": [
+            {"diz": "um", "figura": "trapezio", "calc": "area_trapezio"},
+            {"diz": "dois"},
+        ],
+        "ramos": {},
+    })
+    L = []
+    Tocador(falar=lambda x: L.append(x) or None, ouvir=lambda s: None,
+            desenhar=lambda p, r: None, pausas=False, cerebro=None).toca(aula)
+    assert L == ["um", "dois"]
 
 
 def test_modo_gravacao_scriptado():

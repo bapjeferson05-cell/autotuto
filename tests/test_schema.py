@@ -24,6 +24,23 @@ def test_acerta_tem_que_ser_lista_de_strings():
            {"escuta_s": 10, "senao": "por_que", "acerta": "triangulo"}}]}
     assert any("acerta" in e for e in validar_estrutura(obj))
 
+def test_figura_string_crua_e_erro():
+    # F7: `figura` como string (não objeto) — o schema tem que pegar
+    obj = {**AULA_OK, "blocos": [{"diz": "x", "figura": "trapezio"}]}
+    assert any("figura" in e for e in validar_estrutura(obj))
+
+
+def test_calc_com_gerador_nao_texto_e_erro():
+    obj = {**AULA_OK, "blocos": [{"diz": "x", "calc": {"gerador": 123}}]}
+    assert any("calc.gerador" in e for e in validar_estrutura(obj))
+
+
+def test_figura_inline_valida_nao_tem_erro():
+    obj = {**AULA_OK, "blocos": [{"diz": "x", "figura":
+           {"gerador": "figura", "spec": {"pontos": {}}}}]}
+    assert validar_estrutura(obj) == []
+
+
 def test_de_json_e_para_json_roundtrip():
     a = Aula.de_json(AULA_OK)
     assert a.para_json()["titulo"] == "T"

@@ -34,6 +34,27 @@ def validar_estrutura(o: dict) -> list[str]:
         onde = f"bloco[{i}]"
         if not (b.get("diz") or b.get("figura") or b.get("calc")):
             erros.append(f"{onde}: vazio (precisa de diz, figura ou calc)")
+        # F7: sem estes checks, uma `figura`/`calc` como string crua passa aqui e
+        # só estoura lá no tocador (TypeError). Trava a forma no schema.
+        if "figura" in b:
+            fig = b["figura"]
+            if not isinstance(fig, dict):
+                erros.append(f"{onde}.figura: tem que ser objeto")
+            elif not isinstance(fig.get("gerador"), str):
+                erros.append(f"{onde}.figura.gerador: falta ou não é texto")
+            elif fig["gerador"] == "figura":
+                if fig.get("spec") is not None and not isinstance(fig["spec"], dict):
+                    erros.append(f"{onde}.figura.spec: objeto ou omita")
+            elif fig.get("params") is not None and not isinstance(fig["params"], dict):
+                erros.append(f"{onde}.figura.params: objeto ou omita")
+        if "calc" in b:
+            cl = b["calc"]
+            if not isinstance(cl, dict):
+                erros.append(f"{onde}.calc: tem que ser objeto")
+            elif not isinstance(cl.get("gerador"), str):
+                erros.append(f"{onde}.calc.gerador: falta ou não é texto")
+            elif cl.get("params") is not None and not isinstance(cl["params"], dict):
+                erros.append(f"{onde}.calc.params: objeto ou omita")
         pg = b.get("pergunta")
         if pg is not None:
             if not isinstance(pg, dict):

@@ -99,9 +99,10 @@ class Tocador:
         (d / f"{self._n_png:02d}_{rotulo}.png").write_bytes(png)
 
     # ───────────────────────────────────────────────────────────────── um beat
-    def _toca_bloco(self, bloco: dict, *, retomar: bool = False):
+    def _toca_bloco(self, bloco: dict, *, retomar: bool = False, desde: int = 0):
         """Toca um beat. Devolve:
-        ("barge", fala)      -> o aluno interrompeu
+        ("barge", fala)      -> o aluno interrompeu durante o `diz`
+        ("barge", fala, i)   -> interrompeu durante o passo `i` do `calc`
         ("resposta", fala|None) -> resposta a um beat de pergunta
         None                 -> seguiu normal
 
@@ -109,8 +110,17 @@ class Tocador:
         voltou do ramo. Pula a figura (já está na tela) e o `diz` (já foi dito),
         e roda SÓ o `calc` (com o `diz_passos`) + o `espera` — pra fórmula/conta
         do beat não sumir. Ver F1.
+
+        `desde`: no replay do `calc`, começa do passo `desde` — os passos antes
+        dele o aluno já viu E ouviu antes de interromper, não repete (F4).
         """
         fig = bloco.get("figura")
+        # F7: aula do LLM pode mandar `figura` como string crua em vez de objeto —
+        # o schema hoje deixa passar. Sem este guarda, `fig["gerador"]` estoura
+        # TypeError e o `print` do except estoura AttributeError e derruba `toca()`.
+        if fig and not retomar and not isinstance(fig, dict):
+            print("[tocador] figura não é um objeto, pulando", file=sys.stderr)
+            fig = None
         if fig and not retomar:
             try:
                 gerador = fig["gerador"]
@@ -120,7 +130,7 @@ class Tocador:
                     png = GERADORES[gerador](**(fig.get("params") or {}))
                 self.desenhar(png, gerador)
             except Exception as e:  # gerador desconhecido / params ruins numa aula do LLM
-                print(f"[tocador] figura {fig.get('gerador')!r} falhou, pulando: {e!r}",
+                print(f"[tocador] figura {fig!r} falhou, pulando: {e!r}",
                       file=sys.stderr)
 
         if bloco.get("diz") and not retomar:
@@ -140,23 +150,29 @@ class Tocador:
             seg = int(bloco["pergunta"].get("escuta_s", 12))
             return ("resposta", self.ouvir(seg))
 
-        if bloco.get("calc"):
-            c = bloco["calc"]
+        c = bloco.get("calc")
+        # F7: mesmo caso da figura — `calc` pode chegar como string crua.
+        if c and not isinstance(c, dict):
+            print("[tocador] calc não é um objeto, pulando", file=sys.stderr)
+            c = None
+        if c:
             try:
                 r = calc.CATALOGO[c["gerador"]](**(c.get("params") or {}))
             except Exception as e:  # gerador desconhecido / params ruins numa aula do LLM
-                print(f"[tocador] calc {c.get('gerador')!r} falhou, pulando: {e!r}",
+                print(f"[tocador] calc {c!r} falhou, pulando: {e!r}",
                       file=sys.stderr)
                 r = None
             if r is not None:
                 passos = r.passos if bloco.get("mostra_passos") else r.passos[-1:]
                 diz_passos = bloco.get("diz_passos") or []
                 for i, latex in enumerate(passos):
+                    if i < desde:          # já visto+ouvido antes do barge — não repete
+                        continue
                     self.desenhar(lousa.passo_latex(latex), f"passo{i + 1}")
                     if diz_passos and i < len(diz_passos) and diz_passos[i]:
                         fala = self.falar(diz_passos[i])
                         if fala:
-                            return ("barge", fala)
+                            return ("barge", fala, i)
                     elif self.pausas:
                         time.sleep(1.1 if i < len(passos) - 1 else 0.7)
 
@@ -192,7 +208,12 @@ class Tocador:
                     est.sai_ramo()
                     self._entra_ramo(est, g2)
                     return
-                if g2 is None:
+                elif g2 == gat:
+                    # F3: o aluno re-pergunta o mesmo ramo que já está rolando.
+                    # Não re-entra (loop); reconhece e segue drenando — nunca
+                    # ignorar o aluno em silêncio (SPEC §7).
+                    self.falar(_FILLER.get(gat, _FILLER_DEFAULT))
+                elif g2 is None:
                     self.falar(HONESTO)
         self.falar(_VOLTA)
 
@@ -259,6 +280,13 @@ class Tocador:
             if gat:
                 self._entra_ramo(est, gat, filler=(not r or r[0] == "barge"))
             if retomar_calc:
-                self._toca_bloco(bloco, retomar=True)
+                # F4: se o barge foi durante o `calc`, o replay começa do passo
+                # seguinte — não relê o que o aluno já ouviu.
+                desde = r[2] + 1 if len(r) > 2 else 0
+                r2 = self._toca_bloco(bloco, retomar=True, desde=desde)
+                if r2 and r2[0] == "barge":
+                    # F2/F4: interrompeu DE NOVO durante a retomada. Um nível de
+                    # recuperação basta — ack honesto e a aula segue (sem recursão).
+                    self.falar(HONESTO)
 
         return est
