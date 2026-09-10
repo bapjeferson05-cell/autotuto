@@ -77,3 +77,38 @@ def test_pergunta_senao_aponta_ramo_existente(nome):
         pg = beat.get("pergunta")
         if pg:
             assert pg["senao"] in aula.ramos
+
+
+@pytest.mark.parametrize("nome", NOMES)
+def test_diz_passos_casa_com_numero_de_passos_do_calc(nome):
+    # o tocador narra uma frase de diz_passos por passo do calc — contagens
+    # diferentes engolem frase ou deixam passo mudo
+    aula = carregar(nome)
+    for beat in _todos_os_beats(aula):
+        dp = beat.get("diz_passos")
+        c = beat.get("calc")
+        if dp is None or c is None:
+            continue
+        passos = CALC_CATALOGO[c["gerador"]](**c["params"]).passos
+        assert len(dp) == len(passos), (nome, c["gerador"], len(dp), len(passos))
+
+
+@pytest.mark.parametrize("nome", NOMES)
+def test_nenhuma_fala_tem_latex(nome):
+    # `diz` e `confirma` são falados: nada de barra invertida, circunflexo ou "frac"
+    aula = carregar(nome)
+    for beat in _todos_os_beats(aula):
+        falas = [beat.get("diz", "")]
+        pg = beat.get("pergunta") or {}
+        falas.append(pg.get("confirma", "") or "")
+        falas += list(beat.get("diz_passos") or [])
+        for f in falas:
+            assert "\\" not in f and "^" not in f and "frac" not in f, (nome, f)
+
+
+def test_carregar_nao_vaza_mutacao_entre_execucoes():
+    # o tocador escreve nos beats; cada carregar() tem que dar um objeto novo
+    a1 = carregar("trapezio")
+    a1.blocos[0]["_resultado"] = "sujeira"
+    a2 = carregar("trapezio")
+    assert "_resultado" not in a2.blocos[0]

@@ -21,6 +21,8 @@ Dependência: só `autotuto.schema`. Nomes de gerador/calc entram como string.
 """
 from __future__ import annotations
 
+import copy
+
 from autotuto.schema import Aula
 
 # ───────────────────────────────────────────────────────── ramos genéricos
@@ -113,13 +115,14 @@ TRAPEZIO: dict = {
                     "de mesma área. Um retângulo na base maior, dezoito por seis, "
                     "seria área demais; na base menor, dez por seis, seria de menos.",
              "figura": {"gerador": "figura", "spec": {
-                 "pontos": {"A": [0, 0], "B": [10, 0], "C": [10, 6], "D": [0, 6],
-                            "E": [16, 0], "F": [24, 0], "G": [24, 6], "H": [16, 6]},
+                 "pontos": {"A": [0, 0], "B": [18, 0], "C": [18, 6], "D": [0, 6],
+                            "E": [24, 0], "F": [34, 0], "G": [34, 6], "H": [24, 6]},
                  "poligonos": [{"vs": ["A", "B", "C", "D"], "preenche": True},
                                {"vs": ["E", "F", "G", "H"], "preenche": True}],
-                 "rotulos": [{"xy": [5, 3], "texto": "10 x 6"},
-                             {"xy": [20, 3], "texto": "8 x 6"},
-                             {"xy": [13, 3], "texto": "+"}]}},
+                 "rotulos": [{"xy": [9, 3], "texto": "18 x 6"},
+                             {"xy": [9, -1.2], "texto": "demais"},
+                             {"xy": [29, 3], "texto": "10 x 6"},
+                             {"xy": [29, -1.2], "texto": "de menos"}]}},
              "espera": "media"},
             {"diz": "A média fica no meio: dezoito mais dez dá vinte e oito, dividido "
                     "por dois dá quatorze. Um retângulo de quatorze por seis tem "
@@ -334,7 +337,9 @@ EQ_PRIMEIRO_GRAU: dict = {
                     "O caminho é sempre o mesmo.",
              "calc": {"gerador": "eq_primeiro_grau", "params": {"a": 3, "b": -3}},
              "mostra_passos": True,
-             "diz_passos": ["Três x igual a três.",
+             "diz_passos": ["Tirando cinco dos dois lados, sobra três x menos três "
+                            "igual a zero.",
+                            "Isso é três x igual a três.",
                             "Dividindo por três, x é igual a um."],
              "espera": "longa"},
         ],
@@ -386,9 +391,8 @@ REGRA_DE_TRES: dict = {
          "mostra_passos": True,
          "diz_passos": ["Três está pra vinte e quatro assim como cinco está pro preço "
                         "que eu quero.",
-                        "Multiplicando cruzado, o preço é vinte e quatro vezes cinco "
-                        "dividido por três.",
-                        "Cento e vinte sobre três dá quarenta reais."],
+                        "Multiplicando cruzado, é vinte e quatro vezes cinco dividido "
+                        "por três: cento e vinte sobre três dá quarenta reais."],
          "espera": "longa"},
         {"diz": "Quarenta reais. Dá pra conferir pelo preço de um caderno: vinte e "
                 "quatro sobre três é oito, e cinco vezes oito é quarenta.",
@@ -423,9 +427,13 @@ _CATALOGO = {"trapezio": TRAPEZIO, "pitagoras": PITAGORAS,
 
 
 def carregar(nome: str) -> Aula:
-    """A aula de ouro `nome`, já com os ramos genéricos mergeados."""
-    return Aula.de_json(_com_genericos(_CATALOGO[nome]))
+    """A aula de ouro `nome`, já com os ramos genéricos mergeados.
+
+    Deep copy: o tocador escreve `_resultado`/`_resp_scriptada` nos beats, e os
+    dicts aqui são de módulo — sem a cópia, uma execução contamina a próxima.
+    """
+    return Aula.de_json(copy.deepcopy(_com_genericos(_CATALOGO[nome])))
 
 
 def disponiveis() -> list[str]:
-    return ["trapezio", "pitagoras", "eq_primeiro_grau", "regra_de_tres"]
+    return list(_CATALOGO)
