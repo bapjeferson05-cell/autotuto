@@ -1,0 +1,30 @@
+:root {
+  --fundo: #0e2a22;
+  --fundo-alto: #123328;
+  --giz: #eaeaea;
+  --fraco: #8fa79c;
+  --destaque: #f2b134;
+  --azul: #5ab1e0;
+  --verde: #7bd88f;
+  --erro: #e06a5a;
+
+  color-scheme: dark;
+  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--giz);
+  background: var(--fundo);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--fundo);
+}

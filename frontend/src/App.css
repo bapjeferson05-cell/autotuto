@@ -1,0 +1,212 @@
+.app {
+  height: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cabecalho {
+  padding: 20px 0 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cabecalho h1 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 500;
+  font-size: 28px;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.cabecalho p {
+  margin: 4px 0 0;
+  color: var(--fraco);
+  font-size: 14px;
+}
+
+.chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 16px;
+}
+
+.transcript {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 4px 16px;
+}
+
+.vazio {
+  color: var(--fraco);
+  text-align: center;
+  margin: auto;
+  max-width: 44ch;
+  line-height: 1.6;
+}
+
+.msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  line-height: 1.5;
+}
+
+.msg p {
+  margin: 0;
+}
+
+.msg.aluno {
+  align-self: flex-end;
+  background: var(--destaque);
+  color: #14100a;
+  border-bottom-right-radius: 4px;
+}
+
+.msg.professor {
+  align-self: flex-start;
+  background: var(--fundo-alto);
+  border: 1px solid #ffffff14;
+  border-bottom-left-radius: 4px;
+}
+
+.msg.pensando {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  padding: 14px;
+}
+
+.ponto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fraco);
+  animation: pulsa 1s infinite ease-in-out;
+}
+
+.ponto:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.ponto:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes pulsa {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.math-display {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.math-display .figura {
+  max-width: 100%;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.math-display .formula {
+  align-self: stretch;
+  overflow-x: auto;
+  background: #00000030;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.erro {
+  align-self: center;
+  color: var(--erro);
+  background: #e06a5a1a;
+  border: 1px solid #e06a5a40;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.fim {
+  align-self: center;
+  text-align: center;
+  color: var(--fraco);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px;
+}
+
+.entrada {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.entrada input {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #ffffff2a;
+  background: #00000030;
+  color: var(--giz);
+  font: inherit;
+  outline: none;
+}
+
+.entrada input:focus {
+  border-color: var(--destaque);
+}
+
+.entrada button,
+.fim button {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--destaque);
+  color: #14100a;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.entrada button.secundario {
+  background: var(--azul);
+  color: #06202e;
+}
+
+.entrada button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.entrada button:not(:disabled):hover,
+.fim button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 480px) {
+  .msg {
+    max-width: 95%;
+  }
+}

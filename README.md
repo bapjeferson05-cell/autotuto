@@ -72,6 +72,24 @@ python3 -m venv .venv && .venv/bin/pip install matplotlib numpy pillow
 .venv/bin/python cerebro_shootout.py
 ```
 
+### Modo web (backend + frontend) — chat no navegador
+
+Mesmo `professor/` de sempre, exposto por HTTP em vez de voz/terminal: um backend
+FastAPI toca a aula um passo por vez, um frontend React mostra o chat, as figuras e os
+passos da conta (renderizados com KaTeX).
+
+```bash
+# backend
+python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt
+.venv/bin/uvicorn backend.app:app --reload          # http://localhost:8000
+
+# frontend (outro terminal)
+cd frontend && npm install && npm run dev            # http://localhost:5173
+```
+
+Ou os dois de uma vez com Docker: `cp .env.example .env` (preenche a `ANTHROPIC_API_KEY`),
+depois `docker compose up --build` → `http://localhost:8080`.
+
 ### Com voz e visor (precisa do stack de áudio do jarvis)
 
 ```bash
@@ -109,6 +127,8 @@ com **caixa de som, sem fone**. Cérebro: `PROF_LLM=claude` (rápido, ~4s) ou
 | `professor/aulas.py` | **aulas de ouro** escritas à mão: `trapezio`, `pitagoras`, `eq_primeiro_grau` (balança), `regra_de_tres` (proporção) — o MVP e o few-shot dirigido do planejador |
 | `professor/voz.py` | ponte pro jarvis (Piper + faster-whisper + barge-in). `falar` com cão-de-guarda; `ouvir` limitado; injeção por teclado |
 | `professor/visor.py` | a tela: `http.server` stdlib, tema lousa, caixa de texto, teclas de contingência |
+| `backend/app.py` + `backend/services/sessao.py` | API HTTP do mesmo `professor/` — um beat por request (sessão em memória), pro modo web |
+| `frontend/` | chat em React+TypeScript: mostra a fala, a figura e os passos da conta (KaTeX) |
 | `PROJETO.md` | a arquitetura e o MVP em detalhe |
 | `COBERTURA.md` | relatório do renderizador contra as ~100 figuras |
 | `PESQUISA_matematica-de-gente.md` | 5 princípios de pesquisa educacional mapeados pro código |
@@ -123,4 +143,5 @@ com **caixa de som, sem fone**. Cérebro: `PROF_LLM=claude` (rápido, ~4s) ou
 - ✅ 4 aulas de ouro · passos narrados · few-shot dirigido por tópico
 - ✅ voz (Piper + faster-whisper + barge-in + AEC) · visor · modo voz / texto / o-aluno-começa
 - ✅ contingência de teclado (mic ruim no palco)
+- ✅ modo web: backend FastAPI (`backend/`) + frontend React/KaTeX (`frontend/`) + Docker
 - ⏳ mais aulas de ouro · renderer: caprichar toro + Arquimedes · versão celular
