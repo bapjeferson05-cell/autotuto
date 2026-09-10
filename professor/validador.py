@@ -284,6 +284,13 @@ def valida_bloco(bloco: dict, *, onde: str = "bloco", ramos_validos: set | None 
             es = pg.get("escuta_s", 12)
             if not isinstance(es, (int, float)) or not (3 <= es <= 60):
                 rel.problemas.append(f"{onde}.pergunta.escuta_s deve ser um número de 3 a 60")
+            ac = pg.get("acerta")
+            if ac is not None and (not isinstance(ac, list)
+                                   or not all(isinstance(x, str) for x in ac)):
+                rel.problemas.append(f"{onde}.pergunta.acerta deve ser uma lista de textos (ou omita)")
+            cf = pg.get("confirma")
+            if cf is not None and not isinstance(cf, str):
+                rel.problemas.append(f"{onde}.pergunta.confirma deve ser um texto (ou omita)")
 
     if "figura" in bloco and bloco["figura"]:
         params, erros = _valida_chamada(bloco["figura"], "figura")

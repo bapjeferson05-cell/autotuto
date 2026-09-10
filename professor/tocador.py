@@ -77,7 +77,8 @@ class Tocador:
                 time.sleep(self.settle)
             fala = self.falar(bloco["diz"])
             if fala:
-                return ("barge", fala)
+                # falou DURANTE a pergunta = é a resposta dele, não interrupção
+                return ("resposta" if bloco.get("pergunta") else "barge", fala)
         if bloco.get("pergunta"):
             if "_resp_scriptada" in bloco:
                 return ("resposta", bloco["_resp_scriptada"])
@@ -131,12 +132,18 @@ class Tocador:
                     print(f'  🎤 "{dita}"')
                     achou = classificar(dita, est.aula.ramos)
                     # acertou = SÓ se casa uma palavra da lista 'acerta' (senao é o
-                    # destino de quem errou/calou — nunca conta como acerto). E se a
-                    # resposta não é uma pergunta de volta ('...?', 'não sei').
+                    # destino de quem errou/calou — nunca conta como acerto). E se não
+                    # for um ECO da pergunta: devolveu "?" repetindo a disjunção
+                    # ("maior ou menor?") ou o "por que" do professor, ou disse que
+                    # não sabe.
                     d = _norm(dita)
-                    pergunta_de_volta = dita.rstrip().endswith("?") or "nao sei" in d
-                    acertou = (not pergunta_de_volta
-                               and any(_norm(k) in d for k in pg.get("acerta", [])))
+                    eco = "nao sei" in d or (
+                        dita.rstrip().endswith("?")
+                        and (" ou " in f" {d} " or "por que" in d or "porque" in d))
+                    acerta = pg.get("acerta") or []
+                    if isinstance(acerta, str):
+                        acerta = [acerta]
+                    acertou = not eco and any(_norm(k) in d for k in acerta)
                     if acertou and pg.get("confirma"):           # fading: confirma curto, pula a derivação
                         print("  ✓ acertou — pula a derivação (fading)")
                         self.falar(pg["confirma"])

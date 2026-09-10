@@ -127,8 +127,10 @@ class Visor:
         """No modo texto/sem-TTS: fala pelo `ritmo` e devolve a fala do aluno se
         ele apertar uma tecla de contingência no meio (o Tocador trata como barge-in)."""
         self.mostrar_fala(texto)
+        if not self.ritmo:
+            return None
         fim = time.monotonic() + min(len(texto) * self.ritmo, 8.0)
-        while self.ritmo and time.monotonic() < fim:
+        while time.monotonic() < fim:
             t = self.pop_injecao()
             if t:
                 return t
