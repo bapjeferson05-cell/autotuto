@@ -6,7 +6,15 @@ build-backend = "setuptools.build_meta"
 name = "autotuto"
 version = "0.2.0"
 requires-python = ">=3.13"
-dependencies = ["matplotlib", "numpy", "pillow", "piper-tts", "faster-whisper"]
+# versões travadas nas que foram testadas — é app de demo, não lib; preferimos
+# "quebrou, mas do jeito que já conhecemos" a "quebrou de surpresa no dia".
+dependencies = [
+    "matplotlib==3.11.1",
+    "numpy==2.5.3",
+    "pillow==12.3.0",
+    "piper-tts==1.8.0",
+    "faster-whisper==1.2.1",
+]
 
 [tool.setuptools]
 packages = ["autotuto", "autotuto.figuras"]

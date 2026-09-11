@@ -77,7 +77,7 @@ Fase 1 encerra 20/09/2026 · Fase 2 05/10/2026.*
 ## 5. O pedido / roadmap (20 s)
 
 > "Hoje: 4 aulas de ouro (trapézio, Pitágoras, equação do 1º grau, regra de três), o
-> ciclo de interrupção honesto fechado e testado (120 testes automatizados). Fase 2:
+> ciclo de interrupção honesto fechado e testado (121 testes automatizados). Fase 2:
 > mais aulas, o renderizador ao vivo no navegador, e o kit open source pra qualquer
 > professor montar as aulas dele. O código está no GitHub, licença aberta."
 

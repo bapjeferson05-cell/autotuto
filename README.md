@@ -128,6 +128,6 @@ vivem em `autotuto/config.py`.
 - ✅ 4 aulas de ouro · passos narrados (dual coding) · few-shot dirigido por tópico
 - ✅ voz (Piper + faster-whisper, adapter próprio) · visor · modo voz / texto / roteiro
 - ✅ teclado como caminho principal de interrupção (mic é bônus, `BARGE_IN=0` por padrão)
-- ✅ 120 testes, 0 warnings
+- ✅ 121 testes, 0 warnings
 - ⏳ primitiva de círculo nas figuras · mais aulas de ouro · renderer ao vivo no navegador
   (Fase 2) · teste do caminho de mic (`BARGE_IN=1`) com hardware real

@@ -19,10 +19,24 @@ os.environ.setdefault("AUTOTUTO_BARGE_IN", "0")  # ANTES de importar config/voz
 
 _MIN_LETRAS = 4  # abaixo disso, é ruído/silêncio "transcrito" (ex.: ". . . ."), não pergunta
 
+# faster-whisper "alucina" essas frases a partir de silêncio/ruído — têm letras de
+# sobra (passariam no _MIN_LETRAS), mas não são o aluno falando.
+_ALUCINACOES = (
+    "legendado pela comunidade",
+    "legendas pela comunidade",
+    "amara.org",
+    "obrigado por assistir",
+    "inscreva-se no canal",
+    "www.",
+)
+
 
 def _parece_pergunta(txt: str) -> bool:
     # isalpha() por caractere (Unicode de verdade) — o range Latin-1 usado antes
     # deixava símbolos como × e ÷ passarem como "letra".
+    t = txt.lower()
+    if any(a in t for a in _ALUCINACOES):
+        return False
     return sum(1 for c in txt if c.isalpha()) >= _MIN_LETRAS
 
 from autotuto import planejador  # noqa: E402
@@ -82,6 +96,9 @@ def main() -> None:
                 aula, rel = planejador.planeja(problema)
                 if not rel.ok:
                     print(f"[demo_voz] planejador caiu no fallback: {rel.erros}")
+                    # honesto: não troca a pergunta por outro assunto em silêncio
+                    falar("Não consegui montar uma aula nova pra essa pergunta agora "
+                         "— vou com uma que já tenho pronta.")
                 tocador.toca(aula)
                 visor.estado("aguardando")
     except KeyboardInterrupt:

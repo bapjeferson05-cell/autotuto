@@ -240,7 +240,14 @@ class Visor:
                 if body:
                     self.wfile.write(body)
 
-        self._srv = ThreadingHTTPServer((self.host, self.porta), H)
+        try:
+            self._srv = ThreadingHTTPServer((self.host, self.porta), H)
+        except OSError as e:
+            raise OSError(
+                f"não consegui abrir a porta {self.porta} ({e}). Provavelmente um "
+                f"demo antigo ainda está de pé — mata o processo antigo (ou passa "
+                f"outra porta pro Visor) antes de rodar de novo."
+            ) from e
         threading.Thread(target=self._srv.serve_forever, daemon=True).start()
         print(f"visor → http://localhost:{self.porta}")
         return self

@@ -37,5 +37,6 @@ def test_parece_pergunta_ignora_ruido_e_aceita_pergunta_real():
     assert not _parece_pergunta("")
     assert not _parece_pergunta("uh")
     assert not _parece_pergunta("× ÷ ×")           # símbolos não contam como letra
+    assert not _parece_pergunta("Legendado pela comunidade Amara.org")  # alucinação do whisper
     assert _parece_pergunta("por que divide por dois")
     assert _parece_pergunta("quero entender trapézio")

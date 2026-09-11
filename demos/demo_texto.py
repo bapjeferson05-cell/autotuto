@@ -51,6 +51,9 @@ def main() -> None:
             aula, rel = planejador.planeja(problema)
             if not rel.ok:
                 print(f"[demo_texto] planejador caiu no fallback: {rel.erros}")
+                # honesto: não troca a pergunta por outro assunto em silêncio
+                visor.falar("Não consegui montar uma aula nova pra essa pergunta agora "
+                            "— vou com uma que já tenho pronta.")
             tocador.toca(aula)
             visor.estado("aguardando")
             visor.mostrar_fala("Pode perguntar outra coisa.")

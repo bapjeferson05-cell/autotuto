@@ -41,10 +41,11 @@ def main() -> None:
     print(f"[demo_roteiro] fim — {est.resumo()}")
     try:
         while True:
-            # a caixa de texto do visor fica visível (estado "pronto"), mas esse
-            # modo é 100% scriptado — sem isso, uma pergunta digitada ficava presa
-            # em "pensando" pra sempre (achado ao vivo nesta sessão).
-            pergunta = visor.pop_pergunta()
+            # a caixa de texto E as teclas de contingência do visor ficam ativas
+            # (estado "pronto"), mas esse modo é 100% scriptado — sem drenar os
+            # dois, uma pergunta digitada OU uma tecla apertada ficava presa em
+            # "pensando"/"ouvindo" pra sempre (achado ao vivo nesta sessão).
+            pergunta = visor.pop_pergunta() or visor.pop_injecao()
             if pergunta:
                 visor.mostrar_fala("Esse é o modo gravação (scriptado) — não respondo "
                                    "pergunta ao vivo aqui. Roda o demo_texto.py ou o "
