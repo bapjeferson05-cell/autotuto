@@ -19,6 +19,9 @@ FALA_TIMEOUT_S = 12.0                                # cão-de-guarda do Piper
 GRAVA_RESTO_S  = 2.0                                 # quanto grava após o corte
 SILENCIO_MS    = 400                                 # silêncio que fecha a gravação
 TTS_LENGTH_SCALE = 1.0
+TTS_NOISE_SCALE = 0.667                              # textura da voz (default típico do Piper)
+TTS_NOISE_W_SCALE = 0.8                              # variação do timing dos fonemas
+TTS_JITTER = 0.08                                    # +/- sorteado por fala (evita soar sempre igual)
 
 # Ritmo / visor
 SETTLE_S       = 0.4                                 # figura aparece ANTES da fala

@@ -17,6 +17,7 @@ Garantias:
 """
 from __future__ import annotations
 
+import random
 import subprocess
 import sys
 import threading
@@ -100,7 +101,14 @@ def _rms(frame: bytes) -> float:
 
 def _sintetizar(voz_piper, txt: str) -> tuple[bytes, int]:
     """txt -> (PCM s16le, sample_rate). Consome todos os chunks do Piper."""
-    cfg = piper.SynthesisConfig(length_scale=config.TTS_LENGTH_SCALE)
+    # jitter pequeno por fala — sem isso, a mesma frase (ex.: um filler repetido
+    # numa interrupção) sai com timing/prosódia idênticos toda vez, soa "disco riscado"
+    j = config.TTS_JITTER
+    cfg = piper.SynthesisConfig(
+        length_scale=config.TTS_LENGTH_SCALE * random.uniform(1 - j, 1 + j),
+        noise_scale=config.TTS_NOISE_SCALE * random.uniform(1 - j, 1 + j),
+        noise_w_scale=config.TTS_NOISE_W_SCALE * random.uniform(1 - j, 1 + j),
+    )
     pcm = bytearray()
     rate = 22050
     for chunk in voz_piper.synthesize(txt, cfg):

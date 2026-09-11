@@ -20,6 +20,7 @@ genéricos mergeados por `carregar`/`planeja`).
 from __future__ import annotations
 
 import os
+import random
 import re
 import sys
 import time
@@ -52,16 +53,22 @@ _NAO_SABE = re.compile(
 
 # frase curta de transição ao entrar num ramo (só quando faz sentido — ver
 # `filler` em `_entra_ramo`). Banco pequeno, default genérico.
+# 2-3 variações por gatilho — sorteadas (não a mesma frase toda vez que o aluno
+# interrompe com o mesmo tipo de dúvida).
 _FILLER = {
-    "por_que": "Boa pergunta.",
-    "por_que_div_2": "Boa pergunta.",
-    "nao_entendi": "Sem problema.",
-    "repete": "Claro.",
-    "achar_hipotenusa": "Deixa eu ver.",
-    "e_triangulo": "Deixa eu ver.",
-    "outro_numero": "Deixa eu ver.",
+    "por_que": ("Boa pergunta.", "Ótima pergunta.", "Show, vamos nessa."),
+    "por_que_div_2": ("Boa pergunta.", "Ótima pergunta.", "Faz sentido perguntar isso."),
+    "nao_entendi": ("Sem problema.", "Tranquilo.", "Calma, vamos de novo."),
+    "repete": ("Claro.", "Sem problema, de novo:", "Pode deixar."),
+    "achar_hipotenusa": ("Deixa eu ver.", "Boa.", "Olha só."),
+    "e_triangulo": ("Deixa eu ver.", "Boa.", "Olha só."),
+    "outro_numero": ("Deixa eu ver.", "Boa.", "Olha só."),
 }
-_FILLER_DEFAULT = "Deixa eu ver."
+_FILLER_DEFAULT = ("Deixa eu ver.", "Um instante.", "Peraí.")
+
+
+def _filler(gat: str) -> str:
+    return random.choice(_FILLER.get(gat, _FILLER_DEFAULT))
 
 _ACOLHE = "Tranquilo não saber — é pra isso que a gente tá aqui. Olha:"
 _VOLTA = "Voltando de onde a gente parou."
@@ -197,7 +204,7 @@ class Tocador:
         # filler só depois de saber que o ramo existe (senão o aluno ouviria
         # "Deixa eu ver." e logo em seguida "Essa eu não preparei...").
         if filler:
-            self.falar(_FILLER.get(gat, _FILLER_DEFAULT))
+            self.falar(_filler(gat))
         for rb in est.drena_ramo():
             r = self._toca_bloco(rb)
             if r and r[0] == "barge":
@@ -212,7 +219,7 @@ class Tocador:
                     # F3: o aluno re-pergunta o mesmo ramo que já está rolando.
                     # Não re-entra (loop); reconhece e segue drenando — nunca
                     # ignorar o aluno em silêncio (SPEC §7).
-                    self.falar(_FILLER.get(gat, _FILLER_DEFAULT))
+                    self.falar(_filler(gat))
                 elif g2 is None:
                     self.falar(HONESTO)
         self.falar(_VOLTA)

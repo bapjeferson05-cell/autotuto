@@ -188,7 +188,9 @@ def test_re_pergunta_mesmo_ramo_recebe_filler_nao_silencio():
 
     est = Tocador(falar=falar, ouvir=lambda s: None,
                   pausas=False, cerebro=None).toca(carregar("pitagoras"))
-    assert seen.count(_FILLER["por_que"]) >= 2         # entrada + o ack da re-pergunta
+    # _FILLER["por_que"] agora é uma tupla de variações (sorteadas) — conta
+    # quantas falas vieram dali, não uma string fixa.
+    assert sum(1 for t in seen if t in _FILLER["por_que"]) >= 2  # entrada + ack da re-pergunta
     assert _VOLTA in seen                              # o ramo terminou normal
     assert est.historico == ["por_que"]               # não re-entrou no ramo
 
