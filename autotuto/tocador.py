@@ -59,7 +59,7 @@ _FILLER = {
     "por_que": ("Boa pergunta.", "Ótima pergunta.", "Show, vamos nessa."),
     "por_que_div_2": ("Boa pergunta.", "Ótima pergunta.", "Faz sentido perguntar isso."),
     "nao_entendi": ("Sem problema.", "Tranquilo.", "Calma, vamos de novo."),
-    "repete": ("Claro.", "Sem problema, de novo:", "Pode deixar."),
+    "repete": ("Claro.", "Sem problema, de novo.", "Pode deixar."),
     "achar_hipotenusa": ("Deixa eu ver.", "Boa.", "Olha só."),
     "e_triangulo": ("Deixa eu ver.", "Boa.", "Olha só."),
     "outro_numero": ("Deixa eu ver.", "Boa.", "Olha só."),

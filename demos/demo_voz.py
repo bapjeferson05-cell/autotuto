@@ -13,7 +13,6 @@ Uso:
 from __future__ import annotations
 
 import os
-import re
 import sys
 
 os.environ.setdefault("AUTOTUTO_BARGE_IN", "0")  # ANTES de importar config/voz
@@ -22,7 +21,9 @@ _MIN_LETRAS = 4  # abaixo disso, é ruído/silêncio "transcrito" (ex.: ". . . .
 
 
 def _parece_pergunta(txt: str) -> bool:
-    return len(re.sub(r"[^a-zA-ZÀ-ÿ]", "", txt)) >= _MIN_LETRAS
+    # isalpha() por caractere (Unicode de verdade) — o range Latin-1 usado antes
+    # deixava símbolos como × e ÷ passarem como "letra".
+    return sum(1 for c in txt if c.isalpha()) >= _MIN_LETRAS
 
 from autotuto import planejador  # noqa: E402
 from autotuto.aulas import carregar, disponiveis  # noqa: E402

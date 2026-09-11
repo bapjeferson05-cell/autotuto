@@ -103,7 +103,7 @@ def _sintetizar(voz_piper, txt: str) -> tuple[bytes, int]:
     """txt -> (PCM s16le, sample_rate). Consome todos os chunks do Piper."""
     # jitter pequeno por fala — sem isso, a mesma frase (ex.: um filler repetido
     # numa interrupção) sai com timing/prosódia idênticos toda vez, soa "disco riscado"
-    j = config.TTS_JITTER
+    j = max(0.0, min(config.TTS_JITTER, 0.9))  # clamp: TTS_JITTER mal configurado não pode zerar/negativar os parâmetros
     cfg = piper.SynthesisConfig(
         length_scale=config.TTS_LENGTH_SCALE * random.uniform(1 - j, 1 + j),
         noise_scale=config.TTS_NOISE_SCALE * random.uniform(1 - j, 1 + j),

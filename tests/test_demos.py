@@ -28,3 +28,14 @@ def test_roteiro_headless():
         respostas={int(k): v for k, v in r.get("respostas", {}).items()},
     )
     assert est.historico  # disparou pelo menos a interrupção scriptada
+
+
+def test_parece_pergunta_ignora_ruido_e_aceita_pergunta_real():
+    from demos.demo_voz import _parece_pergunta
+
+    assert not _parece_pergunta(". . . .")
+    assert not _parece_pergunta("")
+    assert not _parece_pergunta("uh")
+    assert not _parece_pergunta("× ÷ ×")           # símbolos não contam como letra
+    assert _parece_pergunta("por que divide por dois")
+    assert _parece_pergunta("quero entender trapézio")
