@@ -13,9 +13,16 @@ Uso:
 from __future__ import annotations
 
 import os
+import re
 import sys
 
 os.environ.setdefault("AUTOTUTO_BARGE_IN", "0")  # ANTES de importar config/voz
+
+_MIN_LETRAS = 4  # abaixo disso, é ruído/silêncio "transcrito" (ex.: ". . . ."), não pergunta
+
+
+def _parece_pergunta(txt: str) -> bool:
+    return len(re.sub(r"[^a-zA-ZÀ-ÿ]", "", txt)) >= _MIN_LETRAS
 
 from autotuto import planejador  # noqa: E402
 from autotuto.aulas import carregar, disponiveis  # noqa: E402
@@ -62,7 +69,9 @@ def main() -> None:
                 visor.estado("ouvindo")
                 visor.mostrar_fala("Pode falar o assunto ou a questão.")
                 problema = voz.ouvir(20)
-                if not problema:
+                if not problema or not _parece_pergunta(problema):
+                    if problema:
+                        print(f"[demo_voz] ruído/silêncio, ignorando: {problema!r}")
                     continue
                 print(f"[demo_voz] questão: {problema!r}")
                 visor.aluno(problema)
