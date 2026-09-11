@@ -8,6 +8,7 @@ texto; o aluno digita o assunto na caixa e aperta 1/2/3/0 pra interromper.
 """
 from __future__ import annotations
 
+import sys
 import time
 
 from autotuto import config, planejador
@@ -16,6 +17,7 @@ from autotuto.visor import Visor
 
 
 def main() -> None:
+    sys.stdout.reconfigure(line_buffering=True)  # senão o print() some até o processo sair
     visor = Visor(ritmo=config.RITMO_S_POR_CHAR).start()
     visor.estado("aguardando")
 

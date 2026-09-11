@@ -22,6 +22,7 @@ from autotuto.visor import Visor
 
 
 def main() -> None:
+    sys.stdout.reconfigure(line_buffering=True)  # senão o print() some até o processo sair
     caminho = sys.argv[1] if len(sys.argv) > 1 else "roteiros/trapezio.json"
     r = json.load(open(caminho, encoding="utf-8"))
 
@@ -40,7 +41,16 @@ def main() -> None:
     print(f"[demo_roteiro] fim — {est.resumo()}")
     try:
         while True:
-            time.sleep(1)
+            # a caixa de texto do visor fica visível (estado "pronto"), mas esse
+            # modo é 100% scriptado — sem isso, uma pergunta digitada ficava presa
+            # em "pensando" pra sempre (achado ao vivo nesta sessão).
+            pergunta = visor.pop_pergunta()
+            if pergunta:
+                visor.mostrar_fala("Esse é o modo gravação (scriptado) — não respondo "
+                                   "pergunta ao vivo aqui. Roda o demo_texto.py ou o "
+                                   "demo_voz.py pra isso.")
+                visor.estado("pronto")
+            time.sleep(0.3)
     except KeyboardInterrupt:
         print("\n[demo_roteiro] encerrando")
         visor.stop()

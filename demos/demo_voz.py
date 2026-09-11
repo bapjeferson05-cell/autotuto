@@ -33,6 +33,7 @@ from autotuto.voz import Voz  # noqa: E402
 
 
 def main() -> None:
+    sys.stdout.reconfigure(line_buffering=True)  # senão o print() some até o processo sair
     alvo = sys.argv[1] if len(sys.argv) > 1 else "aluno"
 
     visor = Visor(ritmo=0).start()  # ritmo 0 → visor.falar não dorme; a Voz manda no tempo
