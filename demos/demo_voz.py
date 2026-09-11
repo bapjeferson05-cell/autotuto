@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
+import time
 
 os.environ.setdefault("AUTOTUTO_BARGE_IN", "0")  # ANTES de importar config/voz
 
@@ -44,6 +46,34 @@ from autotuto.aulas import carregar, disponiveis  # noqa: E402
 from autotuto.tocador import Tocador  # noqa: E402
 from autotuto.visor import Visor  # noqa: E402
 from autotuto.voz import Voz  # noqa: E402
+
+_FILLERS_ESPERA = (
+    (7, "Ainda pensando nisso, um instante…"),
+    (20, "Essa tá dando um pouco mais de trabalho, já te mostro."),
+)
+
+
+def _planeja_com_filler(problema: str, falar) -> tuple:
+    """planejador.planeja roda numa thread; se demorar, o professor avisa em vez
+    de ficar mudo (achado ao vivo: local pode levar minutos sem dizer nada)."""
+    resultado: dict = {}
+
+    def alvo():
+        resultado["r"] = planejador.planeja(problema)
+
+    th = threading.Thread(target=alvo, daemon=True)
+    th.start()
+    t0 = time.monotonic()
+    ditos = set()
+    while th.is_alive():
+        dt = time.monotonic() - t0
+        for limite, frase in _FILLERS_ESPERA:
+            if dt >= limite and limite not in ditos:
+                ditos.add(limite)
+                falar(frase)
+        time.sleep(0.5)
+    th.join()
+    return resultado["r"]
 
 
 def main() -> None:
@@ -93,7 +123,7 @@ def main() -> None:
                 visor.aluno(problema)
                 visor.estado("pensando")
                 visor.mostrar_fala("Deixa eu montar isso aqui…")
-                aula, rel = planejador.planeja(problema)
+                aula, rel = _planeja_com_filler(problema, falar)
                 if not rel.ok:
                     print(f"[demo_voz] planejador caiu no fallback: {rel.erros}")
                     # honesto: não troca a pergunta por outro assunto em silêncio

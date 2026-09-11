@@ -7,7 +7,9 @@ LLM_PROVEDOR   = env("AUTOTUTO_LLM", "ollama")      # ollama | claude
 LLM_MODELO     = env("AUTOTUTO_MODELO", "qwen2.5:7b")
 LLM_CLAUDE     = "claude-sonnet-5"
 CEREBRO_TIMEOUT_S = 8.0                              # LLM curto da interrupção
-PLANEJADOR_TIMEOUT_S = 120.0
+PLANEJADOR_TIMEOUT_S = 45.0  # medido ao vivo: se não respondeu nisso, tá travado — melhor
+                              # cair no fallback honesto (aula de ouro) do que deixar o
+                              # aluno esperando minutos (era 120s, alto demais pra demo)
 
 # Voz
 STT_MODELO     = env("AUTOTUTO_STT", "base")         # tiny | base | small
