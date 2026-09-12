@@ -5,8 +5,22 @@ e valores esperados (ex: áreas não-negativas).
 """
 from __future__ import annotations
 
+import inspect
+
 from autotuto import calc
 from autotuto.figuras import catalogo as figuras_catalogo
+
+
+def _params_desconhecidos(fn, params: dict) -> list[str]:
+    """Chaves de `params` que `fn` nem aceita (contrato mínimo e explícito:
+    a ASSINATURA de verdade é a fonte, sem duplicar uma lista à parte que
+    pode ficar desatualizada). Não checa tipo nem obrigatoriedade — só pega
+    o "gerador certo, kwarg errado" que a autópsia mostrou (eq_primeiro_grau
+    com `x=...`), ANTES de chamar a função."""
+    parametros = inspect.signature(fn).parameters
+    if any(p.kind is p.VAR_KEYWORD for p in parametros.values()):
+        return []  # a função aceita **kwargs livremente
+    return sorted(set(params) - set(parametros))
 
 
 def _é_gerador_area_ou_comprimento(nome: str) -> bool:
@@ -24,7 +38,9 @@ _PREFIXOS_GRAVES = ("gerador de calc desconhecido", "gerador de figura desconhec
 
 
 def _é_grave(aviso: str) -> bool:
-    return aviso.startswith(_PREFIXOS_GRAVES) or " falhou:" in aviso
+    return (aviso.startswith(_PREFIXOS_GRAVES)
+            or " falhou:" in aviso
+            or "argumento desconhecido" in aviso)
 
 
 def avisos_graves(avisos: list[str]) -> list[str]:
@@ -97,9 +113,20 @@ def _validar_calc(calc_spec: dict) -> list[str]:
         avisos.append(f"gerador de calc desconhecido: {gerador}")
         return avisos
 
-    # Tenta executar o gerador com os params
     fn = calc.CATALOGO[gerador]
     params = calc_spec.get("params") or {}
+
+    # contrato explícito: rejeita kwarg que a assinatura nem tem ANTES de
+    # rodar (autópsia 2026-09-12: eq_primeiro_grau(a, b) chamado com um
+    # `x` extra). A mensagem tem que dizer exatamente o que tirar e o que
+    # é aceito — é ela que vai voltar pro LLM corrigir no retry.
+    ruins = _params_desconhecidos(fn, params)
+    if ruins:
+        aceitos = ", ".join(inspect.signature(fn).parameters)
+        avisos.append(
+            f"{gerador}: argumento desconhecido {ruins} — {gerador} só aceita "
+            f"({aceitos}). Remova {ruins} da chamada.")
+        return avisos
 
     try:
         resultado = fn(**params)

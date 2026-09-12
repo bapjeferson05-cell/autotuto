@@ -66,8 +66,8 @@ def test_planeja_gerador_de_figura_desconhecido_nao_fica_ok():
 
 def test_planeja_calc_com_kwarg_invalido_nao_fica_ok():
     # o LLM pode chamar um gerador de verdade com params que não existem na
-    # assinatura (kwarg extra) — o Python levanta TypeError, e isso também
-    # não pode passar como rel.ok=True.
+    # assinatura (kwarg extra) — o contrato explícito rejeita ANTES de
+    # rodar, e isso também não pode passar como rel.ok=True.
     plano = json.dumps({
         "titulo": "Ângulos", "topico": "angulos", "dados": {},
         "blocos": [{"diz": "vamos calcular",
@@ -76,7 +76,7 @@ def test_planeja_calc_com_kwarg_invalido_nao_fica_ok():
     })
     aula, rel = planeja("ângulos complementares", perguntar=lambda m, **k: plano)
     assert not rel.ok
-    assert any("falhou" in a for a in rel.avisos)
+    assert any("argumento desconhecido" in a for a in rel.avisos)
 
 
 def test_timeout_maior_quando_nao_ha_few_shot_dirigido():
@@ -120,6 +120,10 @@ _PLANO_ANGULOS_CORRIGIDO = {
 
 
 def test_kwarg_invalido_dispara_correcao_e_retry_resolve():
+    # P1.1 + contrato explícito: não basta REJEITAR o kwarg extra — o motivo
+    # que volta pro LLM precisa ser claro o bastante pra ele produzir a
+    # chamada certa da próxima vez (é isso que o teste prova, não só que o
+    # schema barrou).
     respostas = iter([json.dumps(_PLANO_ANGULOS_COM_KWARG_INVALIDO),
                       json.dumps(_PLANO_ANGULOS_CORRIGIDO)])
     mandados = []
@@ -130,7 +134,9 @@ def test_kwarg_invalido_dispara_correcao_e_retry_resolve():
 
     aula, rel = planeja("ângulos complementares", perguntar=fake, tentativas=2)
     assert rel.ok and not rel.avisos                   # corrigiu e ficou limpo
-    assert "falhou" in mandados[-1]                     # o LLM recebeu o motivo real
+    motivo = mandados[-1]
+    assert "eq_primeiro_grau" in motivo and "'x'" in motivo   # qual gerador, qual chave sobrando
+    assert "a, b" in motivo                                   # e o que É aceito — não só "deu erro"
 
 
 def test_kwarg_invalido_sem_correcao_esgota_tentativas_mas_nao_troca_de_assunto():
@@ -142,4 +148,4 @@ def test_kwarg_invalido_sem_correcao_esgota_tentativas_mas_nao_troca_de_assunto(
                         perguntar=lambda m, **k: json.dumps(_PLANO_ANGULOS_COM_KWARG_INVALIDO))
     assert not rel.ok
     assert aula.titulo == "Complementaridade de Ângulos"   # não virou trapézio
-    assert any("falhou" in a for a in rel.avisos)
+    assert any("argumento desconhecido" in a for a in rel.avisos)

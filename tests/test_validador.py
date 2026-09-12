@@ -121,3 +121,39 @@ def test_houve_falha_grave_falso_para_aviso_leve():
     from autotuto.validador import houve_falha_grave
     assert houve_falha_grave(["area_trapezio: valor negativo (-45)"]) is False
     assert houve_falha_grave([]) is False
+
+
+def test_calc_com_kwarg_extra_e_rejeitado_antes_de_rodar():
+    # contrato explícito por gerador: eq_primeiro_grau(a, b) não aceita 'x'.
+    # A rejeição usa a ASSINATURA de verdade (inspect), não uma lista à parte.
+    a = {
+        "blocos": [{"diz": "x", "calc": {"gerador": "eq_primeiro_grau",
+                                        "params": {"a": 1, "b": -90, "x": "y"}}}],
+        "ramos": {},
+    }
+    avisos = checar_matematica(a)
+    assert len(avisos) == 1
+    msg = avisos[0]
+    assert "eq_primeiro_grau" in msg and "'x'" in msg
+    assert "a, b" in msg                      # diz exatamente o que É aceito
+    assert "falhou" not in msg                # não foi um TypeError pego depois —
+                                               # foi rejeitado ANTES de chamar a função
+
+
+def test_calc_com_params_validos_nao_e_rejeitado():
+    a = {
+        "blocos": [{"diz": "x", "calc": {"gerador": "eq_primeiro_grau",
+                                        "params": {"a": 1, "b": -90}}}],
+        "ramos": {},
+    }
+    assert checar_matematica(a) == []
+
+
+def test_calc_kwarg_extra_conta_como_falha_grave():
+    from autotuto.validador import houve_falha_grave
+    a = {
+        "blocos": [{"diz": "x", "calc": {"gerador": "eq_primeiro_grau",
+                                        "params": {"a": 1, "b": -90, "x": "y"}}}],
+        "ramos": {},
+    }
+    assert houve_falha_grave(checar_matematica(a)) is True
