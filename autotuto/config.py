@@ -7,9 +7,13 @@ LLM_PROVEDOR   = env("AUTOTUTO_LLM", "ollama")      # ollama | claude
 LLM_MODELO     = env("AUTOTUTO_MODELO", "qwen2.5:7b")
 LLM_CLAUDE     = "claude-sonnet-5"
 CEREBRO_TIMEOUT_S = 8.0                              # LLM curto da interrupção
-PLANEJADOR_TIMEOUT_S = 45.0  # medido ao vivo: se não respondeu nisso, tá travado — melhor
-                              # cair no fallback honesto (aula de ouro) do que deixar o
-                              # aluno esperando minutos (era 120s, alto demais pra demo)
+PLANEJADOR_TIMEOUT_S = 45.0  # medido ao vivo NO CAMINHO CONHECIDO (few-shot dirigido
+                              # bate, ~35-45s): se não respondeu nisso, tá travado —
+                              # melhor cair no fallback honesto do que esperar minutos.
+PLANEJADOR_TIMEOUT_NOVO_S = 100.0  # autópsia de 2026-09-12: SEM few-shot dirigido (tópico
+                              # nunca visto) o modelo pensa mais e passa dos 45s — chegou
+                              # a ~90s num caso real. Não pode penalizar o caminho feliz
+                              # com esse teto maior, então só entra quando não há few-shot.
 
 # Voz
 STT_MODELO     = env("AUTOTUTO_STT", "base")         # tiny | base | small

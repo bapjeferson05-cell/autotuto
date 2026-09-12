@@ -44,6 +44,14 @@ def _log(msg: str) -> None:
 # camada 3: a frase que o professor fala quando não preparou aquilo.
 HONESTO = "Essa eu não preparei agora — sigo daqui, e a gente volta nisso."
 
+# quando uma FERRAMENTA falta (gerador inexistente) ou quebra com os params
+# que o plano mandou: a etapa correspondente simplesmente não acontece — o
+# aluno não pode ficar ouvindo o professor descrever uma figura que nunca
+# aparece, ou ficar sem saber que um número não foi calculado. Falado, não só
+# logado (autópsia de 2026-09-12: hoje isso só ia pro stderr, em silêncio).
+LIMITACAO_VISUAL = "Entendi o que você quer, mas ainda não consigo desenhar essa parte — sigo explicando sem a figura."
+LIMITACAO_CALC = "Entendi o que você quer calcular, mas ainda não tenho essa conta pronta — sigo sem o número exato."
+
 # beat de pergunta: o aluno diz que não sabe -> a gente acolhe e vai pro `senao`
 # (que ENSINA), não trata como erro silencioso.
 _NAO_SABE = re.compile(
@@ -139,6 +147,7 @@ class Tocador:
             except Exception as e:  # gerador desconhecido / params ruins numa aula do LLM
                 print(f"[tocador] figura {fig!r} falhou, pulando: {e!r}",
                       file=sys.stderr)
+                self.falar(LIMITACAO_VISUAL)
 
         if bloco.get("diz") and not retomar:
             self._falas.append(bloco["diz"])
@@ -168,6 +177,7 @@ class Tocador:
             except Exception as e:  # gerador desconhecido / params ruins numa aula do LLM
                 print(f"[tocador] calc {c!r} falhou, pulando: {e!r}",
                       file=sys.stderr)
+                self.falar(LIMITACAO_CALC)
                 r = None
             if r is not None:
                 passos = r.passos if bloco.get("mostra_passos") else r.passos[-1:]

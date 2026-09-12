@@ -1,6 +1,7 @@
 import math
 from autotuto.calc import (Resultado, area_trapezio, area_triangulo, area_retangulo,
-                           pitagoras, eq_primeiro_grau, regra_de_tres, CATALOGO)
+                           pitagoras, eq_primeiro_grau, regra_de_tres,
+                           porcentagem, mdc, mmc, CATALOGO)
 
 def test_trapezio_valor_e_passos():
     r = area_trapezio(B=18, b=10, h=6)
@@ -40,4 +41,22 @@ def test_regra_de_tres():
 
 def test_catalogo_tem_as_seis():
     assert set(CATALOGO) == {"area_trapezio", "area_triangulo", "area_retangulo",
-                             "pitagoras", "eq_primeiro_grau", "regra_de_tres"}
+                             "pitagoras", "eq_primeiro_grau", "regra_de_tres",
+                             "porcentagem", "mdc", "mmc"}
+
+
+def test_porcentagem():
+    # 15% de desconto em 80: o desconto em si é 15% de 80 -> parte=12, todo=80
+    r = porcentagem(12, 80)
+    assert r.valor == 15.0
+    assert "%" in r.passos[-1]
+
+
+def test_mdc():
+    assert mdc(24, 36).valor == 12
+
+
+def test_mmc():
+    r = mmc(4, 6)
+    assert r.valor == 12
+    assert "mdc" in r.passos[0] and "mmc" in r.passos[1]

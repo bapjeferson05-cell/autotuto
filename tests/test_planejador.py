@@ -77,3 +77,21 @@ def test_planeja_calc_com_kwarg_invalido_nao_fica_ok():
     aula, rel = planeja("ângulos complementares", perguntar=lambda m, **k: plano)
     assert not rel.ok
     assert any("falhou" in a for a in rel.avisos)
+
+
+def test_timeout_maior_quando_nao_ha_few_shot_dirigido():
+    # autópsia 2026-09-12: sem few-shot (tópico fora das 4 aulas de ouro) o
+    # modelo demora mais — não pode usar o timeout curto do caminho feliz.
+    from autotuto.config import PLANEJADOR_TIMEOUT_NOVO_S, PLANEJADOR_TIMEOUT_S
+    vistos = []
+
+    def fake(m, *, timeout, **k):
+        vistos.append(timeout)
+        return json.dumps(carregar("trapezio").para_json())
+
+    planeja("me explica o universo", perguntar=fake)   # sem pista -> timeout maior
+    assert vistos[-1] == PLANEJADOR_TIMEOUT_NOVO_S
+
+    vistos.clear()
+    planeja("resolva 2x - 8 = 0", perguntar=fake)       # bate a pista -> timeout curto
+    assert vistos[-1] == PLANEJADOR_TIMEOUT_S

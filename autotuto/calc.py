@@ -62,6 +62,28 @@ def regra_de_tres(a, b, c) -> Resultado:
         rf"\dfrac{{{_n(a)}}}{{{_n(b)}}} = \dfrac{{{_n(c)}}}{{x}}",
         rf"x = \dfrac{{{_n(b)} \cdot {_n(c)}}}{{{_n(a)}}} = {x:g}"])
 
+# autópsia de 2026-09-12: porcentagem e MDC apareceram de verdade num tópico
+# nunca visto (o LLM não tinha ferramenta e improvisou com eq_primeiro_grau,
+# errando os params). As 3 abaixo são as que os dados pediram — nenhuma outra.
+def porcentagem(parte, todo) -> Resultado:
+    """Que porcentagem `parte` é de `todo`."""
+    pct = parte / todo * 100
+    return Resultado(round(pct, 2), [
+        r"\% = \dfrac{\text{parte}}{\text{todo}}\cdot 100",
+        rf"\% = \dfrac{{{_n(parte)}}}{{{_n(todo)}}}\cdot 100 = {pct:.4g}\%"], "%")
+
+def mdc(a, b) -> Resultado:
+    g = math.gcd(int(a), int(b))
+    return Resultado(g, [rf"\mathrm{{mdc}}({_n(a)}, {_n(b)}) = {g}"])
+
+def mmc(a, b) -> Resultado:
+    g = math.gcd(int(a), int(b))
+    m = abs(int(a) * int(b)) // g
+    return Resultado(m, [
+        rf"\mathrm{{mdc}}({_n(a)}, {_n(b)}) = {g}",
+        rf"\mathrm{{mmc}}({_n(a)}, {_n(b)}) = \dfrac{{{_n(a)} \cdot {_n(b)}}}{{{g}}} = {m}"])
+
 CATALOGO = {"area_trapezio": area_trapezio, "area_triangulo": area_triangulo,
             "area_retangulo": area_retangulo, "pitagoras": pitagoras,
-            "eq_primeiro_grau": eq_primeiro_grau, "regra_de_tres": regra_de_tres}
+            "eq_primeiro_grau": eq_primeiro_grau, "regra_de_tres": regra_de_tres,
+            "porcentagem": porcentagem, "mdc": mdc, "mmc": mmc}

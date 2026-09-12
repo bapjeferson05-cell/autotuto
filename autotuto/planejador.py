@@ -22,7 +22,7 @@ import re
 from dataclasses import dataclass, field
 
 from autotuto import aulas, llm, schema, validador
-from autotuto.config import PLANEJADOR_TIMEOUT_S
+from autotuto.config import PLANEJADOR_TIMEOUT_NOVO_S, PLANEJADOR_TIMEOUT_S
 
 # RULING: todo módulo PODE importar autotuto.config (é a raiz, não importa nada).
 
@@ -139,6 +139,10 @@ GERADORES DE CÁLCULO (use no "calc", campo "gerador"):
   area_trapezio(B, b, h) · area_triangulo(base, altura) · area_retangulo(base, altura)
   · pitagoras(a, b, c)  (passe só 2; a HIPOTENUSA — lado maior, oposto ao ângulo reto
   — é "c") · eq_primeiro_grau(a, b)  (resolve a·x + b = 0) · regra_de_tres(a, b, c)
+  · porcentagem(parte, todo)  (que % `parte` é de `todo`) · mdc(a, b) · mmc(a, b)
+  NÃO improvise um cálculo com um gerador que não é dele (ex.: usar eq_primeiro_grau
+  pra simular porcentagem ou MDC) — se não existe gerador certo, admita no "diz" e
+  siga sem o número exato.
 
 GERADORES DE FIGURA (use no "figura", campo "gerador"):
   trapezio · triangulo · retangulo · dois_retangulos · balanca · tabela_prop ·
@@ -190,12 +194,17 @@ def planeja(
         mensagens.append({"role": "assistant", "content": exemplo})
     mensagens.append({"role": "user", "content": problema})
 
+    # sem few-shot dirigido = tópico fora das 4 aulas de ouro: o modelo pensa
+    # mais, precisa de mais tempo. Não penalizar o caminho conhecido com esse
+    # teto maior (autópsia de 2026-09-12).
+    timeout = PLANEJADOR_TIMEOUT_S if exemplo is not None else PLANEJADOR_TIMEOUT_NOVO_S
+
     erros: list[str] = ["planejador não rodou"]
     aula_dict: dict | None = None
 
     for _ in range(max(1, tentativas)):
         try:
-            bruto = perguntar(mensagens, timeout=PLANEJADOR_TIMEOUT_S, json_mode=True)
+            bruto = perguntar(mensagens, timeout=timeout, json_mode=True)
         except Exception as e:  # ConnectionError, URLError, TimeoutError...
             return _fallback([f"LLM indisponível: {e!r}"])
 

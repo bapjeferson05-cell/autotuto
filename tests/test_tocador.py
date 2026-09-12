@@ -111,8 +111,10 @@ def test_barge_dentro_do_ramo_sem_match_e_honesto():
 
 
 def test_gerador_torto_nao_derruba_a_sessao():
-    # F7: aula gerada com gerador/params inválidos -> loga e pula, a aula segue.
+    # F7: aula gerada com gerador/params inválidos -> loga, FALA a limitação
+    # (não só stderr em silêncio — autópsia de 2026-09-12) e a aula segue.
     from autotuto.schema import Aula
+    from autotuto.tocador import LIMITACAO_CALC, LIMITACAO_VISUAL
     aula = Aula.de_json({
         "titulo": "torta", "topico": "t", "dados": {},
         "blocos": [
@@ -126,7 +128,7 @@ def test_gerador_torto_nao_derruba_a_sessao():
     L = []
     Tocador(falar=lambda t: L.append(t) or None, ouvir=lambda s: None,
             desenhar=lambda p, r: None, pausas=False, cerebro=None).toca(aula)
-    assert L == ["um", "dois", "tres"]
+    assert L == [LIMITACAO_VISUAL, "um", "dois", LIMITACAO_CALC, "tres"]
 
 
 _P0 = "Essa é a fórmula geral, valendo pra qualquer trapézio."
