@@ -45,3 +45,16 @@ def test_de_json_e_para_json_roundtrip():
     a = Aula.de_json(AULA_OK)
     assert a.para_json()["titulo"] == "T"
     assert a.ramos["por_que"][0]["diz"] == "porque sim"
+
+
+def test_figura_string_crua_DENTRO_de_ramo_e_erro():
+    # code-review: a checagem de forma só rodava em blocos de topo. Um beat
+    # malformado dentro de 'ramos' passava batido e só explodia depois, no
+    # validador matemático (AttributeError) — quebrando o "nunca crasha".
+    obj = {**AULA_OK, "ramos": {"por_que": [{"diz": "x", "figura": "trapezio"}]}}
+    assert any("figura" in e for e in validar_estrutura(obj))
+
+
+def test_calc_string_crua_DENTRO_de_ramo_e_erro():
+    obj = {**AULA_OK, "ramos": {"por_que": [{"diz": "x", "calc": "area_trapezio"}]}}
+    assert any("calc" in e for e in validar_estrutura(obj))

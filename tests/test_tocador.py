@@ -238,3 +238,38 @@ def test_desenha_figura_e_passos_do_calc():
             pausas=False, cerebro=None).toca(carregar("pitagoras"))
     assert any(r == "figura" and ok for r, ok in rotulos)          # spec inline
     assert any(r.startswith("passo") and ok for r, ok in rotulos)  # calc na lousa
+
+
+def test_calc_dentro_de_ramo_tambem_e_retomado_apos_barge():
+    # code-review: o replay que preserva o `calc` (F1/F4) só existia na
+    # trilha principal (`toca()`). Interromper um beat que tem diz+calc DENTRO
+    # de um ramo perdia a conta pra sempre e o professor mentia "voltando de
+    # onde a gente parou" sem nunca ter mostrado a derivação.
+    from autotuto.schema import Aula
+    aula = Aula.de_json({
+        "titulo": "t", "topico": "t", "dados": {},
+        "blocos": [{"diz": "vou perguntar algo", "espera": "curta"}],
+        "ramos": {
+            "por_que": [
+                {"diz": "antes, uma conta",
+                 "calc": {"gerador": "area_triangulo", "params": {"base": 4, "altura": 6}},
+                 "mostra_passos": True,
+                 "diz_passos": ["passo um", "passo dois"]},
+                {"diz": "conclusao do ramo"},
+            ],
+            "nao_entendi": [{"diz": "de novo"}],
+            "repete": [{"diz": "repetindo"}],
+        },
+    })
+    L, rotulos = [], []
+
+    def falar(t):
+        L.append(t)
+        return "por que isso?" if t == "antes, uma conta" else None
+
+    Tocador(falar=falar, ouvir=lambda s: None,
+            desenhar=lambda p, r: rotulos.append(r),
+            pausas=False, cerebro=None).toca(aula, interrupcoes={1: "por_que"})
+
+    assert "passo um" in L and "passo dois" in L
+    assert any(r.startswith("passo") for r in rotulos)

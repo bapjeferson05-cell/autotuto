@@ -120,6 +120,8 @@ def tabela_prop(a=3, b=24, c=5, x=40, **_):
 
 def reta_numerica(inicio=0, fim=10, marca=None, passo=1, **_):
     """Reta numérica de `inicio` a `fim` com ticks; destaca `marca` se dado."""
+    if passo <= 0:
+        raise ValueError(f"reta_numerica: passo tem que ser positivo (recebeu {passo!r})")
     segs = [[[inicio, 0], [fim, 0]]]
     rotulos = []
     n = inicio

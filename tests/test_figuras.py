@@ -102,3 +102,14 @@ def test_geradores_tem_as_chaves_esperadas():
                               "dois_retangulos", "balanca", "tabela_prop",
                               "reta_numerica"}
     assert GERADORES["figura"] is figura
+
+
+def test_reta_numerica_rejeita_passo_nao_positivo():
+    # Bug do code-review: passo<=0 fazia `while n <= fim` nunca avançar o
+    # suficiente e travar num loop infinito. Tem que falhar rápido, não travar.
+    import pytest
+    from autotuto.figuras.catalogo import reta_numerica
+    with pytest.raises(ValueError):
+        reta_numerica(inicio=0, fim=10, passo=0)
+    with pytest.raises(ValueError):
+        reta_numerica(inicio=0, fim=10, passo=-1)

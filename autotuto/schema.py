@@ -21,6 +21,59 @@ class Aula:
                 "blocos": self.blocos, "ramos": self.ramos}
 
 
+def _valida_beat(b: dict, onde: str, ramos: dict) -> list[str]:
+    """Checagem de forma de UM beat. Usada tanto pros `blocos` de topo quanto
+    pros beats de dentro de cada `ramo` — antes só os de topo passavam por
+    aqui, e um `figura`/`calc` malformado num ramo só estourava (AttributeError)
+    lá na frente, no `validador.checar_matematica` (bug do code-review)."""
+    erros: list[str] = []
+    if not (b.get("diz") or b.get("figura") or b.get("calc")):
+        erros.append(f"{onde}: vazio (precisa de diz, figura ou calc)")
+    # F7: sem estes checks, uma `figura`/`calc` como string crua passa aqui e
+    # só estoura lá no tocador (TypeError). Trava a forma no schema.
+    if "figura" in b:
+        fig = b["figura"]
+        if not isinstance(fig, dict):
+            erros.append(f"{onde}.figura: tem que ser objeto")
+        elif not isinstance(fig.get("gerador"), str):
+            erros.append(f"{onde}.figura.gerador: falta ou não é texto")
+        elif fig["gerador"] == "figura":
+            if fig.get("spec") is not None and not isinstance(fig["spec"], dict):
+                erros.append(f"{onde}.figura.spec: objeto ou omita")
+        elif fig.get("params") is not None and not isinstance(fig["params"], dict):
+            erros.append(f"{onde}.figura.params: objeto ou omita")
+    if "calc" in b:
+        cl = b["calc"]
+        if not isinstance(cl, dict):
+            erros.append(f"{onde}.calc: tem que ser objeto")
+        elif not isinstance(cl.get("gerador"), str):
+            erros.append(f"{onde}.calc.gerador: falta ou não é texto")
+        elif cl.get("params") is not None and not isinstance(cl["params"], dict):
+            erros.append(f"{onde}.calc.params: objeto ou omita")
+    pg = b.get("pergunta")
+    if pg is not None:
+        if not isinstance(pg, dict):
+            erros.append(f"{onde}.pergunta: tem que ser objeto")
+            return erros
+        if not pg.get("senao"):
+            erros.append(f"{onde}.pergunta: falta 'senao'")
+        elif pg["senao"] not in ramos:
+            erros.append(f"{onde}.pergunta.senao='{pg['senao']}' não é um ramo")
+        es = pg.get("escuta_s", 12)
+        if not isinstance(es, (int, float)) or not (3 <= es <= 60):
+            erros.append(f"{onde}.pergunta.escuta_s: 3 a 60")
+        ac = pg.get("acerta")
+        if ac is not None and (not isinstance(ac, list) or not all(isinstance(x, str) for x in ac)):
+            erros.append(f"{onde}.pergunta.acerta: lista de textos ou omita")
+        cf = pg.get("confirma")
+        if cf is not None and not isinstance(cf, str):
+            erros.append(f"{onde}.pergunta.confirma: texto ou omita")
+    esp = b.get("espera")
+    if esp is not None and esp not in _ESPERAS:
+        erros.append(f"{onde}.espera: {sorted(_ESPERAS)} ou omita")
+    return erros
+
+
 def validar_estrutura(o: dict) -> list[str]:
     erros: list[str] = []
     if not isinstance(o.get("blocos"), list) or not o["blocos"]:
@@ -31,52 +84,11 @@ def validar_estrutura(o: dict) -> list[str]:
         erros.append("'ramos' tem que ser um objeto")
         ramos = {}
     for i, b in enumerate(o["blocos"]):
-        onde = f"bloco[{i}]"
-        if not (b.get("diz") or b.get("figura") or b.get("calc")):
-            erros.append(f"{onde}: vazio (precisa de diz, figura ou calc)")
-        # F7: sem estes checks, uma `figura`/`calc` como string crua passa aqui e
-        # só estoura lá no tocador (TypeError). Trava a forma no schema.
-        if "figura" in b:
-            fig = b["figura"]
-            if not isinstance(fig, dict):
-                erros.append(f"{onde}.figura: tem que ser objeto")
-            elif not isinstance(fig.get("gerador"), str):
-                erros.append(f"{onde}.figura.gerador: falta ou não é texto")
-            elif fig["gerador"] == "figura":
-                if fig.get("spec") is not None and not isinstance(fig["spec"], dict):
-                    erros.append(f"{onde}.figura.spec: objeto ou omita")
-            elif fig.get("params") is not None and not isinstance(fig["params"], dict):
-                erros.append(f"{onde}.figura.params: objeto ou omita")
-        if "calc" in b:
-            cl = b["calc"]
-            if not isinstance(cl, dict):
-                erros.append(f"{onde}.calc: tem que ser objeto")
-            elif not isinstance(cl.get("gerador"), str):
-                erros.append(f"{onde}.calc.gerador: falta ou não é texto")
-            elif cl.get("params") is not None and not isinstance(cl["params"], dict):
-                erros.append(f"{onde}.calc.params: objeto ou omita")
-        pg = b.get("pergunta")
-        if pg is not None:
-            if not isinstance(pg, dict):
-                erros.append(f"{onde}.pergunta: tem que ser objeto")
-                continue
-            if not pg.get("senao"):
-                erros.append(f"{onde}.pergunta: falta 'senao'")
-            elif pg["senao"] not in ramos:
-                erros.append(f"{onde}.pergunta.senao='{pg['senao']}' não é um ramo")
-            es = pg.get("escuta_s", 12)
-            if not isinstance(es, (int, float)) or not (3 <= es <= 60):
-                erros.append(f"{onde}.pergunta.escuta_s: 3 a 60")
-            ac = pg.get("acerta")
-            if ac is not None and (not isinstance(ac, list) or not all(isinstance(x, str) for x in ac)):
-                erros.append(f"{onde}.pergunta.acerta: lista de textos ou omita")
-            cf = pg.get("confirma")
-            if cf is not None and not isinstance(cf, str):
-                erros.append(f"{onde}.pergunta.confirma: texto ou omita")
-        esp = b.get("espera")
-        if esp is not None and esp not in _ESPERAS:
-            erros.append(f"{onde}.espera: {sorted(_ESPERAS)} ou omita")
+        erros += _valida_beat(b, f"bloco[{i}]", ramos)
     for nome, blocos in ramos.items():
         if not isinstance(blocos, list) or not blocos:
             erros.append(f"ramo '{nome}': lista não-vazia de beats")
+            continue
+        for i, b in enumerate(blocos):
+            erros += _valida_beat(b, f"ramo['{nome}'][{i}]", ramos)
     return erros

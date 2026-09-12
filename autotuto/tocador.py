@@ -207,6 +207,12 @@ class Tocador:
             self.falar(_filler(gat))
         for rb in est.drena_ramo():
             r = self._toca_bloco(rb)
+            # beat de dentro do ramo interrompido no `diz` que TAMBÉM tem `calc`:
+            # se a gente continuar drenando ESTE MESMO ramo (não trocar de ramo),
+            # reexecuta só o calc depois — senão a conta some e o "_VOLTA" no fim
+            # do laço mente que retomou de onde parou (mesmo bug do F1/F4, só que
+            # essa cópia do replay nunca existiu aqui).
+            retomar_calc = bool(r and r[0] == "barge" and rb.get("calc"))
             if r and r[0] == "barge":
                 # mesma política da trilha principal: as 3 camadas, e honesto se
                 # nada casar — nunca ignorar o aluno em silêncio (F2).
@@ -222,6 +228,11 @@ class Tocador:
                     self.falar(_filler(gat))
                 elif g2 is None:
                     self.falar(HONESTO)
+                if retomar_calc:
+                    desde = r[2] + 1 if len(r) > 2 else 0
+                    r2 = self._toca_bloco(rb, retomar=True, desde=desde)
+                    if r2 and r2[0] == "barge":
+                        self.falar(HONESTO)
         self.falar(_VOLTA)
 
     # ──────────────────────────────────────────────────────────────────── o loop
