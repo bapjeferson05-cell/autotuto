@@ -14,6 +14,20 @@ def _é_gerador_area_ou_comprimento(nome: str) -> bool:
     return nome.startswith(("area_", "comprimento_", "perimetro_"))
 
 
+# GRAVE = uma etapa do plano simplesmente NÃO aconteceu (ferramenta que não
+# existe, ou existe mas explodiu com os params que o LLM mandou) — o aluno
+# ficaria sem aquele passo. Diferente de "valor negativo": aí a conta rodou,
+# só o número que saiu é suspeito — o passo aconteceu, só merece uma segunda
+# olhada. Autópsia de 2026-09-12: um plano com "gerador de figura desconhecido"
+# saía com `rel.ok=True` — o contrato mentia que deu tudo certo.
+_PREFIXOS_GRAVES = ("gerador de calc desconhecido", "gerador de figura desconhecido")
+
+
+def houve_falha_grave(avisos: list[str]) -> bool:
+    """True se algum aviso é grave (ferramenta ausente ou que falhou ao rodar)."""
+    return any(a.startswith(_PREFIXOS_GRAVES) or " falhou:" in a for a in avisos)
+
+
 def checar_matematica(aula: dict) -> list[str]:
     """Valida cálculos e figuras de uma aula, retornando avisos não-fatais.
 

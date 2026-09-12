@@ -221,4 +221,9 @@ def planeja(
     aula_dict = aulas._com_genericos(aula_dict)
     aula = schema.Aula.de_json(aula_dict)
     avisos = validador.checar_matematica(aula_dict)
-    return aula, Relatorio(ok=True, erros=[], avisos=avisos)
+    # o plano validou a FORMA (schema), mas uma ferramenta pedida pode não
+    # existir ou ter explodido com os params que o LLM mandou — aí uma etapa
+    # do plano simplesmente não vai acontecer. `ok` tem que contar isso: senão
+    # o contrato mente "deu tudo certo" pra um plano com um passo furado.
+    ok = not validador.houve_falha_grave(avisos)
+    return aula, Relatorio(ok=ok, erros=[], avisos=avisos)

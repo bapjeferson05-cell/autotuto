@@ -47,3 +47,33 @@ def test_sem_llm_cai_no_trapezio():
 
     aula, rel = planeja("qualquer coisa", perguntar=morto)
     assert aula.titulo == carregar("trapezio").titulo and not rel.ok
+
+
+def test_planeja_gerador_de_figura_desconhecido_nao_fica_ok():
+    # autópsia 2026-09-12: um plano que valida a FORMA mas pede um gerador de
+    # figura que não existe (ex.: o LLM inventou "grafico_barras") saía com
+    # rel.ok=True — o contrato mentia. Uma etapa do plano não ia acontecer.
+    plano = json.dumps({
+        "titulo": "Gráfico", "topico": "grafico_barras", "dados": {},
+        "blocos": [{"diz": "olha o gráfico", "figura": {"gerador": "grafico_barras"}}],
+        "ramos": {"por_que": [{"diz": "porque sim"}], "nao_entendi": [{"diz": "de novo"}]},
+    })
+    aula, rel = planeja("interpretação de gráfico", perguntar=lambda m, **k: plano)
+    assert aula.blocos                    # a aula continua sendo a gerada (não vira fallback)
+    assert not rel.ok                     # mas o relatório não finge que deu tudo certo
+    assert any("grafico_barras" in a for a in rel.avisos)
+
+
+def test_planeja_calc_com_kwarg_invalido_nao_fica_ok():
+    # o LLM pode chamar um gerador de verdade com params que não existem na
+    # assinatura (kwarg extra) — o Python levanta TypeError, e isso também
+    # não pode passar como rel.ok=True.
+    plano = json.dumps({
+        "titulo": "Ângulos", "topico": "angulos", "dados": {},
+        "blocos": [{"diz": "vamos calcular",
+                    "calc": {"gerador": "eq_primeiro_grau", "params": {"a": 1, "b": -90, "x": "y"}}}],
+        "ramos": {"por_que": [{"diz": "porque sim"}], "nao_entendi": [{"diz": "de novo"}]},
+    })
+    aula, rel = planeja("ângulos complementares", perguntar=lambda m, **k: plano)
+    assert not rel.ok
+    assert any("falhou" in a for a in rel.avisos)

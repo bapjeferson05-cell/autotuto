@@ -104,3 +104,20 @@ def test_ramo_com_calc():
     }
     avisos = checar_matematica(a)
     assert any("gerador_inexistente" in e for e in avisos)
+
+
+def test_houve_falha_grave_gerador_desconhecido():
+    from autotuto.validador import houve_falha_grave
+    assert houve_falha_grave(["gerador de calc desconhecido: fantasma"]) is True
+    assert houve_falha_grave(["gerador de figura desconhecido: grafico_barras"]) is True
+
+
+def test_houve_falha_grave_execucao_falhou():
+    from autotuto.validador import houve_falha_grave
+    assert houve_falha_grave(["eq_primeiro_grau falhou: unexpected keyword argument 'x'"]) is True
+
+
+def test_houve_falha_grave_falso_para_aviso_leve():
+    from autotuto.validador import houve_falha_grave
+    assert houve_falha_grave(["area_trapezio: valor negativo (-45)"]) is False
+    assert houve_falha_grave([]) is False
