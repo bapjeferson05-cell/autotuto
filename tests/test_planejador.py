@@ -95,3 +95,51 @@ def test_timeout_maior_quando_nao_ha_few_shot_dirigido():
     vistos.clear()
     planeja("resolva 2x - 8 = 0", perguntar=fake)       # bate a pista -> timeout curto
     assert vistos[-1] == PLANEJADOR_TIMEOUT_S
+
+
+# P1.1 — fixture de regressão: o plano REAL que o qwen2.5:7b gerou na autópsia
+# de 2026-09-12 pra "ângulos complementares" (nunca visto antes). O modelo
+# entendeu a matemática, escolheu o gerador CERTO (eq_primeiro_grau), mas
+# mandou um kwarg que não existe na assinatura (`x`). Fixado aqui pra sempre
+# — se isso passar a passar de primeira, é melhoria real, não sorte numa
+# pergunta diferente.
+_PLANO_ANGULOS_COM_KWARG_INVALIDO = {
+    "titulo": "Complementaridade de Ângulos", "topico": "angulos", "dados": {},
+    "blocos": [
+        {"diz": "Vamos calcular o ângulo complementar de 35 graus.",
+         "calc": {"gerador": "eq_primeiro_grau", "params": {"a": 1, "b": -90, "x": "angulo2"}},
+         "mostra_passos": True, "diz_passos": ["35 + x = 90", "resolvendo"]},
+    ],
+    "ramos": {"por_que": [{"diz": "porque sim"}], "nao_entendi": [{"diz": "de novo"}]},
+}
+_PLANO_ANGULOS_CORRIGIDO = {
+    **_PLANO_ANGULOS_COM_KWARG_INVALIDO,
+    "blocos": [{**_PLANO_ANGULOS_COM_KWARG_INVALIDO["blocos"][0],
+                "calc": {"gerador": "eq_primeiro_grau", "params": {"a": 1, "b": -90}}}],
+}
+
+
+def test_kwarg_invalido_dispara_correcao_e_retry_resolve():
+    respostas = iter([json.dumps(_PLANO_ANGULOS_COM_KWARG_INVALIDO),
+                      json.dumps(_PLANO_ANGULOS_CORRIGIDO)])
+    mandados = []
+
+    def fake(m, **k):
+        mandados.append(m[-1]["content"])   # a última msg = a instrução de correção
+        return next(respostas)
+
+    aula, rel = planeja("ângulos complementares", perguntar=fake, tentativas=2)
+    assert rel.ok and not rel.avisos                   # corrigiu e ficou limpo
+    assert "falhou" in mandados[-1]                     # o LLM recebeu o motivo real
+
+
+def test_kwarg_invalido_sem_correcao_esgota_tentativas_mas_nao_troca_de_assunto():
+    # o modelo insiste no mesmo erro em toda tentativa. Perder o passo de UMA
+    # conta é bem menos ruim pro aluno que o professor virar pra outro
+    # assunto (trapézio) sem avisar — a forma validou, só uma ferramenta
+    # falhou. Aceita o candidato mesmo assim; rel.ok=False conta a verdade.
+    aula, rel = planeja("ângulos complementares", tentativas=2,
+                        perguntar=lambda m, **k: json.dumps(_PLANO_ANGULOS_COM_KWARG_INVALIDO))
+    assert not rel.ok
+    assert aula.titulo == "Complementaridade de Ângulos"   # não virou trapézio
+    assert any("falhou" in a for a in rel.avisos)

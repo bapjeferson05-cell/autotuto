@@ -201,6 +201,7 @@ def planeja(
 
     erros: list[str] = ["planejador não rodou"]
     aula_dict: dict | None = None
+    melhor_candidato: dict | None = None   # último que passou o schema (mesmo com avisos graves)
 
     for _ in range(max(1, tentativas)):
         try:
@@ -216,6 +217,14 @@ def planeja(
             erros = [f"JSON inválido: {e}"]
 
         if not erros:
+            melhor_candidato = candidato
+            # P1.1: a forma pode validar mas uma ferramenta pedida não existir,
+            # ou explodir com os params que vieram (kwarg que não é da
+            # assinatura). Dá pro LLM a MESMA chance de correção que um erro
+            # de schema tem — antes disso só aparecia depois, tarde demais.
+            erros = validador.avisos_graves(validador.checar_matematica(candidato))
+
+        if not erros:
             aula_dict = candidato
             break
 
@@ -223,7 +232,13 @@ def planeja(
         mensagens.append({"role": "user", "content": "corrija: " + "; ".join(erros)})
 
     if aula_dict is None:
-        return _fallback(erros)
+        # tentativas esgotadas: se ALGUM candidato chegou a validar a forma,
+        # usa o último deles (com os avisos que restarem) em vez de trocar de
+        # assunto — perder o passo de uma conta é bem menos ruim que o
+        # professor virar pra outro tópico sem avisar.
+        aula_dict = melhor_candidato
+        if aula_dict is None:
+            return _fallback(erros)
 
     # RULING: mergeia os ramos genéricos ANTES de montar a Aula — todo plano
     # gerado ganha por_que / nao_entendi / repete (a aula sobrescreve por chave).

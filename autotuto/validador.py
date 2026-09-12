@@ -23,9 +23,22 @@ def _é_gerador_area_ou_comprimento(nome: str) -> bool:
 _PREFIXOS_GRAVES = ("gerador de calc desconhecido", "gerador de figura desconhecido")
 
 
+def _é_grave(aviso: str) -> bool:
+    return aviso.startswith(_PREFIXOS_GRAVES) or " falhou:" in aviso
+
+
+def avisos_graves(avisos: list[str]) -> list[str]:
+    """Só os avisos graves (ferramenta ausente ou que falhou ao rodar) — o
+    subconjunto que vale a pena mandar de volta pro LLM corrigir. P1.1:
+    autópsia mostrou o modelo escolher o gerador certo (eq_primeiro_grau) e
+    mandar um kwarg que não existe na assinatura — isso merece a MESMA
+    chance de correção que um erro de schema, não só virar `ok=False` depois."""
+    return [a for a in avisos if _é_grave(a)]
+
+
 def houve_falha_grave(avisos: list[str]) -> bool:
     """True se algum aviso é grave (ferramenta ausente ou que falhou ao rodar)."""
-    return any(a.startswith(_PREFIXOS_GRAVES) or " falhou:" in a for a in avisos)
+    return bool(avisos_graves(avisos))
 
 
 def checar_matematica(aula: dict) -> list[str]:
