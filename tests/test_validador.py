@@ -157,3 +157,18 @@ def test_calc_kwarg_extra_conta_como_falha_grave():
         "ramos": {},
     }
     assert houve_falha_grave(checar_matematica(a)) is True
+
+
+def test_exemplo_literal_do_usuario_eq_primeiro_grau_com_x_extra():
+    # o caso exato pedido pra fechar essa peça: eq_primeiro_grau(a=35, b=90,
+    # x=35) -> REJEITADO com "argumento desconhecido"; sem o x, EXECUTA.
+    a_ruim = {"blocos": [{"diz": "x", "calc": {"gerador": "eq_primeiro_grau",
+                                              "params": {"a": 35, "b": 90, "x": 35}}}],
+             "ramos": {}}
+    avisos = checar_matematica(a_ruim)
+    assert len(avisos) == 1 and "argumento desconhecido" in avisos[0] and "'x'" in avisos[0]
+
+    a_bom = {"blocos": [{"diz": "x", "calc": {"gerador": "eq_primeiro_grau",
+                                             "params": {"a": 35, "b": 90}}}],
+            "ramos": {}}
+    assert checar_matematica(a_bom) == []

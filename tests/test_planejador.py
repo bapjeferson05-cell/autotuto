@@ -149,3 +149,31 @@ def test_kwarg_invalido_sem_correcao_esgota_tentativas_mas_nao_troca_de_assunto(
     assert not rel.ok
     assert aula.titulo == "Complementaridade de Ângulos"   # não virou trapézio
     assert any("argumento desconhecido" in a for a in rel.avisos)
+
+
+def test_exemplo_literal_do_usuario_fluxo_completo_de_correcao():
+    # eq_primeiro_grau(a=35, b=90, x=35) -> REJEITADO -> LLM recebe o erro ->
+    # eq_primeiro_grau(a=35, b=90) -> EXECUTA. De ponta a ponta, determinístico.
+    ruim = json.dumps({
+        "titulo": "t", "topico": "t", "dados": {},
+        "blocos": [{"diz": "x", "calc": {"gerador": "eq_primeiro_grau",
+                                        "params": {"a": 35, "b": 90, "x": 35}}}],
+        "ramos": {"por_que": [{"diz": "y"}], "nao_entendi": [{"diz": "z"}]},
+    })
+    bom = json.dumps({
+        "titulo": "t", "topico": "t", "dados": {},
+        "blocos": [{"diz": "x", "calc": {"gerador": "eq_primeiro_grau",
+                                        "params": {"a": 35, "b": 90}}}],
+        "ramos": {"por_que": [{"diz": "y"}], "nao_entendi": [{"diz": "z"}]},
+    })
+    respostas = iter([ruim, bom])
+    corrigido_recebido = []
+
+    def fake(m, **k):
+        corrigido_recebido.append(m[-1]["content"])
+        return next(respostas)
+
+    aula, rel = planeja("qualquer coisa", perguntar=fake, tentativas=2)
+    assert rel.ok and not rel.avisos                          # EXECUTOU limpo
+    assert "argumento desconhecido" in corrigido_recebido[-1]  # o LLM recebeu o motivo
+    assert "'x'" in corrigido_recebido[-1]
