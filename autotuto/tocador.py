@@ -161,10 +161,19 @@ class Tocador:
                 return ("resposta" if bloco.get("pergunta") else "barge", fala)
 
         if bloco.get("pergunta") and not retomar:
-            if "_resp_scriptada" in bloco:
+            if not bloco.get("diz"):
+                # nada foi perguntado em voz alta (schema já rejeita isso no
+                # caminho do LLM, mas o tocador não pode confiar só nisso —
+                # uma aula de ouro ou um roteiro escrito à mão pode ter o
+                # mesmo erro). Sem isso, ficaria "escutando" uma pergunta que
+                # nunca fez — o aluno esperando resposta pra um silêncio.
+                print("[tocador] beat 'pergunta' sem 'diz' — pulando (nada foi perguntado)",
+                      file=sys.stderr)
+            elif "_resp_scriptada" in bloco:
                 return ("resposta", bloco["_resp_scriptada"])
-            seg = int(bloco["pergunta"].get("escuta_s", 12))
-            return ("resposta", self.ouvir(seg))
+            else:
+                seg = int(bloco["pergunta"].get("escuta_s", 12))
+                return ("resposta", self.ouvir(seg))
 
         c = bloco.get("calc")
         # F7: mesmo caso da figura — `calc` pode chegar como string crua.

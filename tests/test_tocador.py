@@ -275,3 +275,27 @@ def test_calc_dentro_de_ramo_tambem_e_retomado_apos_barge():
 
     assert "passo um" in L and "passo dois" in L
     assert any(r.startswith("passo") for r in rotulos)
+
+
+def test_pergunta_sem_diz_nao_fica_escutando_silencio():
+    # bug distinto do contrato de ferramentas (schema/calc): um beat 'pergunta'
+    # sem 'diz' fazia o tocador chamar ouvir() sem nunca ter falado nada — o
+    # aluno ficaria esperando resposta pra uma pergunta que nunca ouviu.
+    ouviu = []
+    t = Tocador(falar=lambda x: None, ouvir=lambda s: ouviu.append(s) or None,
+                desenhar=lambda p, r: None, pausas=False, cerebro=None)
+    bloco = {"pergunta": {"escuta_s": 12, "senao": "nao_entendi"}}   # sem 'diz'
+    r = t._toca_bloco(bloco)
+    assert ouviu == []          # NUNCA chama ouvir() sem ter perguntado nada
+    assert r is None            # segue como um beat vazio, não trava nem devolve resposta
+
+
+def test_pergunta_com_diz_continua_escutando_normal():
+    # a mesma aula com 'diz' continua funcionando exatamente como antes.
+    ouviu = []
+    t = Tocador(falar=lambda x: None, ouvir=lambda s: ouviu.append(s) or "resposta",
+                desenhar=lambda p, r: None, pausas=False, cerebro=None)
+    bloco = {"diz": "qual o outro ângulo?", "pergunta": {"escuta_s": 12, "senao": "nao_entendi"}}
+    r = t._toca_bloco(bloco)
+    assert ouviu == [12]
+    assert r == ("resposta", "resposta")
