@@ -64,6 +64,36 @@ autotuto/visor.py                  a tela (http.server, zero dep)
 
 ---
 
+## Perfis de hardware
+
+A máquina de quem vai rodar isso varia muito — de um notebook velho de 4GB até uma
+máquina boa de 16GB. `AUTOTUTO_PERFIL` ajusta o *default* de LLM e do modelo de STT;
+qualquer knob setado explicitamente (`AUTOTUTO_LLM`, `AUTOTUTO_STT`) sempre ganha do
+perfil, seja qual for.
+
+| perfil | RAM alvo | LLM padrão | voz (TTS/STT) | como rodar |
+|---|---|---|---|---|
+| `leve`   | ~4GB  | nuvem (`claude`, precisa `ANTHROPIC_API_KEY`) | não recomendada | `demo_texto.py` |
+| `medio`  | ~8GB  | nuvem (`claude`) — `ollama` local ainda cabe | local cabe (STT `tiny`) | `demo_texto.py` ou `demo_voz.py` |
+| `pesado` | ~16GB | local (`ollama` + `qwen2.5:7b`) — **default de sempre** | local (STT `base`) | `demo_voz.py` |
+
+```bash
+AUTOTUTO_PERFIL=leve ANTHROPIC_API_KEY=sk-... .venv/bin/python demos/demo_texto.py
+```
+
+Sem `AUTOTUTO_PERFIL`, nada muda — continua exatamente o comportamento de sempre
+(`pesado`: `ollama` local). Detecção automática de RAM não existe de propósito (não dá
+pra fazer direito sem depender de `psutil`, e SPEC.md já veta dependência sem
+justificativa) — a escolha do perfil é sua.
+
+As duas chamadas curtas de LLM (classificação de interrupção e avaliação semântica de
+resposta) também são desligáveis individualmente — `Tocador(cerebro=None,
+avaliador=None)`, como `demo_roteiro.py` já faz — pra quem quiser o caminho mais leve
+possível, sem LLM nenhum (perde a inteligência de interrupção/resposta, então não é o
+que `leve` recomenda por padrão).
+
+---
+
 ## Rodar
 
 ```bash
@@ -88,8 +118,8 @@ a caixa de texto. Voz é bônus: `AUTOTUTO_BARGE_IN=0` por padrão (o mic não i
 sozinho — liga com `AUTOTUTO_BARGE_IN=1` se o ambiente tiver echo-cancel).
 
 Cérebro: `AUTOTUTO_LLM=claude` (precisa de `ANTHROPIC_API_KEY`, rápido) ou `ollama` +
-`qwen2.5:7b` local (default). Todos os knobs (timings, modelo, portas, cores da lousa)
-vivem em `autotuto/config.py`.
+`qwen2.5:7b` local (default) — ver "Perfis de hardware" acima pra qual escolher. Todos
+os knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 
 ---
 

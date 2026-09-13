@@ -2,8 +2,14 @@ import os
 
 env = lambda k, d: os.environ.get(k, d)
 
+# Perfil de hardware — só muda o FALLBACK dos knobs abaixo quando eles não são
+# setados explicitamente (ver README "Perfis de hardware"). AUTOTUTO_LLM=... ou
+# AUTOTUTO_STT=... sempre ganham do perfil, sejam quais forem.
+PERFIL = env("AUTOTUTO_PERFIL", "pesado")  # leve (~4GB) | medio (~8GB) | pesado (~16GB)
+
 # LLM
-LLM_PROVEDOR   = env("AUTOTUTO_LLM", "ollama")      # ollama | claude
+_LLM_PADRAO    = {"leve": "claude", "medio": "claude"}.get(PERFIL, "ollama")
+LLM_PROVEDOR   = env("AUTOTUTO_LLM", _LLM_PADRAO)   # ollama | claude
 LLM_MODELO     = env("AUTOTUTO_MODELO", "qwen2.5:7b")
 LLM_CLAUDE     = "claude-sonnet-5"
 CEREBRO_TIMEOUT_S = 8.0                              # LLM curto da interrupção
@@ -17,7 +23,8 @@ PLANEJADOR_TIMEOUT_NOVO_S = 100.0  # autópsia de 2026-09-12: SEM few-shot dirig
                               # com esse teto maior, então só entra quando não há few-shot.
 
 # Voz
-STT_MODELO     = env("AUTOTUTO_STT", "base")         # tiny | base | small
+_STT_PADRAO    = {"leve": "tiny", "medio": "tiny"}.get(PERFIL, "base")
+STT_MODELO     = env("AUTOTUTO_STT", _STT_PADRAO)    # tiny | base | small
 STT_DEVICE     = "cpu"
 TTS_VOICE      = env("AUTOTUTO_TTS_VOICE", os.path.expanduser("~/jarvis/models/piper/pt_BR-faber-medium.onnx"))
 STT_CACHE      = env("AUTOTUTO_STT_CACHE", os.path.expanduser("~/jarvis/models/faster-whisper"))
