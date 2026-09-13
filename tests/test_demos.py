@@ -22,7 +22,7 @@ def test_demos_importam(mod):
 
 def test_roteiro_headless():
     r = json.load(open(ROTEIRO, encoding="utf-8"))
-    est = Tocador(pausas=False, cerebro=None).toca(
+    est = Tocador(pausas=False, cerebro=None, avaliador=None).toca(
         carregar(r["aula"]),
         interrupcoes={int(k): v for k, v in r.get("interrupcoes", {}).items()},
         respostas={int(k): v for k, v in r.get("respostas", {}).items()},

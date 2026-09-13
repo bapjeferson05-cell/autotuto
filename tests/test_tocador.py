@@ -22,7 +22,7 @@ def roda(nome, *, barge=None, quando=2, resp=None, cerebro=None):
         return barge if (barge and n[0] == quando) else None
 
     est = Tocador(falar=falar, ouvir=lambda s: resp,
-                  pausas=False, cerebro=cerebro).toca(carregar(nome))
+                  pausas=False, cerebro=cerebro, avaliador=None).toca(carregar(nome))
     return est, L
 
 
@@ -85,7 +85,7 @@ def test_barge_no_beat_da_formula_nao_perde_o_calc():
 
     Tocador(falar=falar, ouvir=lambda s: "triângulo",
             desenhar=lambda png, rot: rotulos.append(rot),
-            pausas=False, cerebro=None).toca(carregar("trapezio"))
+            pausas=False, cerebro=None, avaliador=None).toca(carregar("trapezio"))
     assert any(HONESTO in x for x in L)               # não casou nada -> honesto
     assert any(r.startswith("passo") for r in rotulos)   # a fórmula voltou pra lousa
     assert any("oitenta e quatro" in x.lower() for x in L)  # o resultado foi dito
@@ -105,7 +105,7 @@ def test_barge_dentro_do_ramo_sem_match_e_honesto():
         return None
 
     est = Tocador(falar=falar, ouvir=lambda s: None,
-                  pausas=False, cerebro=None).toca(carregar("pitagoras"))
+                  pausas=False, cerebro=None, avaliador=None).toca(carregar("pitagoras"))
     assert any(HONESTO in x for x in seen)
     assert est.historico == ["por_que"]              # o ramo terminou, sem desvio
 
@@ -127,7 +127,7 @@ def test_gerador_torto_nao_derruba_a_sessao():
     })
     L = []
     Tocador(falar=lambda t: L.append(t) or None, ouvir=lambda s: None,
-            desenhar=lambda p, r: None, pausas=False, cerebro=None).toca(aula)
+            desenhar=lambda p, r: None, pausas=False, cerebro=None, avaliador=None).toca(aula)
     assert L == [LIMITACAO_VISUAL, "um", "dois", LIMITACAO_CALC, "tres"]
 
 
@@ -148,7 +148,7 @@ def test_retomada_do_calc_nao_rele_passos_ja_narrados():
         return "por que divide por dois?" if t == _P0 else None
 
     Tocador(falar=falar, ouvir=lambda s: None, desenhar=lambda p, r: None,
-            pausas=False, cerebro=None).toca(carregar("trapezio"))
+            pausas=False, cerebro=None, avaliador=None).toca(carregar("trapezio"))
     assert L.count(_P0) == 1          # dito só antes do barge, não re-narrado
     assert L.count(_P1) == 1          # narrado uma vez, na retomada
     assert L.count(_P2) == 1
@@ -169,7 +169,7 @@ def test_barge_de_novo_na_retomada_e_honesto_e_segue():
         return None
 
     Tocador(falar=falar, ouvir=lambda s: None, desenhar=lambda p, r: None,
-            pausas=False, cerebro=None).toca(carregar("trapezio"))
+            pausas=False, cerebro=None, avaliador=None).toca(carregar("trapezio"))
     assert sum(HONESTO in x for x in L) == 1
     assert any("oitenta e quatro" in x.lower() for x in L)   # chegou no valor final
 
@@ -189,7 +189,7 @@ def test_re_pergunta_mesmo_ramo_recebe_filler_nao_silencio():
         return None
 
     est = Tocador(falar=falar, ouvir=lambda s: None,
-                  pausas=False, cerebro=None).toca(carregar("pitagoras"))
+                  pausas=False, cerebro=None, avaliador=None).toca(carregar("pitagoras"))
     # _FILLER["por_que"] agora é uma tupla de variações (sorteadas) — conta
     # quantas falas vieram dali, não uma string fixa.
     assert sum(1 for t in seen if t in _FILLER["por_que"]) >= 2  # entrada + ack da re-pergunta
@@ -203,7 +203,7 @@ def test_figura_calc_string_crua_nao_derruba(tmp_path, monkeypatch):
     # AttributeError não tratado -> aborta toca().
     monkeypatch.chdir(tmp_path)
     t = Tocador(falar=lambda x: None, ouvir=lambda s: None,
-                desenhar=lambda p, r: None, pausas=False, cerebro=None)
+                desenhar=lambda p, r: None, pausas=False, cerebro=None, avaliador=None)
     assert t._toca_bloco({"diz": "x", "figura": "trapezio",
                           "calc": "area_trapezio"}) is None
 
@@ -218,13 +218,13 @@ def test_figura_calc_string_crua_nao_derruba(tmp_path, monkeypatch):
     })
     L = []
     Tocador(falar=lambda x: L.append(x) or None, ouvir=lambda s: None,
-            desenhar=lambda p, r: None, pausas=False, cerebro=None).toca(aula)
+            desenhar=lambda p, r: None, pausas=False, cerebro=None, avaliador=None).toca(aula)
     assert L == ["um", "dois"]
 
 
 def test_modo_gravacao_scriptado():
     # o beat de pergunta do trapézio é o 3º beat principal (n_princ == 3).
-    est = Tocador(pausas=False, cerebro=None).toca(
+    est = Tocador(pausas=False, cerebro=None, avaliador=None).toca(
         carregar("trapezio"),
         interrupcoes={2: "por_que_div_2"},
         respostas={3: "acho que vira um triângulo"})
@@ -237,7 +237,7 @@ def test_desenha_figura_e_passos_do_calc():
     rotulos = []
     Tocador(falar=lambda t: None, ouvir=lambda s: None,
             desenhar=lambda png, rot: rotulos.append((rot, isinstance(png, bytes))),
-            pausas=False, cerebro=None).toca(carregar("pitagoras"))
+            pausas=False, cerebro=None, avaliador=None).toca(carregar("pitagoras"))
     assert any(r == "figura" and ok for r, ok in rotulos)          # spec inline
     assert any(r.startswith("passo") and ok for r, ok in rotulos)  # calc na lousa
 
@@ -271,7 +271,7 @@ def test_calc_dentro_de_ramo_tambem_e_retomado_apos_barge():
 
     Tocador(falar=falar, ouvir=lambda s: None,
             desenhar=lambda p, r: rotulos.append(r),
-            pausas=False, cerebro=None).toca(aula, interrupcoes={1: "por_que"})
+            pausas=False, cerebro=None, avaliador=None).toca(aula, interrupcoes={1: "por_que"})
 
     assert "passo um" in L and "passo dois" in L
     assert any(r.startswith("passo") for r in rotulos)
@@ -283,7 +283,7 @@ def test_pergunta_sem_diz_nao_fica_escutando_silencio():
     # aluno ficaria esperando resposta pra uma pergunta que nunca ouviu.
     ouviu = []
     t = Tocador(falar=lambda x: None, ouvir=lambda s: ouviu.append(s) or None,
-                desenhar=lambda p, r: None, pausas=False, cerebro=None)
+                desenhar=lambda p, r: None, pausas=False, cerebro=None, avaliador=None)
     bloco = {"pergunta": {"escuta_s": 12, "senao": "nao_entendi"}}   # sem 'diz'
     r = t._toca_bloco(bloco)
     assert ouviu == []          # NUNCA chama ouvir() sem ter perguntado nada
@@ -294,7 +294,7 @@ def test_pergunta_com_diz_continua_escutando_normal():
     # a mesma aula com 'diz' continua funcionando exatamente como antes.
     ouviu = []
     t = Tocador(falar=lambda x: None, ouvir=lambda s: ouviu.append(s) or "resposta",
-                desenhar=lambda p, r: None, pausas=False, cerebro=None)
+                desenhar=lambda p, r: None, pausas=False, cerebro=None, avaliador=None)
     bloco = {"diz": "qual o outro ângulo?", "pergunta": {"escuta_s": 12, "senao": "nao_entendi"}}
     r = t._toca_bloco(bloco)
     assert ouviu == [12]
@@ -314,7 +314,7 @@ def test_resposta_numerica_diferente_do_texto_do_acerta_ainda_acerta():
     })
     for resposta in ("quatro", "o mdc é 4", "acho que é quatro", "4"):
         est = Tocador(falar=lambda t: None, ouvir=lambda s: resposta,
-                      pausas=False, cerebro=None).toca(aula)
+                      pausas=False, cerebro=None, avaliador=None).toca(aula)
         assert est.historico == [], f"{resposta!r} deveria ter feito fading, foi pro ramo"
 
 
@@ -328,7 +328,7 @@ def test_resposta_numerica_errada_nao_acerta():
         "ramos": {"nao_entendi": [{"diz": "de novo"}]},
     })
     est = Tocador(falar=lambda t: None, ouvir=lambda s: "5",
-                  pausas=False, cerebro=None).toca(aula)
+                  pausas=False, cerebro=None, avaliador=None).toca(aula)
     assert est.historico == ["nao_entendi"]
 
 
@@ -348,10 +348,78 @@ def test_acerta_conceitual_com_numero_incidental_nao_e_falso_positivo():
         "ramos": {"nao_entendi": [{"diz": "de novo"}]},
     })
     est = Tocador(falar=lambda t: None, ouvir=lambda s: "porque triângulo tem três lados",
-                  pausas=False, cerebro=None).toca(aula)
+                  pausas=False, cerebro=None, avaliador=None).toca(aula)
     assert est.historico == ["nao_entendi"]          # NÃO pode virar fading
 
     # e a resposta certa de verdade continua funcionando
     est2 = Tocador(falar=lambda t: None, ouvir=lambda s: "porque é metade de um retângulo",
-                   pausas=False, cerebro=None).toca(aula)
+                   pausas=False, cerebro=None, avaliador=None).toca(aula)
     assert est2.historico == []                       # fading, sem ramo
+
+
+def _aula_pergunta_aberta():
+    from autotuto.schema import Aula
+    return Aula.de_json({
+        "titulo": "t", "topico": "t", "dados": {},
+        "blocos": [{"diz": "por que a área do triângulo é base vezes altura sobre dois?",
+                    "pergunta": {"escuta_s": 12, "senao": "nao_entendi",
+                                 "acerta": ["metade de um retângulo"],
+                                 "confirma": "isso mesmo"}}],
+        "ramos": {"nao_entendi": [{"diz": "de novo"}]},
+    })
+
+
+def test_avaliador_diz_certo_faz_fading_mesmo_sem_bater_substring():
+    # P1.2: resposta certa DITA COM OUTRAS PALAVRAS não bate o substring nem o
+    # crivo numérico -- só o avaliador semântico enxerga isso.
+    aula = _aula_pergunta_aberta()
+    fake = lambda pergunta, esperado, resposta, **k: "certo"
+    est = Tocador(falar=lambda t: None, ouvir=lambda s: "porque ele fica deitado dentro do retângulo",
+                  pausas=False, cerebro=None, avaliador=fake).toca(aula)
+    assert est.historico == []                        # fading, sem ramo (senao)
+
+
+def test_avaliador_diz_parcial_reconhece_e_ensina():
+    # acerto parcial: reconhece (fala _PARCIAL), mas ainda ensina via `senao`
+    # -- não é "certo" (não pula a derivação) nem erro silencioso.
+    from autotuto.tocador import _PARCIAL
+    aula = _aula_pergunta_aberta()
+    fake = lambda pergunta, esperado, resposta, **k: "parcial"
+    L = []
+    est = Tocador(falar=lambda t: L.append(t) or None, ouvir=lambda s: "porque divide por dois",
+                  pausas=False, cerebro=None, avaliador=fake).toca(aula)
+    assert est.historico == ["nao_entendi"]
+    assert _PARCIAL in L
+
+
+def test_avaliador_nao_e_chamado_quando_substring_ja_acertou():
+    # não gasta chamada de LLM à toa quando o crivo determinístico já decidiu.
+    aula = _aula_pergunta_aberta()
+    def fake(pergunta, esperado, resposta, **k):
+        raise AssertionError("avaliador não deveria ser chamado — já acertou por substring")
+    est = Tocador(falar=lambda t: None, ouvir=lambda s: "é a metade de um retângulo",
+                  pausas=False, cerebro=None, avaliador=fake).toca(aula)
+    assert est.historico == []
+
+
+def test_avaliador_nao_e_chamado_em_nao_sei():
+    # F8 continua tratando "não sei" antes do LLM entrar em cena.
+    aula = _aula_pergunta_aberta()
+    def fake(pergunta, esperado, resposta, **k):
+        raise AssertionError("avaliador não deveria ser chamado — resposta foi 'não sei'")
+    est = Tocador(falar=lambda t: None, ouvir=lambda s: "não sei",
+                  pausas=False, cerebro=None, avaliador=fake).toca(aula)
+    assert est.historico == ["nao_entendi"]
+
+
+def test_avaliador_none_ou_errado_mantem_comportamento_antigo():
+    # sem avaliador (None) ou com veredito "errado"/None: cai no `senao` de
+    # sempre -- P1.2 nunca piora o caminho que já existia.
+    aula = _aula_pergunta_aberta()
+    resposta = "porque sim, só é"
+    est_sem = Tocador(falar=lambda t: None, ouvir=lambda s: resposta,
+                       pausas=False, cerebro=None, avaliador=None).toca(aula)
+    fake_errado = lambda pergunta, esperado, r, **k: "errado"
+    est_com = Tocador(falar=lambda t: None, ouvir=lambda s: resposta,
+                       pausas=False, cerebro=None, avaliador=fake_errado).toca(aula)
+    assert est_sem.historico == est_com.historico == ["nao_entendi"]

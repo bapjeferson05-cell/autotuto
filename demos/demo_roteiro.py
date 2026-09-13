@@ -29,7 +29,8 @@ def main() -> None:
     visor = Visor(ritmo=float(r.get("ritmo", 0.06))).start()
     time.sleep(float(r.get("espera", 3)))  # tempo pra começar a gravar a tela
 
-    tocador = Tocador(falar=visor.falar, desenhar=visor.desenhar, pausas=True, cerebro=None)
+    tocador = Tocador(falar=visor.falar, desenhar=visor.desenhar, pausas=True,
+                      cerebro=None, avaliador=None)
     est = tocador.toca(
         carregar(r["aula"]),
         interrupcoes={int(k): v for k, v in r.get("interrupcoes", {}).items()},

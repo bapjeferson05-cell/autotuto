@@ -26,7 +26,7 @@ import sys
 import time
 from pathlib import Path
 
-from autotuto import calc, cerebro as _cerebro, classificador, config
+from autotuto import avaliador as _avaliador, calc, cerebro as _cerebro, classificador, config
 from autotuto.classificador import classificar
 from autotuto.estado import EstadoAula
 from autotuto.figuras import lousa
@@ -80,6 +80,10 @@ def _filler(gat: str) -> str:
 
 _ACOLHE = "Tranquilo não saber — é pra isso que a gente tá aqui. Olha:"
 _VOLTA = "Voltando de onde a gente parou."
+# P1.2: o avaliador semântico (LLM) disse "parcial" — reconhece o pedaço certo
+# antes de completar (não tratar como erro silencioso, mas também não fingir
+# que fechou a ideia inteira).
+_PARCIAL = "Você chegou perto — parte disso já tá certa. Deixa eu completar:"
 
 
 class Tocador:
@@ -89,15 +93,19 @@ class Tocador:
     ouvir(seg)   -> str | None: escuta até `seg`s por uma resposta a `pergunta`.
     desenhar(png, rotulo) -> None.
     cerebro      -> roteador da camada 2 (ou None p/ modo determinístico).
+    avaliador    -> avaliador semântico de resposta, P1.2 (ou None p/ modo
+                    determinístico — só substring/número, sem LLM).
     pausas       -> False zera todos os sleeps (testes / modo texto rápido).
     """
 
     def __init__(self, falar=None, ouvir=None, desenhar=None, *,
-                 cerebro=_cerebro.roteia_interrupcao, pausas=True):
+                 cerebro=_cerebro.roteia_interrupcao,
+                 avaliador=_avaliador.avalia_resposta, pausas=True):
         self.falar = falar or self._falar_padrao
         self.ouvir = ouvir or (lambda seg: None)
         self.desenhar = desenhar or self._desenhar_padrao
         self.cerebro = cerebro
+        self.avaliador = avaliador
         self.pausas = pausas
         self._falas: list[str] = []   # últimos 3 `diz` — contexto da camada 2
         self._n_png = 0
@@ -305,13 +313,28 @@ class Tocador:
                         classificador._norm(k) in d
                         or classificador.mesma_resposta_numerica(k, dita)
                         for k in acerta)
-                    if acertou and pg.get("confirma"):
+                    # P1.2 (autópsia 2026-09-12): os crivos acima são substring/
+                    # número — não enxergam uma resposta certa ou parcialmente
+                    # certa DITA COM OUTRAS PALAVRAS. Só entra o avaliador (LLM)
+                    # quando os dois já disseram "não bateu" e vale a pena gastar
+                    # a chamada — nunca quando já acertou, é eco, ou é "não sei"
+                    # (F8 continua tratando isso antes, sem depender do LLM).
+                    veredito = None
+                    if (not acertou and not eco and acerta and self.avaliador
+                            and not _NAO_SABE.search(d)):
+                        veredito = self.avaliador(bloco["diz"], acerta, dita)
+                    if (acertou or veredito == "certo") and pg.get("confirma"):
                         self.falar(pg["confirma"])   # fading: pula a derivação
                         gat = None
                     elif _NAO_SABE.search(d):
                         # só depois de descartar o acerto: acolhe e vai pro `senao`
                         # (que ENSINA) — um acerto hedgeado NÃO é "não saber" (F8).
                         self.falar(_ACOLHE)
+                        gat = senao
+                    elif veredito == "parcial":
+                        # reconhece o pedaço certo antes de ensinar o resto —
+                        # nunca tratar acerto parcial como erro silencioso.
+                        self.falar(_PARCIAL)
                         gat = senao
                     else:
                         gat = achou or senao
