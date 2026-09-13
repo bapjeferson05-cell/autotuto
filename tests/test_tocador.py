@@ -330,3 +330,28 @@ def test_resposta_numerica_errada_nao_acerta():
     est = Tocador(falar=lambda t: None, ouvir=lambda s: "5",
                   pausas=False, cerebro=None).toca(aula)
     assert est.historico == ["nao_entendi"]
+
+
+def test_acerta_conceitual_com_numero_incidental_nao_e_falso_positivo():
+    # P1.1 — achado ao vivo 2026-09-12: acerta=["três triângulos"] (conceitual,
+    # não numérico) aceitava "porque triângulo tem três lados" (resposta
+    # ERRADA) só porque as duas mencionavam "três". O 'acerta' não é
+    # numericamente atômico -> o avaliador numérico não pode nem entrar em
+    # cena; sobra só o substring, que corretamente não bate.
+    from autotuto.schema import Aula
+    aula = Aula.de_json({
+        "titulo": "t", "topico": "t", "dados": {},
+        "blocos": [{"diz": "o que rola quando corto o retângulo na diagonal?",
+                    "pergunta": {"escuta_s": 12, "senao": "nao_entendi",
+                                 "acerta": ["três triângulos", "metade de um retângulo"],
+                                 "confirma": "isso mesmo"}}],
+        "ramos": {"nao_entendi": [{"diz": "de novo"}]},
+    })
+    est = Tocador(falar=lambda t: None, ouvir=lambda s: "porque triângulo tem três lados",
+                  pausas=False, cerebro=None).toca(aula)
+    assert est.historico == ["nao_entendi"]          # NÃO pode virar fading
+
+    # e a resposta certa de verdade continua funcionando
+    est2 = Tocador(falar=lambda t: None, ouvir=lambda s: "porque é metade de um retângulo",
+                   pausas=False, cerebro=None).toca(aula)
+    assert est2.historico == []                       # fading, sem ramo

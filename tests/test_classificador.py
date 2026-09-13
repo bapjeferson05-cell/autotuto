@@ -44,3 +44,32 @@ def test_mesma_resposta_numerica():
     assert mesma_resposta_numerica("4", "acho que é quatro") is True
     assert mesma_resposta_numerica("4", "5") is False
     assert mesma_resposta_numerica("4", "não sei") is False
+
+
+def test_numero_atomico_aceita_so_o_numero_puro():
+    from autotuto.classificador import _numero_atomico
+    assert _numero_atomico("4") == 4.0
+    assert _numero_atomico("quatro") == 4.0
+    assert _numero_atomico("vinte e cinco") == 25.0
+    assert _numero_atomico("cem") == 100.0
+    # NÃO atômico: o número é só parte de uma frase maior
+    assert _numero_atomico("três triângulos") is None
+    assert _numero_atomico("dividido por dois") is None
+    assert _numero_atomico("metade de um retângulo") is None
+    assert _numero_atomico("o mdc é 4") is None
+
+
+def test_mesma_resposta_numerica_so_com_acerta_atomico():
+    # P1.1 — o achado do "três lados" ≈ "três triângulos" (2026-09-12): o
+    # 'acerta' precisa ser numericamente atômico pro avaliador numérico
+    # sequer entrar em cena.
+    from autotuto.classificador import mesma_resposta_numerica
+    # regressão obrigatória: as respostas boas continuam batendo
+    assert mesma_resposta_numerica("4", "quatro") is True
+    assert mesma_resposta_numerica("4", "o mdc é 4") is True
+    assert mesma_resposta_numerica("4", "acho que é quatro") is True
+    assert mesma_resposta_numerica("4", "5") is False
+    # o falso positivo do "três lados" — NÃO pode mais acertar
+    assert mesma_resposta_numerica("três triângulos", "triângulo tem três lados") is False
+    assert mesma_resposta_numerica("dividido por dois", "porque divide por 2") is False
+    assert mesma_resposta_numerica("metade de um retângulo", "porque divide por 2") is False

@@ -39,10 +39,38 @@ def extrai_numero(texto: str) -> float | None:
     return None
 
 
-def mesma_resposta_numerica(a: str, b: str) -> bool:
-    """True se as duas falas carregam o MESMO número (dígito ou por extenso)."""
-    na, nb = extrai_numero(a), extrai_numero(b)
-    return na is not None and nb is not None and na == nb
+def _numero_atomico(texto: str) -> float | None:
+    """Como `extrai_numero`, mas só se o texto INTEIRO (normalizado) É o
+    número — nada mais. 'quatro' e '4' contam; 'três triângulos' e 'dividido
+    por dois' NÃO (o número aí é só uma peça de uma frase maior, não a
+    resposta inteira). P1.1 (achado 2026-09-12): sem essa restrição, um
+    'acerta' conceitual que menciona um número de passagem ('três
+    triângulos') aceitava qualquer resposta que citasse o MESMO número por
+    coincidência ('triângulo tem três lados') — falso positivo grotesco."""
+    d = _norm(texto)
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", d):
+        return float(d)
+    if d in _UNIDADES:
+        return float(_UNIDADES[d])
+    if d in _DEZENAS:
+        return float(_DEZENAS[d])
+    m = re.fullmatch(rf"({'|'.join(_DEZENAS)}) e ({'|'.join(_UNIDADES)})", d)
+    if m:
+        return float(_DEZENAS[m.group(1)] + _UNIDADES[m.group(2)])
+    if d in ("cem", "cento"):
+        return 100.0
+    return None
+
+
+def mesma_resposta_numerica(esperado: str, resposta: str) -> bool:
+    """True só se `esperado` (um item de 'acerta') é uma resposta numérica
+    ATÔMICA (o item inteiro é o número — ver `_numero_atomico`) e `resposta`
+    (o que o aluno disse, livre) carrega o mesmo número em qualquer forma."""
+    ne = _numero_atomico(esperado)
+    if ne is None:
+        return False
+    nr = extrai_numero(resposta)
+    return nr is not None and ne == nr
 
 _REGRAS = [
     ("por_que_div_2", (r"\b(por ?que|pq).*(divid|sobre|metade|media|\bdois\b|\b2\b)",
