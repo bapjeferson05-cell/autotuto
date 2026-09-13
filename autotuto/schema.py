@@ -27,6 +27,15 @@ def _valida_beat(b: dict, onde: str, ramos: dict) -> list[str]:
     aqui, e um `figura`/`calc` malformado num ramo só estourava (AttributeError)
     lá na frente, no `validador.checar_matematica` (bug do code-review)."""
     erros: list[str] = []
+    # achado ao vivo 2026-09-13: uma aula do LLM pode mandar um item de
+    # `blocos`/ramo como STRING CRUA em vez de objeto — sem este guarda,
+    # `b.get(...)` estoura AttributeError aqui dentro, derrubando o thread do
+    # planejador (e, sem try/except lá em cima, o processo inteiro do demo).
+    # Mesma classe de bug do F7 (figura/calc crus), um nível acima: o BEAT
+    # inteiro, não só um campo dele.
+    if not isinstance(b, dict):
+        erros.append(f"{onde}: precisa ser objeto (beat), veio {type(b).__name__}")
+        return erros
     if not (b.get("diz") or b.get("figura") or b.get("calc")):
         erros.append(f"{onde}: vazio (precisa de diz, figura ou calc)")
     # F7: sem estes checks, uma `figura`/`calc` como string crua passa aqui e

@@ -58,3 +58,19 @@ def test_figura_string_crua_DENTRO_de_ramo_e_erro():
 def test_calc_string_crua_DENTRO_de_ramo_e_erro():
     obj = {**AULA_OK, "ramos": {"por_que": [{"diz": "x", "calc": "area_trapezio"}]}}
     assert any("calc" in e for e in validar_estrutura(obj))
+
+
+def test_beat_string_crua_e_erro_sem_crashar():
+    # achado ao vivo 2026-09-13: um item de 'blocos' pode chegar do LLM como
+    # STRING CRUA (não um beat/objeto) -- sem o guarda, `b.get(...)` estourava
+    # AttributeError aqui dentro, derrubando o thread do planejador e, sem
+    # try/except lá em cima, o processo do demo inteiro.
+    obj = {**AULA_OK, "blocos": [{"diz": "oi"}, "isso não é um beat"]}
+    erros = validar_estrutura(obj)
+    assert any("bloco[1]" in e and "objeto" in e for e in erros)
+
+
+def test_beat_string_crua_DENTRO_de_ramo_e_erro_sem_crashar():
+    obj = {**AULA_OK, "ramos": {"por_que": [{"diz": "x"}, "string crua"]}}
+    erros = validar_estrutura(obj)
+    assert any("por_que" in e and "objeto" in e for e in erros)
