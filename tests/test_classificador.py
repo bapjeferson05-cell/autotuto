@@ -23,3 +23,24 @@ def test_sem_match_e_none():
 
 def test_norm():
     assert _norm("Pêra Aí, POR QUÊ?!") == "pera ai por que"
+
+
+def test_extrai_numero_digito_e_por_extenso():
+    from autotuto.classificador import extrai_numero
+    assert extrai_numero("4") == 4.0
+    assert extrai_numero("quatro") == 4.0
+    assert extrai_numero("o mdc é 4") == 4.0
+    assert extrai_numero("acho que é quatro") == 4.0
+    assert extrai_numero("vinte e cinco") == 25.0
+    assert extrai_numero("trinta") == 30.0
+    assert extrai_numero("cem") == 100.0
+    assert extrai_numero("não sei") is None
+
+
+def test_mesma_resposta_numerica():
+    from autotuto.classificador import mesma_resposta_numerica
+    assert mesma_resposta_numerica("4", "quatro") is True
+    assert mesma_resposta_numerica("4", "o mdc é 4") is True
+    assert mesma_resposta_numerica("4", "acho que é quatro") is True
+    assert mesma_resposta_numerica("4", "5") is False
+    assert mesma_resposta_numerica("4", "não sei") is False

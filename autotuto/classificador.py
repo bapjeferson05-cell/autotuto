@@ -5,6 +5,45 @@ def _norm(s: str) -> str:
     s = unicodedata.normalize("NFKD", s.lower()).encode("ascii", "ignore").decode()
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", s)).strip()
 
+
+# ────────────────────────────────────────────── avaliador numérico (P1)
+# autópsia 2026-09-12: "4", "quatro" e "o mdc é 4" são a MESMA resposta —
+# comparar substring de frase inteira não enxerga isso. Camada determinística
+# pequena (não precisa de IA pra número): acha o primeiro número na fala, em
+# dígito ou por extenso (0-100, o suficiente pra resposta curta de aluno).
+_UNIDADES = {"zero": 0, "um": 1, "uma": 1, "dois": 2, "duas": 2, "tres": 3,
+             "quatro": 4, "cinco": 5, "seis": 6, "sete": 7, "oito": 8, "nove": 9,
+             "dez": 10, "onze": 11, "doze": 12, "treze": 13, "catorze": 14,
+             "quatorze": 14, "quinze": 15, "dezesseis": 16, "dezessete": 17,
+             "dezoito": 18, "dezenove": 19}
+_DEZENAS = {"vinte": 20, "trinta": 30, "quarenta": 40, "cinquenta": 50,
+            "sessenta": 60, "setenta": 70, "oitenta": 80, "noventa": 90}
+
+
+def extrai_numero(texto: str) -> float | None:
+    """Primeiro número em `texto` — dígito ('4', '20.5') ou por extenso
+    ('quatro', 'vinte e cinco'). None se não achar nenhum."""
+    d = _norm(texto)
+    m = re.search(r"-?\d+(?:\.\d+)?", d)
+    if m:
+        return float(m.group())
+    m = re.search(rf"\b({'|'.join(_DEZENAS)})\b(?:\s+e\s+({'|'.join(_UNIDADES)}))?", d)
+    if m:
+        v = _DEZENAS[m.group(1)]
+        return float(v + _UNIDADES[m.group(2)]) if m.group(2) else float(v)
+    m = re.search(rf"\b({'|'.join(_UNIDADES)})\b", d)
+    if m:
+        return float(_UNIDADES[m.group(1)])
+    if re.search(r"\bcem\b|\bcento\b", d):
+        return 100.0
+    return None
+
+
+def mesma_resposta_numerica(a: str, b: str) -> bool:
+    """True se as duas falas carregam o MESMO número (dígito ou por extenso)."""
+    na, nb = extrai_numero(a), extrai_numero(b)
+    return na is not None and nb is not None and na == nb
+
 _REGRAS = [
     ("por_que_div_2", (r"\b(por ?que|pq).*(divid|sobre|metade|media|\bdois\b|\b2\b)",
                        r"(dividir|dividido|divide) por (dois|2)",

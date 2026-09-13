@@ -123,6 +123,14 @@ MODELO DE DADOS (schema):
   Cada bloco precisa de pelo menos um de: diz, figura, calc.
   Se um beat tem "pergunta", o "senao" TEM que ser um gatilho existente em "ramos".
 
+  "pergunta.acerta" = exemplos do que o ALUNO diria pra mostrar que respondeu
+  CERTO (a resposta dele, não a sua). "pergunta.confirma" = a SUA fala curta
+  quando ele acerta (aí pula a derivação). Não confunda os dois papéis:
+    Pergunta: "Qual é o MDC de 15 e 20?"
+    acerta (CERTO — é o que o ALUNO fala):    ["5", "cinco", "o mdc é 5", "acho que é 5"]
+    acerta (ERRADO — isso é fala SUA, não do aluno): ["Boa!", "Isso mesmo!", "Vamos continuar"]
+    confirma (a SUA fala, separado): "Isso, o MDC é 5 mesmo — vamos direto pro próximo."
+
 REGRAS DE PEDAGOGIA (SPEC §3):
 - Nunca mentir pro aluno: só planeje o que dá pra explicar de verdade.
 - "diz" NARRA A DECISÃO, não o passo cru. Ruim: "divide por dois". Bom: "divide por

@@ -297,7 +297,14 @@ class Tocador:
                     acerta = pg.get("acerta") or []
                     if isinstance(acerta, str):
                         acerta = [acerta]
-                    acertou = not eco and any(classificador._norm(k) in d for k in acerta)
+                    # P1 (autópsia 2026-09-12): "4", "quatro" e "o mdc é 4" são a
+                    # MESMA resposta — substring de frase não enxerga isso. Se um
+                    # item de 'acerta' carrega número, compara o número da fala do
+                    # aluno com ele (dígito ou por extenso), não só o texto.
+                    acertou = not eco and any(
+                        classificador._norm(k) in d
+                        or classificador.mesma_resposta_numerica(k, dita)
+                        for k in acerta)
                     if acertou and pg.get("confirma"):
                         self.falar(pg["confirma"])   # fading: pula a derivação
                         gat = None

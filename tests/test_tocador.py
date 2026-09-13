@@ -299,3 +299,34 @@ def test_pergunta_com_diz_continua_escutando_normal():
     r = t._toca_bloco(bloco)
     assert ouviu == [12]
     assert r == ("resposta", "resposta")
+
+
+def test_resposta_numerica_diferente_do_texto_do_acerta_ainda_acerta():
+    # P1 (autópsia 2026-09-12): acerta=["4"], aluno responde "quatro" ou
+    # "o mdc é 4" -- é a MESMA resposta, não deveria cair no senao.
+    from autotuto.schema import Aula
+    aula = Aula.de_json({
+        "titulo": "t", "topico": "t", "dados": {},
+        "blocos": [{"diz": "qual o mdc?",
+                    "pergunta": {"escuta_s": 12, "senao": "nao_entendi",
+                                 "acerta": ["4"], "confirma": "isso, é 4 mesmo"}}],
+        "ramos": {"nao_entendi": [{"diz": "de novo"}]},
+    })
+    for resposta in ("quatro", "o mdc é 4", "acho que é quatro", "4"):
+        est = Tocador(falar=lambda t: None, ouvir=lambda s: resposta,
+                      pausas=False, cerebro=None).toca(aula)
+        assert est.historico == [], f"{resposta!r} deveria ter feito fading, foi pro ramo"
+
+
+def test_resposta_numerica_errada_nao_acerta():
+    from autotuto.schema import Aula
+    aula = Aula.de_json({
+        "titulo": "t", "topico": "t", "dados": {},
+        "blocos": [{"diz": "qual o mdc?",
+                    "pergunta": {"escuta_s": 12, "senao": "nao_entendi",
+                                 "acerta": ["4"], "confirma": "isso, é 4 mesmo"}}],
+        "ramos": {"nao_entendi": [{"diz": "de novo"}]},
+    })
+    est = Tocador(falar=lambda t: None, ouvir=lambda s: "5",
+                  pausas=False, cerebro=None).toca(aula)
+    assert est.historico == ["nao_entendi"]
