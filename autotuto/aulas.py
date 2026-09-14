@@ -1,4 +1,4 @@
-"""aulas.py — as 5 aulas de ouro, escritas à mão.
+"""aulas.py — as 6 aulas de ouro, escritas à mão.
 
 Não são geradas por LLM. São a referência: a pedagogia que a gente QUER, no
 schema do projeto. Servem pra três coisas:
@@ -648,6 +648,119 @@ FRACAO: dict = {
 }
 
 
+# ═══════════════════════════════════ ÂNGULOS — complemento e suplemento
+# Veio de uma prova de 7º ano de verdade: era a questão mais barata da folha,
+# duas subtrações, e foi a que ficou EM BRANCO. O 145° do enunciado era
+# pegadinha — ângulo de 90° ou mais não tem complemento, e o aluno que responde
+# "-55" inventou um ângulo que não existe.
+# O mnemônico "Complementar → Canto reto" é do vídeo que o próprio aluno
+# produziu; é bom demais pra não usar.
+_ANG_COMP = {
+    "pontos": {"V": [0, 0], "P": [4.5, 0], "Q": [0, 4.5], "R": [3.29, 3.07]},
+    "segmentos": [["V", "P"], ["V", "Q"], ["V", "R"]],
+    # raios diferentes de propósito: no mesmo raio os dois arcos se emendam
+    # num quarto de círculo e o aluno enxerga UM ângulo de 90°, não dois.
+    "angulos": [{"vertice": "V", "de": "P", "para": "R", "raio": 0.9},
+                {"vertice": "V", "de": "R", "para": "Q", "raio": 1.7}],
+    "rotulos": [{"xy": [1.58, 0.62], "texto": "43°"},
+                {"xy": [0.94, 2.16], "texto": "47°"},
+                {"xy": [2.2, 5.3], "texto": "juntos fecham o canto reto"}],
+}
+
+_ANG_SUP = {
+    "pontos": {"V": [0, 0], "P": [4.5, 0], "Q": [-4.5, 0], "R": [3.29, 3.07]},
+    "segmentos": [["Q", "P"], ["V", "R"]],
+    "angulos": [{"vertice": "V", "de": "P", "para": "R", "raio": 0.9},
+                {"vertice": "V", "de": "R", "para": "Q", "raio": 1.7}],
+    "rotulos": [{"xy": [1.58, 0.62], "texto": "43°"},
+                {"xy": [-0.66, 1.86], "texto": "137°"},
+                {"xy": [0, -1.1], "texto": "juntos fecham a linha reta"}],
+}
+
+ANGULOS: dict = {
+    "titulo": "Complemento e suplemento — o que falta pra fechar",
+    "topico": "complemento",
+    "dados": {"angulo": 43, "complemento": 47, "suplemento": 137},
+    "blocos": [
+        {"diz": "Esses dois nomes assustam, mas os dois perguntam a mesma coisa: "
+                "quanto falta pra fechar. Muda só o que você está fechando.",
+         "espera": "media"},
+        {"diz": "Complemento fecha o canto reto. Tem um jeito de nunca mais "
+                "esquecer: Complemento, Canto reto. Os dois com C. E canto reto "
+                "é noventa graus.",
+         "figura": {"gerador": "figura", "spec": _ANG_COMP},
+         "espera": "media"},
+        {"diz": "Olha o desenho: o ângulo de quarenta e três está lá embaixo, e "
+                "o que sobra até fechar o canto é quarenta e sete. Quarenta e "
+                "três mais quarenta e sete dá noventa.",
+         "calc": {"gerador": "complemento", "params": {"angulo": 43}},
+         "mostra_passos": True,
+         "diz_passos": ["Complemento é noventa menos o ângulo.",
+                        "Noventa menos quarenta e três dá quarenta e sete."],
+         "espera": "longa"},
+        {"diz": "Suplemento é a mesma ideia, só que fechando a linha reta "
+                "inteira, que é cento e oitenta graus.",
+         "figura": {"gerador": "figura", "spec": _ANG_SUP},
+         "calc": {"gerador": "suplemento", "params": {"angulo": 43}},
+         "mostra_passos": True,
+         "diz_passos": ["Suplemento é cento e oitenta menos o ângulo.",
+                        "Cento e oitenta menos quarenta e três dá cento e trinta e sete."],
+         "espera": "longa"},
+        # beat PERGUNTA — a pegadinha da prova, antes de eu contar
+        {"diz": "Agora pensa comigo antes de eu continuar. E se o ângulo fosse "
+                "cento e quarenta e cinco graus? Quanto seria o complemento dele?",
+         "pergunta": {"escuta_s": 12, "senao": "maior_que_noventa",
+                      "acerta": ["não existe", "nao existe", "não tem", "nao tem",
+                                 "não dá", "nao da", "impossível", "impossivel"],
+                      "confirma": "Isso! Não existe. Cento e quarenta e cinco já "
+                                  "passou do canto reto, então não sobra nada pra "
+                                  "fechar. Essa é a pegadinha clássica."}},
+        {"diz": "Então guarda os dois: complemento fecha o canto, noventa. "
+                "Suplemento fecha a linha, cento e oitenta. E se o ângulo já "
+                "passou de noventa, complemento não existe.",
+         "espera": "media"},
+    ],
+    "ramos": {
+        "de_onde_veio": [
+            {"diz": "Os nomes vêm do latim: complemento é o que completa, "
+                    "suplemento é o que supre a falta. Os dois são literalmente "
+                    "o nome de tapar um buraco.",
+             "espera": "media"},
+            {"diz": "E o noventa e o cento e oitenta vêm da Babilônia, que "
+                    "contava de sessenta em sessenta e dividiu a volta inteira "
+                    "em trezentos e sessenta. É o mesmo motivo de o grau ter "
+                    "sessenta minutos e o minuto ter sessenta segundos — tudo "
+                    "isso é a mesma herança, de mais de dois mil anos.",
+             "espera": "longa"},
+        ],
+        "maior_que_noventa": [
+            {"diz": "Cento e quarenta e cinco não tem complemento. E o motivo é "
+                    "de olhar, não de decorar: o canto reto tem noventa. Se o seu "
+                    "ângulo já é maior que noventa, ele estourou o canto — não "
+                    "sobrou nada pra completar.",
+             "figura": {"gerador": "figura", "spec": _ANG_COMP},
+             "espera": "media"},
+            {"diz": "Se você fizer noventa menos cento e quarenta e cinco na "
+                    "calculadora, sai menos cinquenta e cinco. Mas ângulo "
+                    "negativo não é resposta aqui — a resposta certa é dizer que "
+                    "não existe. Suplemento ele tem, porque cento e quarenta e "
+                    "cinco ainda é menor que cento e oitenta: sobram trinta e cinco.",
+             "calc": {"gerador": "suplemento", "params": {"angulo": 145}},
+             "mostra_passos": True,
+             "diz_passos": ["Suplemento é cento e oitenta menos o ângulo.",
+                            "Cento e oitenta menos cento e quarenta e cinco dá trinta e cinco."],
+             "espera": "longa"},
+        ],
+        "por_que": [
+            {"diz": "Porque os dois só perguntam quanto falta. Complemento falta "
+                    "pra noventa, suplemento falta pra cento e oitenta. Não tem "
+                    "fórmula pra decorar: é uma subtração e saber pra onde.",
+             "espera": "media"},
+        ],
+    },
+}
+
+
 # ═══════════════════════════════════ EXEMPLO DE ESTRUTURA (few-shot de emergência)
 # NÃO é uma aula de ouro e NÃO entra em `_CATALOGO` — `disponiveis()` não muda.
 # Existe por um motivo só: quando o problema do aluno não casa com nenhuma pista
@@ -731,7 +844,7 @@ AULA_SEM_PLANO: dict = {
 
 _CATALOGO = {"trapezio": TRAPEZIO, "pitagoras": PITAGORAS,
              "eq_primeiro_grau": EQ_PRIMEIRO_GRAU, "regra_de_tres": REGRA_DE_TRES,
-             "fracao": FRACAO}
+             "fracao": FRACAO, "angulos": ANGULOS}
 
 
 def carregar(nome: str) -> Aula:

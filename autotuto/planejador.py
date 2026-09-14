@@ -51,6 +51,14 @@ _PISTAS: dict[str, tuple] = {
         r"primeiro grau",
         r"pensei num n[úu]mero",
     ),
+    # ângulos: veio de prova real de 7º ano — era a questão que o aluno deixou
+    # em branco, e o tópico não casava NADA aqui.
+    "angulos": (
+        r"complement",
+        r"suplement",
+        r"\b[âa]ngulo",
+        r"\bgraus?\b",
+    ),
     # fração vem cedo: "3/4" e "metade" são sinal forte, e sem isso uma pergunta
     # como "quanto custa a metade" ia parar na regra de três.
     "fracao": (
@@ -252,6 +260,10 @@ GERADORES DE CÁLCULO (use no "calc", campo "gerador"):
   · porcentagem(parte, todo)  (que % `parte` é de `todo`) · mdc(a, b) · mmc(a, b)
   · area_circulo(raio) · comprimento_circunferencia(raio)  (o contorno, 2·pi·r)
   · fracao_de(num, den, todo)  (quanto é num/den de todo)
+  · complemento(angulo) · suplemento(angulo)  (o que falta pra 90° e pra 180°.
+    ATENÇÃO: ângulo de 90° ou mais NÃO TEM complemento — o gerador já devolve
+    "não existe", e essa É a resposta certa. Nunca escreva no "diz" que dá um
+    número negativo.)
   NÃO improvise um cálculo com um gerador que não é dele (ex.: usar eq_primeiro_grau
   pra simular porcentagem ou MDC) — se não existe gerador certo, admita no "diz" e
   siga sem o número exato.

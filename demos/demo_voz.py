@@ -41,7 +41,7 @@ def _parece_pergunta(txt: str) -> bool:
         return False
     return sum(1 for c in txt if c.isalpha()) >= _MIN_LETRAS
 
-from autotuto import planejador  # noqa: E402
+from autotuto import config, planejador  # noqa: E402
 from autotuto.aulas import carregar, disponiveis  # noqa: E402
 from autotuto.tocador import Tocador  # noqa: E402
 from autotuto.visor import Visor  # noqa: E402
@@ -104,6 +104,7 @@ def main() -> None:
 
     tocador = Tocador(falar=falar, ouvir=ouvir, desenhar=visor.desenhar, pausas=True)
 
+    convidou = False
     try:
         if alvo in disponiveis():
             while True:
@@ -126,9 +127,11 @@ def main() -> None:
                 aula, rel = _planeja_com_filler(problema, falar)
                 if not rel.ok:
                     print(f"[demo_voz] planejador caiu no fallback: {rel.erros}")
-                    # honesto: não troca a pergunta por outro assunto em silêncio
-                    falar("Não consegui montar uma aula nova pra essa pergunta agora "
-                         "— vou com uma que já tenho pronta.")
+                    # a própria aula de fallback já diz isso em voz alta
+                    # (aulas.AULA_SEM_PLANO) — repetir aqui vira desculpa em dobro.
+                if not convidou:      # uma vez só — repetir a cada aula irrita
+                    falar(config.CONVITE_INTERRUPCAO)
+                    convidou = True
                 tocador.toca(aula)
                 visor.estado("aguardando")
     except KeyboardInterrupt:

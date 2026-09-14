@@ -29,6 +29,8 @@ _COMANDOS = {
 }
 _SIMBOLOS = {
     "=": "é igual a",
+    "<": "é menor que",
+    ">": "é maior que",
     "+": "mais",
     "-": "menos",
     "(": "abre parênteses",
@@ -112,6 +114,13 @@ def _traduz(s: str) -> str:
 
         if c == "^":
             i += 1
+            # `^\circ` é a unidade GRAU, não expoente: "45 graus", nunca
+            # "45 elevado a círculo".
+            m = re.match(r"\s*\\circ", s[i:])
+            if m:
+                saida.append("graus")
+                i += len(m.group())
+                continue
             if i < len(s) and s[i] == "{":
                 exp, i = _chaves(s, i)
             else:

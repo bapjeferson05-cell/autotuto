@@ -78,3 +78,31 @@ def test_bateria_tem_os_11_topicos_do_achado():
     assert len(bateria.TOPICOS) == 11
     sem_pista = sum(_exemplo_dirigido(t) is None for t in bateria.TOPICOS)
     assert sem_pista == 7, sem_pista
+
+
+def test_os_demos_convidam_o_aluno_a_interromper():
+    # relato de uso real: a pessoa falou em voz alta, o professor seguiu por
+    # cima (BARGE_IN=0 por padrão) e a experiência virou "mais um vídeo, só que
+    # ao vivo". A interrupção é a razão de existir do projeto e o aluno não tem
+    # como adivinhar que ela existe — então o professor convida, em voz alta.
+    import pathlib
+
+    from autotuto import config
+
+    for arq in ("demos/demo_texto.py", "demos/demo_voz.py"):
+        fonte = pathlib.Path(arq).read_text()
+        assert "CONVITE_INTERRUPCAO" in fonte, arq
+        assert "convidou = True" in fonte, arq          # uma vez só
+    # o convite tem que ensinar as teclas que existem de verdade
+    from autotuto.visor import _TECLAS
+    for tecla in ("1", "2", "4"):
+        assert tecla in config.CONVITE_INTERRUPCAO
+        assert tecla in _TECLAS
+
+
+def test_demos_nao_pedem_desculpa_duas_vezes_pelo_fallback():
+    # a AULA_SEM_PLANO já diz em voz alta que não deu; o demo repetir vira
+    # desculpa em dobro antes da mesma frase.
+    import pathlib
+    for arq in ("demos/demo_texto.py", "demos/demo_voz.py"):
+        assert "já tenho pronta" not in pathlib.Path(arq).read_text(), arq

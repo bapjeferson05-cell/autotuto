@@ -1,7 +1,8 @@
 import math
 from autotuto.calc import (Resultado, area_trapezio, area_triangulo, area_retangulo,
                            pitagoras, eq_primeiro_grau, regra_de_tres,
-                           porcentagem, mdc, mmc, area_circulo,
+                           porcentagem, mdc, mmc, area_circulo, complemento,
+                           suplemento,
                            comprimento_circunferencia, fracao_de, CATALOGO)
 
 def test_trapezio_valor_e_passos():
@@ -44,7 +45,8 @@ def test_catalogo_tem_as_seis():
     assert set(CATALOGO) == {"area_trapezio", "area_triangulo", "area_retangulo",
                              "pitagoras", "eq_primeiro_grau", "regra_de_tres",
                              "porcentagem", "mdc", "mmc", "area_circulo",
-                             "comprimento_circunferencia", "fracao_de"}
+                             "comprimento_circunferencia", "fracao_de",
+                             "complemento", "suplemento"}
 
 
 def test_porcentagem():
@@ -103,3 +105,39 @@ def test_circulo_com_raio_negativo_falha_em_vez_de_mentir():
             fn(raio=-3)
         with pytest.raises(ValueError):
             fn(raio=0)
+
+
+# ───── complemento e suplemento (vieram de uma prova de 7º ano de verdade)
+
+def test_complemento_e_suplemento_batem_com_a_prova():
+    # os quatro itens exatos da Questão 2, com o gabarito conferido à mão
+    esperado = {43: (47, 137), 67: (23, 113), 39: (51, 141)}
+    for ang, (c, s) in esperado.items():
+        assert complemento(ang).valor == c, ang
+        assert suplemento(ang).valor == s, ang
+
+
+def test_angulo_maior_que_90_nao_tem_complemento():
+    # A PEGADINHA da questão. Responder 90-145 = -55 é inventar um ângulo que
+    # não existe — e é o tipo de mentira que a regra única do projeto proíbe.
+    r = complemento(145)
+    assert r.valor == "não existe"
+    assert "não existe complemento" in " ".join(r.passos)
+    # mas o suplemento existe, porque 145 ainda é menor que 180
+    assert suplemento(145).valor == 35
+
+
+def test_o_caso_limite_de_90_e_180():
+    assert complemento(90).valor == "não existe"     # 90 já fechou o canto
+    assert complemento(89).valor == 1
+    assert suplemento(180).valor == "não existe"
+    assert suplemento(179).valor == 1
+
+
+def test_nao_levanta_no_caso_impossivel():
+    # se levantasse, o tocador diria "não tenho essa conta pronta" — mentira,
+    # a gente TEM a conta, e a conta diz que não existe. É resposta, não erro.
+    from autotuto.validador import avisos_graves, checar_matematica
+    plano = {"blocos": [{"diz": "olha",
+                         "calc": {"gerador": "complemento", "params": {"angulo": 145}}}]}
+    assert avisos_graves(checar_matematica(plano)) == []

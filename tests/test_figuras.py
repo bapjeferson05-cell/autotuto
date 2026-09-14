@@ -283,3 +283,35 @@ def test_reta_numerica_absurda_vira_aviso_grave_e_nao_trava():
     avisos = checar_matematica(plano)
     assert time.monotonic() - t0 < 2.0        # falhou rápido, não desenhou
     assert avisos_graves(avisos)
+
+
+def test_angulos_vizinhos_podem_ter_raios_diferentes():
+    # dois ângulos vizinhos no MESMO raio (43° e 47° fechando o canto reto)
+    # emendam num arco contínuo de 90°: o aluno vê UM ângulo, não dois.
+    from matplotlib.patches import Arc
+
+    from autotuto.figuras.canvas import _desenha_angulo
+    from autotuto.figuras.lousa import nova_figura
+
+    spec = {"pontos": {"V": [0, 0], "P": [4.5, 0], "Q": [0, 4.5], "R": [3.29, 3.07]}}
+    _, ax = nova_figura()
+    _desenha_angulo(ax, spec, {"vertice": "V", "de": "P", "para": "R", "raio": 0.9})
+    _desenha_angulo(ax, spec, {"vertice": "V", "de": "R", "para": "Q", "raio": 1.7})
+    arcos = [p for p in ax.patches if isinstance(p, Arc)]
+    assert len(arcos) == 2
+    larguras = sorted(a.get_width() for a in arcos)
+    assert larguras[0] < larguras[1], larguras     # raios de fato diferentes
+
+
+def test_raio_do_arco_tem_default_no_config():
+    from matplotlib.patches import Arc
+
+    from autotuto import config
+    from autotuto.figuras.canvas import _desenha_angulo
+    from autotuto.figuras.lousa import nova_figura
+
+    _, ax = nova_figura()
+    _desenha_angulo(ax, {"pontos": {"V": [0, 0], "A": [1, 0], "B": [0.5, 0.87]}},
+                    {"vertice": "V", "de": "A", "para": "B"})
+    arco = next(p for p in ax.patches if isinstance(p, Arc))
+    assert arco.get_width() == 2 * config.RAIO_ARCO

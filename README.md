@@ -72,7 +72,7 @@ autotuto/visor.py                  a tela (http.server, zero dep)
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e .
 
-# 1. os testes (294 — cobrem cada módulo + a regra "nunca mentir")
+# 1. os testes (311 — cobrem cada módulo + a regra "nunca mentir")
 .venv/bin/pytest
 
 # 2. o Ciclo do Trapézio, determinístico, sem LLM nem STT — pro vídeo/ensaio
@@ -125,7 +125,7 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 | `autotuto/figuras/lousa.py` | tema (cores da lousa) + `passo_latex(latex)` |
 | `autotuto/figuras/catalogo.py` | geradores nomeados (trapézio, balança, tabela de proporção, círculo, a pizza da fração...) usados pelo planejador |
 | `autotuto/estado.py` | `EstadoAula` — pilha de trilhas. Interrupção empilha ramo, `drena_ramo()` toca e desempilha, a principal retoma |
-| `autotuto/aulas.py` | **5 aulas de ouro** escritas à mão: `trapezio`, `pitagoras`, `eq_primeiro_grau`, `regra_de_tres`, `fracao` — o MVP e o few-shot do planejador |
+| `autotuto/aulas.py` | **6 aulas de ouro** escritas à mão: `trapezio`, `pitagoras`, `eq_primeiro_grau`, `regra_de_tres`, `fracao`, `angulos` — o MVP e o few-shot do planejador |
 | `autotuto/classificador.py` | fala do aluno → gatilho de ramo (regex; nunca devolve gatilho que a aula não tem) |
 | `autotuto/llm.py` | uma função — `perguntar(mensagens, timeout)` — Ollama local ou Claude API |
 | `autotuto/cerebro.py` | LLM **curto**, só na interrupção: fala + contexto + ramos disponíveis → escolhe um ramo real ou `None` |
@@ -148,10 +148,10 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 - ✅ pipeline problema→aula (planejador + schema + validador) · interrupção em 3 camadas
 - ✅ máquina de estado (interrompe/retoma) · beat `pergunta` + fading · ramos genéricos
 - ✅ passo de conta narrado automático quando o plano não traz `diz_passos`
-- ✅ 5 aulas de ouro (a de fração usa a pizza e os brigadeiros) · passos narrados (dual coding) · few-shot dirigido por tópico
+- ✅ 6 aulas de ouro (a de ângulos saiu de uma prova real de 7º ano) · passos narrados (dual coding) · few-shot dirigido por tópico
 - ✅ voz (Piper + faster-whisper, adapter próprio) · visor · modo voz / texto / roteiro
 - ✅ teclado como caminho principal de interrupção (mic é bônus, `BARGE_IN=0` por padrão)
-- ✅ 294 testes, 0 warnings
+- ✅ 311 testes, 0 warnings
 - ✅ círculo, setor de círculo e a pizza da fração · área/circunferência no `calc`
 - ⏳ mais aulas de ouro (círculo ainda não tem a dela) · renderer ao vivo no
   navegador (Fase 2) · teste do caminho de mic (`BARGE_IN=1`) com hardware real

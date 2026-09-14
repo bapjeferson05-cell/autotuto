@@ -106,5 +106,22 @@ COR_DESTAQUE="#F2B134"; COR_AZUL="#5AB1E0"; COR_VERDE="#7BD88F"
 # aula nenhuma: falha rápido e o modelo corrige.
 MAX_MARCAS_RETA = 60
 
+# Raio do arco que marca um ângulo. Vira knob porque DOIS ângulos vizinhos
+# (o 43° e o 47° que juntos fecham o canto reto) desenhados no mesmo raio
+# viram um arco contínuo só — o aluno vê um ângulo de 90°, não dois. Cada
+# ângulo pode pedir o seu com "raio" no spec.
+RAIO_ARCO     = 0.6
+
+# A interrupção é a razão de existir do projeto — e o aluno não tem como
+# adivinhar que ela existe. Relato de uso real: a pessoa falou em voz alta, o
+# professor seguiu por cima (BARGE_IN vem 0 por padrão, o mic não interrompe) e
+# a experiência virou "mais um vídeo, só que ao vivo". README não resolve: quem
+# está revisando às onze da noite não lê README. Então o professor CONVIDA, em
+# voz alta, uma vez, antes da primeira aula.
+CONVITE_INTERRUPCAO = (
+    "Antes de começar: pode me interromper quando quiser, e é pra isso mesmo. "
+    "Aperta 1 se quiser saber por quê, 2 se eu passar rápido demais, "
+    "4 pra saber de onde a fórmula veio — ou escreve na caixa. Eu paro na hora.")
+
 ALPHA_FIGURA  = 0.12
 ALPHA_PINTADO = 0.55

@@ -5,7 +5,9 @@
   segmentos  [[a, b], ...]            a/b = nome de ponto ou [x, y] cru
              ou {"de": a, "para": b, "tracejado": bool}   (traço pontilhado)
   poligonos  [{"vs": [nomes/coords], "preenche": bool, "pintado": bool}]
-  angulos    [{"vertice", "de", "para"}]   arco (ou quadradinho se ~90°)
+  angulos    [{"vertice", "de", "para", "raio"?}]  arco (ou quadradinho se ~90°)
+             "raio" separa arcos de ângulos VIZINHOS: no mesmo raio eles
+             viram um arco contínuo e somem um no outro.
   marcas     [{"tipo": "cong"|"par", "de", "para"}]   ticks de congruência/paralelismo
   rotulos    [{"xy": [x, y], "texto": str}]
   circulos   [{"centro": nome ou [x,y], "raio": float,
@@ -76,7 +78,7 @@ def _desenha_angulo(ax, spec, ang):
     ang_a = np.degrees(np.arctan2(va[1], va[0]))
     ang_c = np.degrees(np.arctan2(vc[1], vc[0]))
     dif = abs((ang_c - ang_a + 180) % 360 - 180)
-    r = 0.6
+    r = float(ang.get("raio", config.RAIO_ARCO))
     if abs(dif - 90) < 1.5:  # quadradinho de ângulo reto
         ua = va / (np.linalg.norm(va) or 1.0)
         uc = vc / (np.linalg.norm(vc) or 1.0)

@@ -117,10 +117,40 @@ def fracao_de(num, den, todo) -> Resultado:
         rf"\dfrac{{{_n(num)}}}{{{_n(den)}}} \text{{ de }} {_n(todo)}",
         rf"= \dfrac{{{_n(num)} \cdot {_n(todo)}}}{{{_n(den)}}} = {txt}"])
 
+# Complemento e suplemento. Vieram de uma prova real de 7º ano: era a questão
+# mais barata da folha e a que mais gente deixa em branco. O 145° do enunciado
+# era pegadinha — ângulo de 90° ou mais NÃO TEM complemento, e responder
+# "90 - 145 = -55" é inventar um ângulo que não existe. Aqui isso é RESPOSTA,
+# não erro: levantar faria o tocador dizer "não tenho essa conta pronta", o que
+# seria mentira — a gente tem a conta, e a conta diz que não existe.
+def complemento(angulo) -> Resultado:
+    """O que falta pra 90°."""
+    if angulo >= 90:
+        return Resultado("não existe", [
+            rf"90^\circ - {_n(angulo)}^\circ < 0",
+            r"\text{não existe complemento}"])
+    v = 90 - angulo
+    return Resultado(v, [
+        r"C = 90^\circ - \text{ângulo}",
+        rf"C = 90^\circ - {_n(angulo)}^\circ = {_n(v)}^\circ"], "°")
+
+def suplemento(angulo) -> Resultado:
+    """O que falta pra 180°."""
+    if angulo >= 180:
+        return Resultado("não existe", [
+            rf"180^\circ - {_n(angulo)}^\circ < 0",
+            r"\text{não existe suplemento}"])
+    v = 180 - angulo
+    return Resultado(v, [
+        r"S = 180^\circ - \text{ângulo}",
+        rf"S = 180^\circ - {_n(angulo)}^\circ = {_n(v)}^\circ"], "°")
+
+
 CATALOGO = {"area_trapezio": area_trapezio, "area_triangulo": area_triangulo,
             "area_retangulo": area_retangulo, "pitagoras": pitagoras,
             "eq_primeiro_grau": eq_primeiro_grau, "regra_de_tres": regra_de_tres,
             "porcentagem": porcentagem, "mdc": mdc, "mmc": mmc,
             "area_circulo": area_circulo,
             "comprimento_circunferencia": comprimento_circunferencia,
-            "fracao_de": fracao_de}
+            "fracao_de": fracao_de,
+            "complemento": complemento, "suplemento": suplemento}
