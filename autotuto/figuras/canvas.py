@@ -8,13 +8,17 @@
   angulos    [{"vertice", "de", "para"}]   arco (ou quadradinho se ~90°)
   marcas     [{"tipo": "cong"|"par", "de", "para"}]   ticks de congruência/paralelismo
   rotulos    [{"xy": [x, y], "texto": str}]
+  circulos   [{"centro": nome ou [x,y], "raio": float,
+               "preenche": bool,                 (default False)
+               "setor": [ini, fim],              (graus; fatia em vez do círculo todo)
+               "tracejado": bool}]
 
 Depende só de `config` + matplotlib/numpy + stdlib.
 """
 from __future__ import annotations
 
 import numpy as np
-from matplotlib.patches import Arc
+from matplotlib.patches import Arc, Circle, Wedge
 
 from autotuto import config
 from autotuto.figuras.lousa import nova_figura, para_png
@@ -36,7 +40,7 @@ def _desenha_poligono(ax, spec, pol):
     # o `alpha` de um patch dilui a face E a borda — então o preenchimento vai
     # sem borda e o contorno de giz é desenhado à parte, opacidade cheia (F4).
     if pol.get("preenche", False):
-        ax.fill(xs, ys, facecolor=config.COR_AZUL, alpha=0.12,
+        ax.fill(xs, ys, facecolor=config.COR_AZUL, alpha=config.ALPHA_FIGURA,
                 edgecolor="none", zorder=2)
     ax.plot(xs + [xs[0]], ys + [ys[0]], color=config.COR_GIZ, lw=2, zorder=3)
 
@@ -70,8 +74,13 @@ def _desenha_angulo(ax, spec, ang):
         ax.plot([p0[0], p1[0], p2[0]], [p0[1], p1[1], p2[1]],
                 color=config.COR_GIZ, lw=1.5, zorder=4)
     else:
+        # O Arc varre SEMPRE no anti-horário de theta1 a theta2. Com min/max,
+        # um ângulo que cruza a fronteira dos ±180° (ex.: lados em 170° e -170°,
+        # que são 20° de abertura) virava theta1=-170, theta2=170 → desenhava o
+        # arco REFLEXO de 340°, o de fora. Escolher a ordem que varre o menor.
+        t1, t2 = (ang_a, ang_c) if (ang_c - ang_a) % 360 <= 180 else (ang_c, ang_a)
         arco = Arc((v[0], v[1]), 2 * r, 2 * r, angle=0.0,
-                   theta1=min(ang_a, ang_c), theta2=max(ang_a, ang_c),
+                   theta1=t1, theta2=t2,
                    color=config.COR_DESTAQUE, lw=2, zorder=4)
         ax.add_patch(arco)
 
@@ -99,11 +108,55 @@ def _desenha_marca(ax, spec, marca):
                 lw=2, zorder=4)
 
 
+def _desenha_circulo(ax, spec, circ):
+    """Círculo inteiro, ou uma FATIA se vier 'setor': [ini, fim] em graus.
+
+    A fatia é o que destrava fração na lousa (a pizza): 3/4 é um setor de 270°.
+    O preenchimento vai sem borda e o contorno de giz por cima, mesma razão do
+    polígono — o alpha de um patch dilui face E borda juntas."""
+    c = _resolver(spec, circ["centro"])
+    r = float(circ["raio"])
+    # raio <=0 não é círculo: falha alto. O tocador pega a exceção e o professor
+    # ADMITE que não desenhou (LIMITACAO_VISUAL) — melhor que um borrão mudo.
+    if r <= 0:
+        raise ValueError(f"circulo: raio tem que ser positivo (recebeu {circ['raio']!r})")
+    setor = circ.get("setor")
+    ls = "--" if circ.get("tracejado") else "-"
+
+    if setor is not None:
+        ini, fim = float(setor[0]), float(setor[1])
+        if circ.get("preenche", False):
+            # fatia pintada = a resposta da fração, então vai OPACA o bastante
+            # pra se distinguir da fatia vazia ao lado (ALPHA_PINTADO).
+            ax.add_patch(Wedge(tuple(c), r, ini, fim, facecolor=config.COR_AZUL,
+                               alpha=config.ALPHA_PINTADO, edgecolor="none",
+                               zorder=2))
+        # contorno da fatia: os dois raios + o arco
+        for a in (ini, fim):
+            ponta = c + r * np.array([np.cos(np.radians(a)), np.sin(np.radians(a))])
+            ax.plot([c[0], ponta[0]], [c[1], ponta[1]],
+                    color=config.COR_GIZ, lw=2, ls=ls, zorder=3)
+        ax.add_patch(Arc(tuple(c), 2 * r, 2 * r, angle=0.0, theta1=ini, theta2=fim,
+                         color=config.COR_GIZ, lw=2, linestyle=ls, zorder=3))
+    else:
+        if circ.get("preenche", False):
+            ax.add_patch(Circle(tuple(c), r, facecolor=config.COR_AZUL,
+                                alpha=config.ALPHA_FIGURA, edgecolor="none",
+                                zorder=2))
+        ax.add_patch(Circle(tuple(c), r, facecolor="none", edgecolor=config.COR_GIZ,
+                            lw=2, linestyle=ls, zorder=3))
+
+    # patch não mexe no autoscale sozinho: entrega a caixa do círculo pro datalim
+    ax.update_datalim([(c[0] - r, c[1] - r), (c[0] + r, c[1] + r)])
+
+
 def figura(spec: dict) -> bytes:
     spec = dict(spec or {})
     spec.setdefault("pontos", {})
     fig, ax = nova_figura()
 
+    for circ in spec.get("circulos", []):
+        _desenha_circulo(ax, spec, circ)
     for pol in spec.get("poligonos", []):
         _desenha_poligono(ax, spec, pol)
     for seg in spec.get("segmentos", []):

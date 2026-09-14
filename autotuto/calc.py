@@ -83,7 +83,44 @@ def mmc(a, b) -> Resultado:
         rf"\mathrm{{mdc}}({_n(a)}, {_n(b)}) = {g}",
         rf"\mathrm{{mmc}}({_n(a)}, {_n(b)}) = \dfrac{{{_n(a)} \cdot {_n(b)}}}{{{g}}} = {m}"])
 
+# Círculo e fração: as figuras existem agora (catalogo.circulo / catalogo.fracao),
+# e ferramenta de desenho sem ferramenta de conta é exatamente o que fez o LLM
+# improvisar na autópsia. Entram juntas ou não entram.
+def _raio_valido(nome, raio):
+    if raio <= 0:
+        raise ValueError(f"{nome}: raio tem que ser positivo (recebeu {raio!r})")
+
+def area_circulo(raio) -> Resultado:
+    # raio negativo dá área POSITIVA e ninguém percebe — falha em vez de mentir.
+    _raio_valido("area_circulo", raio)
+    v = math.pi * raio ** 2
+    return Resultado(round(v, 4), [
+        r"A = \pi r^2",
+        rf"A = \pi \cdot {_n(raio)}^2 = \pi \cdot {_n(raio ** 2)}",
+        rf"A \approx {v:.4g}"], "u²")
+
+def comprimento_circunferencia(raio) -> Resultado:
+    _raio_valido("comprimento_circunferencia", raio)
+    v = 2 * math.pi * raio
+    return Resultado(round(v, 4), [
+        r"C = 2\pi r",
+        rf"C = 2\pi \cdot {_n(raio)} \approx {v:.4g}"], "u")
+
+def fracao_de(num, den, todo) -> Resultado:
+    """`num`/`den` de `todo`. Devolve fração exata (3/4 de 10 = 15/2, não 7,5)."""
+    if den == 0:
+        raise ValueError("fracao_de: denominador não pode ser zero")
+    v = (Fraction(num).limit_denominator() * Fraction(todo).limit_denominator()
+         / Fraction(den).limit_denominator())
+    txt = _n(v) if v.denominator == 1 else rf"\dfrac{{{v.numerator}}}{{{v.denominator}}}"
+    return Resultado(_n(v) if v.denominator == 1 else f"{v.numerator}/{v.denominator}", [
+        rf"\dfrac{{{_n(num)}}}{{{_n(den)}}} \text{{ de }} {_n(todo)}",
+        rf"= \dfrac{{{_n(num)} \cdot {_n(todo)}}}{{{_n(den)}}} = {txt}"])
+
 CATALOGO = {"area_trapezio": area_trapezio, "area_triangulo": area_triangulo,
             "area_retangulo": area_retangulo, "pitagoras": pitagoras,
             "eq_primeiro_grau": eq_primeiro_grau, "regra_de_tres": regra_de_tres,
-            "porcentagem": porcentagem, "mdc": mdc, "mmc": mmc}
+            "porcentagem": porcentagem, "mdc": mdc, "mmc": mmc,
+            "area_circulo": area_circulo,
+            "comprimento_circunferencia": comprimento_circunferencia,
+            "fracao_de": fracao_de}

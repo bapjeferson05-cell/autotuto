@@ -148,15 +148,22 @@ GERADORES DE CÁLCULO (use no "calc", campo "gerador"):
   · pitagoras(a, b, c)  (passe só 2; a HIPOTENUSA — lado maior, oposto ao ângulo reto
   — é "c") · eq_primeiro_grau(a, b)  (resolve a·x + b = 0) · regra_de_tres(a, b, c)
   · porcentagem(parte, todo)  (que % `parte` é de `todo`) · mdc(a, b) · mmc(a, b)
+  · area_circulo(raio) · comprimento_circunferencia(raio)  (o contorno, 2·pi·r)
+  · fracao_de(num, den, todo)  (quanto é num/den de todo)
   NÃO improvise um cálculo com um gerador que não é dele (ex.: usar eq_primeiro_grau
   pra simular porcentagem ou MDC) — se não existe gerador certo, admita no "diz" e
   siga sem o número exato.
 
 GERADORES DE FIGURA (use no "figura", campo "gerador"):
   trapezio · triangulo · retangulo · dois_retangulos · balanca · tabela_prop ·
-  reta_numerica  — cada um aceita "params". Para uma composição própria (pontos
-  nomeados, ângulos marcados) use {"gerador": "figura", "spec": {...}} com as
-  chaves: pontos, poligonos, segmentos, angulos, marcas, rotulos.
+  reta_numerica · circulo(raio)  (desenha o raio rotulado) · fracao(num, den)
+  (a pizza: den fatias iguais, as num primeiras pintadas — é assim que fração se
+  mostra) — cada um aceita "params". Para uma composição própria (pontos nomeados,
+  ângulos marcados) use {"gerador": "figura", "spec": {...}} com as
+  chaves: pontos, poligonos, segmentos, angulos, marcas, rotulos, circulos.
+  Um item de "circulos" é {"centro": [x,y] ou nome de ponto, "raio": n,
+  "preenche": bool, "setor": [ini, fim] em graus} — com "setor" sai uma FATIA
+  em vez do círculo inteiro.
 
 RESPONDA SÓ com o objeto JSON do plano — nada antes, nada depois, sem cercas de código.
 """

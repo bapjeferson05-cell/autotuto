@@ -100,7 +100,7 @@ def test_todos_os_geradores_desenham():
 def test_geradores_tem_as_chaves_esperadas():
     assert set(GERADORES) == {"figura", "trapezio", "triangulo", "retangulo",
                               "dois_retangulos", "balanca", "tabela_prop",
-                              "reta_numerica"}
+                              "reta_numerica", "circulo", "fracao"}
     assert GERADORES["figura"] is figura
 
 
@@ -113,3 +113,144 @@ def test_reta_numerica_rejeita_passo_nao_positivo():
         reta_numerica(inicio=0, fim=10, passo=0)
     with pytest.raises(ValueError):
         reta_numerica(inicio=0, fim=10, passo=-1)
+
+
+# ─────────────────────────────────────────────── o arco do ângulo (bug do reflexo)
+
+def _arcos_de(pontos, ang):
+    """Desenha só o ângulo num ax limpo e devolve os patches Arc criados."""
+    from matplotlib.patches import Arc
+
+    from autotuto.figuras.canvas import _desenha_angulo
+    from autotuto.figuras.lousa import nova_figura
+
+    _, ax = nova_figura()
+    _desenha_angulo(ax, {"pontos": pontos}, ang)
+    return [p for p in ax.patches if isinstance(p, Arc)]
+
+
+def test_arco_nunca_desenha_o_angulo_reflexo():
+    # BUG: o Arc do matplotlib varre SEMPRE anti-horário de theta1 a theta2.
+    # Com min/max, lados em 170° e -170° (que são 20° de abertura!) viravam
+    # theta1=-170, theta2=170 -> arco de 340°: o professor marcava o ângulo de
+    # FORA e a fala não batia com o desenho. O aluno via uma mentira no quadro.
+    casos = [
+        # (pontos do vértice/lados, abertura real em graus)
+        ({"V": [0, 0], "A": [-0.985, 0.174], "C": [-0.985, -0.174]}, 20.0),   # ±180
+        ({"V": [0, 0], "A": [1, 0], "C": [0.5, 0.866]}, 60.0),                # normal
+        ({"V": [0, 0], "A": [0.5, 0.866], "C": [1, 0]}, 60.0),                # invertido
+        ({"V": [0, 0], "A": [1, 0], "C": [-0.940, 0.342]}, 160.0),            # obtuso
+    ]
+    for pontos, esperado in casos:
+        arcos = _arcos_de(pontos, {"vertice": "V", "de": "A", "para": "C"})
+        assert len(arcos) == 1, pontos
+        varrido = (arcos[0].theta2 - arcos[0].theta1) % 360
+        assert abs(varrido - esperado) < 1.0, (pontos, varrido, esperado)
+        assert varrido <= 180.0 + 1e-9, (pontos, varrido)
+
+
+def test_angulo_reto_vira_quadradinho_e_nao_arco():
+    arcos = _arcos_de({"V": [0, 0], "A": [1, 0], "C": [0, 1]},
+                      {"vertice": "V", "de": "A", "para": "C"})
+    assert arcos == []
+
+
+# ─────────────────────────────────────────────────────────── círculos e fatias
+
+def test_circulo_inteiro_renderiza():
+    png = figura({"pontos": {"O": [0, 0]},
+                  "circulos": [{"centro": "O", "raio": 3, "preenche": True}]})
+    assert png[:8] == PNG_MAGIC
+
+
+def test_circulo_com_setor_e_tracejado():
+    png = figura({"circulos": [
+        {"centro": [0, 0], "raio": 4, "setor": [90, 180], "preenche": True},
+        {"centro": [0, 0], "raio": 4, "setor": [180, 270], "tracejado": True},
+    ]})
+    assert png[:8] == PNG_MAGIC
+
+
+def test_circulo_entra_no_autoscale():
+    # patch do matplotlib NÃO mexe no datalim sozinho: sem update_datalim o
+    # círculo ficava fora do enquadramento (lousa em branco pro aluno).
+    from autotuto.figuras.canvas import _desenha_circulo
+    from autotuto.figuras.lousa import nova_figura
+
+    _, ax = nova_figura()
+    _desenha_circulo(ax, {"pontos": {}}, {"centro": [50, 50], "raio": 5})
+    x0, y0, x1, y1 = ax.dataLim.extents
+    assert x0 <= 45.001 and x1 >= 54.999
+    assert y0 <= 45.001 and y1 >= 54.999
+
+
+def test_contorno_do_circulo_preenchido_fica_opaco():
+    # mesma regra do polígono (F4): o alpha do preenchimento não pode apagar o giz
+    png = figura({"circulos": [{"centro": [0, 0], "raio": 3, "preenche": True}]})
+    mais_claro = Image.open(io.BytesIO(png)).convert("L").getextrema()[1]
+    assert mais_claro > 200, mais_claro
+
+
+def test_fracao_desenha_uma_fatia_por_denominador():
+    from autotuto.figuras.catalogo import fracao
+    for den in (1, 2, 3, 4, 8):
+        assert fracao(num=1, den=den)[:8] == PNG_MAGIC
+
+
+def test_fracao_rejeita_parametros_impossiveis():
+    import pytest
+
+    from autotuto.figuras.catalogo import fracao
+    with pytest.raises(ValueError):
+        fracao(num=1, den=0)
+    with pytest.raises(ValueError):
+        fracao(num=5, den=4)      # 5/4 de pizza não existe no desenho
+    with pytest.raises(ValueError):
+        fracao(num=-1, den=4)
+
+
+def test_circulo_rejeita_raio_nao_positivo():
+    import pytest
+
+    from autotuto.figuras.catalogo import circulo
+    with pytest.raises(ValueError):
+        circulo(raio=0)
+    with pytest.raises(ValueError):
+        circulo(raio=-2)
+
+
+def _luz_media(png):
+    """Luminância média da imagem — proxy de 'quanto tem coisa pintada'."""
+    import numpy as np
+    return float(np.asarray(Image.open(io.BytesIO(png)).convert("L"),
+                            dtype=float).mean())
+
+
+def test_fatia_pintada_se_distingue_da_fatia_vazia():
+    # A fatia pintada É a resposta da fração. Com o alpha discreto do polígono
+    # (0.12) a pizza 3/4 saía quase idêntica à 0/4 na lousa escura: o desenho
+    # não dizia 3/4 pro aluno. Por isso setor usa ALPHA_PINTADO.
+    from autotuto.figuras.catalogo import fracao
+    cheia, vazia = _luz_media(fracao(4, 4)), _luz_media(fracao(0, 4))
+    assert cheia - vazia > 15, (cheia, vazia)
+
+
+def test_preenchimento_de_figura_continua_discreto():
+    # o outro lado da moeda: o fill que só diz "é desta figura que eu falo"
+    # não pode virar bloco de cor e engolir o traço de giz.
+    from autotuto.figuras.catalogo import fracao
+    cheio = _luz_media(figura({"circulos": [{"centro": [0, 0], "raio": 5,
+                                             "preenche": True}]}))
+    vazio = _luz_media(figura({"circulos": [{"centro": [0, 0], "raio": 5}]}))
+    destaque = _luz_media(fracao(4, 4)) - _luz_media(fracao(0, 4))
+    assert 0 < cheio - vazio < destaque / 3, (cheio, vazio, destaque)
+
+
+def test_circulo_com_raio_invalido_falha_alto():
+    # não pode desenhar em silêncio um círculo que não existe: o tocador captura
+    # a exceção e o professor admite a limitação em vez de mostrar um borrão.
+    import pytest
+    with pytest.raises(ValueError):
+        figura({"circulos": [{"centro": [0, 0], "raio": 0}]})
+    with pytest.raises(ValueError):
+        figura({"circulos": [{"centro": [0, 0], "raio": -3}]})

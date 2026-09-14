@@ -69,7 +69,7 @@ autotuto/visor.py                  a tela (http.server, zero dep)
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e .
 
-# 1. os testes (120 — cobrem cada módulo + a regra "nunca mentir")
+# 1. os testes (198 — cobrem cada módulo + a regra "nunca mentir")
 .venv/bin/pytest
 
 # 2. o Ciclo do Trapézio, determinístico, sem LLM nem STT — pro vídeo/ensaio
@@ -109,9 +109,9 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 | `autotuto/config.py` | todo knob do projeto — timings, modelo de LLM/STT, porta do visor, cores da lousa |
 | `autotuto/schema.py` | `Aula`/beat/ramo (dataclasses) + `validar_estrutura()` |
 | `autotuto/calc.py` | Python faz a aritmética (LLM pequeno erra conta), devolve `Resultado(valor, passos_em_LaTeX)` |
-| `autotuto/figuras/canvas.py` | renderizador **universal**: `figura(spec)` compõe pontos/segmentos/polígonos/ângulos/marcas/rótulos |
+| `autotuto/figuras/canvas.py` | renderizador **universal**: `figura(spec)` compõe pontos/segmentos/polígonos/ângulos/marcas/rótulos/círculos (e fatias de círculo) |
 | `autotuto/figuras/lousa.py` | tema (cores da lousa) + `passo_latex(latex)` |
-| `autotuto/figuras/catalogo.py` | geradores nomeados (trapézio, balança, tabela de proporção...) usados pelo planejador |
+| `autotuto/figuras/catalogo.py` | geradores nomeados (trapézio, balança, tabela de proporção, círculo, a pizza da fração...) usados pelo planejador |
 | `autotuto/estado.py` | `EstadoAula` — pilha de trilhas. Interrupção empilha ramo, `drena_ramo()` toca e desempilha, a principal retoma |
 | `autotuto/aulas.py` | **4 aulas de ouro** escritas à mão: `trapezio`, `pitagoras`, `eq_primeiro_grau`, `regra_de_tres` — o MVP e o few-shot do planejador |
 | `autotuto/classificador.py` | fala do aluno → gatilho de ramo (regex; nunca devolve gatilho que a aula não tem) |
@@ -137,6 +137,7 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 - ✅ 4 aulas de ouro · passos narrados (dual coding) · few-shot dirigido por tópico
 - ✅ voz (Piper + faster-whisper, adapter próprio) · visor · modo voz / texto / roteiro
 - ✅ teclado como caminho principal de interrupção (mic é bônus, `BARGE_IN=0` por padrão)
-- ✅ 121 testes, 0 warnings
-- ⏳ primitiva de círculo nas figuras · mais aulas de ouro · renderer ao vivo no navegador
-  (Fase 2) · teste do caminho de mic (`BARGE_IN=1`) com hardware real
+- ✅ 198 testes, 0 warnings
+- ✅ círculo, setor de círculo e a pizza da fração · área/circunferência no `calc`
+- ⏳ mais aulas de ouro (círculo e fração ainda não têm a delas) · renderer ao vivo no
+  navegador (Fase 2) · teste do caminho de mic (`BARGE_IN=1`) com hardware real

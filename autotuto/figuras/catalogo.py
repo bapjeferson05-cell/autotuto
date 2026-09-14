@@ -136,6 +136,52 @@ def reta_numerica(inicio=0, fim=10, marca=None, passo=1, **_):
     return figura({"segmentos": segs, "marcas": marcas, "rotulos": rotulos})
 
 
+def circulo(raio=5, rotulo=None, preenche=True, **_):
+    """Círculo com o raio desenhado e rotulado — a figura base de área/circunferência.
+
+    Sem isso não dava pra ensinar círculo nenhum: o canvas não tinha a primitiva
+    e o catálogo não tinha o gerador (era o ⏳ do README).
+    """
+    r = float(raio)
+    if r <= 0:
+        raise ValueError(f"circulo: raio tem que ser positivo (recebeu {raio!r})")
+    txt = rotulo if rotulo is not None else f"r = {r:g}"
+    return figura({
+        "pontos": {"O": [0, 0], "P": [r, 0]},
+        "circulos": [{"centro": "O", "raio": r, "preenche": preenche}],
+        "segmentos": [["O", "P"]],
+        "rotulos": [{"xy": [r / 2, r * 0.14], "texto": txt},
+                    {"xy": [-r * 0.10, -r * 0.10], "texto": "O"}],
+    })
+
+
+def fracao(num=3, den=4, raio=5, **_):
+    """A pizza: `den` fatias iguais, as `num` primeiras pintadas.
+
+    É o jeito visual clássico de fração — o aluno VÊ 3/4 antes de contar.
+    Cada fatia é um setor com contorno próprio, então os cortes aparecem.
+    """
+    den = int(den)
+    num = int(num)
+    if den <= 0:
+        raise ValueError(f"fracao: denominador tem que ser positivo (recebeu {den!r})")
+    if not 0 <= num <= den:
+        raise ValueError(f"fracao: numerador tem que estar entre 0 e {den} (recebeu {num!r})")
+    r = float(raio)
+    passo = 360.0 / den
+    # começa em 90° (topo) e anda anti-horário — a primeira fatia fica em cima,
+    # que é como a pizza é desenhada no quadro.
+    circulos = [{"centro": "O", "raio": r,
+                 "setor": [90 + i * passo, 90 + (i + 1) * passo],
+                 "preenche": i < num}
+                for i in range(den)]
+    return figura({
+        "pontos": {"O": [0, 0]},
+        "circulos": circulos,
+        "rotulos": [{"xy": [0, -r * 1.35], "texto": f"{num}/{den}"}],
+    })
+
+
 GERADORES = {
     "figura": figura,
     "trapezio": trapezio,
@@ -145,4 +191,6 @@ GERADORES = {
     "balanca": balanca,
     "tabela_prop": tabela_prop,
     "reta_numerica": reta_numerica,
+    "circulo": circulo,
+    "fracao": fracao,
 }
