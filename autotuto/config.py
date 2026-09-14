@@ -65,6 +65,14 @@ RITMO_S_POR_CHAR = 0.045                             # "fala" sem TTS (modo text
 PAUSA = {"curta": 0.35, "media": 0.9, "longa": 1.8, None: 0.55}
 VISOR_PORTA    = 8080
 VISOR_POLL_MS  = 120
+# Ritmo dos passos de uma conta quando NÃO há `diz_passos` narrando cada um:
+# o passo precisa ficar tempo suficiente na lousa pro aluno ler antes do próximo.
+# O último é mais curto porque já é o resultado — a pausa dele vem do `espera`.
+PASSO_S        = 1.1
+PASSO_FINAL_S  = 0.7
+# Intervalos de espera ativa (visor servindo frames, voz drenando a thread).
+# Curtos de propósito: são o piso de latência entre o aluno agir e o sistema ver.
+TICK_S         = 0.05
 
 # Lousa (tema)
 COR_FUNDO="#0E2A22"; COR_GIZ="#EAEAEA"; COR_FRACO="#8FA79C"

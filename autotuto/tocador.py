@@ -227,7 +227,7 @@ class Tocador:
                         if fala:
                             return ("barge", fala, i)
                     elif self.pausas:
-                        time.sleep(1.1 if i < ultimo else 0.7)
+                        time.sleep(config.PASSO_S if i < ultimo else config.PASSO_FINAL_S)
 
         if self.pausas:
             time.sleep(config.PAUSA.get(bloco.get("espera"), config.PAUSA[None]))

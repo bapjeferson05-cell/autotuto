@@ -234,7 +234,7 @@ class Voz:
                     print("[voz] fala pendurou — abandonando", file=sys.stderr, flush=True)
                     _parar_reproducao()
                     return None
-                th.join(timeout=0.05)
+                th.join(timeout=config.TICK_S)
         finally:
             if monitor is not None:
                 monitor.parar()

@@ -150,7 +150,7 @@ class Visor:
             t = self.pop_injecao()
             if t:
                 return t
-            time.sleep(0.05)
+            time.sleep(config.TICK_S)
         return None
 
     def mostrar_fala(self, texto: str) -> None:

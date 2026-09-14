@@ -69,7 +69,7 @@ autotuto/visor.py                  a tela (http.server, zero dep)
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e .
 
-# 1. os testes (254 — cobrem cada módulo + a regra "nunca mentir")
+# 1. os testes (255 — cobrem cada módulo + a regra "nunca mentir")
 .venv/bin/pytest
 
 # 2. o Ciclo do Trapézio, determinístico, sem LLM nem STT — pro vídeo/ensaio
@@ -143,7 +143,7 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 - ✅ 5 aulas de ouro (a de fração usa a pizza e os brigadeiros) · passos narrados (dual coding) · few-shot dirigido por tópico
 - ✅ voz (Piper + faster-whisper, adapter próprio) · visor · modo voz / texto / roteiro
 - ✅ teclado como caminho principal de interrupção (mic é bônus, `BARGE_IN=0` por padrão)
-- ✅ 254 testes, 0 warnings
+- ✅ 255 testes, 0 warnings
 - ✅ círculo, setor de círculo e a pizza da fração · área/circunferência no `calc`
 - ⏳ mais aulas de ouro (círculo ainda não tem a dela) · renderer ao vivo no
   navegador (Fase 2) · teste do caminho de mic (`BARGE_IN=1`) com hardware real

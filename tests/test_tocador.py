@@ -492,3 +492,25 @@ def test_tocador_nao_fala_dois_fillers_iguais_seguidos():
     fillers = [f for f in falas if f in
                ("Boa pergunta.", "Ótima pergunta.", "Faz sentido perguntar isso.")]
     assert len(fillers) == 2 and fillers[0] != fillers[1]
+
+
+def test_nenhum_knob_de_tempo_solto_fora_do_config():
+    # regra da SPEC: todo knob vive em config.py. O ritmo dos passos (1.1s / 0.7s)
+    # estava cravado no tocador — é knob PEDAGÓGICO (quanto tempo o passo fica na
+    # lousa pro aluno ler), justamente o tipo de coisa que se quer ajustar sem
+    # caçar número no meio do código.
+    import pathlib
+    import re
+
+    suspeitos = []
+    for f in pathlib.Path("autotuto").rglob("*.py"):
+        if f.name in ("config.py", "aulas.py", "provedores.py"):
+            continue
+        for i, linha in enumerate(f.read_text().splitlines(), 1):
+            s = linha.strip()
+            if s.startswith("#") or '"""' in s:
+                continue
+            if (re.search(r"(timeout|sleep)\s*[=(]\s*\d+(\.\d+)?", s, re.I)
+                    and "config." not in s):
+                suspeitos.append(f"{f}:{i} {s}")
+    assert suspeitos == [], suspeitos
