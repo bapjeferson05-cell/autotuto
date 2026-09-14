@@ -49,3 +49,24 @@ def test_esperado_vazio_vira_none_sem_chamar_llm():
     def fake(msgs, **k):
         raise AssertionError("não deveria chamar o LLM sem 'acerta' pra comparar")
     assert avalia_resposta(PERGUNTA, [], "qualquer coisa", perguntar=fake) is None
+
+
+def test_regua_empurra_pro_lado_do_aluno():
+    # ACHADO em bateria local: o modelo local reprovou como "errado" uma
+    # definição de triângulo tecnicamente correta, só porque não era a redação
+    # esperada. O erro é assimétrico — reprovar quem acertou faz o professor
+    # explicar o que o aluno já sabia e dá a entender que ele errou. A régua
+    # tem que dizer isso ao modelo, explicitamente.
+    from autotuto.avaliador import _SIS
+    s = _SIS.lower()
+    assert "exemplos de redação" in s          # o 'acerta' não é lista fechada
+    assert "outras palavras" in s
+    assert s.count("na dúvida") >= 2           # as duas faixas de dúvida
+    assert "último recurso" in s
+
+
+def test_veredito_fora_do_vocabulario_vira_none():
+    from autotuto.avaliador import avalia_resposta
+    r = avalia_resposta("p", ["x"], "resposta",
+                        perguntar=lambda m, **k: '{"veredito": "mais ou menos"}')
+    assert r is None

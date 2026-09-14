@@ -24,13 +24,25 @@ from autotuto import llm as _llm
 
 _VEREDITOS = {"certo", "parcial", "errado"}
 
+# O erro caro aqui é assimétrico, e o modelo local errava justamente pro lado
+# caro: reprovou uma definição de triângulo tecnicamente correta só porque não
+# era a redação esperada (achado em bateria local). Marcar de errado quem
+# acertou faz o professor explicar o que o aluno já sabia — e, pior, dá a
+# entender que ele errou. Marcar de parcial quem errou só rende uma entrada
+# mais gentil na explicação, que ia acontecer de qualquer jeito. Por isso a
+# régua manda empurrar pro lado do aluno em caso de dúvida.
 _SIS = ('Você avalia a resposta de um aluno a UMA pergunta de aula. Julgue pelo '
-        'SENTIDO, não só pelas palavras. Responda só com JSON: '
-        '{"veredito": "certo"} se a resposta está correta (mesmo com outras '
-        'palavras); {"veredito": "parcial"} se acertou uma PARTE do raciocínio '
-        'mas não fechou a ideia; {"veredito": "errado"} se não tem relação com '
-        'a resposta esperada, ou se o aluno só repetiu a pergunta ou disse que '
-        'não sabe.')
+        'SENTIDO, não pelas palavras: a lista de respostas esperadas são '
+        'EXEMPLOS de redação, não as únicas formas certas. Uma resposta certa '
+        'dita com outras palavras, mais curta, mais longa, ou por outro caminho '
+        'válido é CERTA. Responda só com JSON: '
+        '{"veredito": "certo"} se o que o aluno disse está correto; '
+        '{"veredito": "parcial"} se acertou uma PARTE do raciocínio mas não '
+        'fechou a ideia; {"veredito": "errado"} SÓ se a resposta contradiz o '
+        'esperado ou não tem nada a ver, ou se o aluno só repetiu a pergunta ou '
+        'disse que não sabe. '
+        'Na dúvida entre certo e parcial, responda parcial. Na dúvida entre '
+        'parcial e errado, responda parcial. "errado" é o último recurso.')
 
 
 def avalia_resposta(pergunta: str, esperado: list[str], resposta: str, *,
