@@ -514,3 +514,44 @@ def test_nenhum_knob_de_tempo_solto_fora_do_config():
                     and "config." not in s):
                 suspeitos.append(f"{f}:{i} {s}")
     assert suspeitos == [], suspeitos
+
+
+def test_passo_sem_diz_passos_nao_fica_mais_mudo():
+    # dual coding pela metade não é dual coding: o passo aparecia na lousa e
+    # ninguém dizia nada. Plano do LLM sem `diz_passos` é o caso comum.
+    falas = []
+    t = Tocador(falar=lambda s: falas.append(s), desenhar=lambda p, r: None,
+                pausas=False, cerebro=None, avaliador=None)
+    t._toca_bloco({"diz": "Vamos ao teorema.", "mostra_passos": True,
+                   "calc": {"gerador": "pitagoras", "params": {"a": 3, "b": 4}}})
+    assert falas[0] == "Vamos ao teorema."
+    assert len(falas) == 4                       # 1 fala + 3 passos narrados
+    assert "raiz quadrada de 25" in falas[-1]
+
+
+def test_a_narracao_escrita_pelo_autor_sempre_vence():
+    falas = []
+    t = Tocador(falar=lambda s: falas.append(s), desenhar=lambda p, r: None,
+                pausas=False, cerebro=None, avaliador=None)
+    t._toca_bloco({"diz": "olha", "mostra_passos": True,
+                   "calc": {"gerador": "area_retangulo",
+                            "params": {"base": 3, "altura": 4}},
+                   "diz_passos": ["três vezes quatro dá doze, e é isso"]})
+    assert falas[-1] == "três vezes quatro dá doze, e é isso"
+
+
+def test_formula_que_a_leitura_nao_entende_continua_muda():
+    # não pode narrar errado: se não sabe ler, cala (e a pausa segura o passo)
+    from autotuto import calc, fala_formula
+    falas = []
+    t = Tocador(falar=lambda s: falas.append(s), desenhar=lambda p, r: None,
+                pausas=False, cerebro=None, avaliador=None)
+    original = calc.CATALOGO["area_retangulo"]
+    calc.CATALOGO["area_retangulo"] = lambda **k: calc.Resultado(1, [r"\int x\,dx"])
+    try:
+        t._toca_bloco({"diz": "olha", "mostra_passos": True,
+                       "calc": {"gerador": "area_retangulo", "params": {}}})
+    finally:
+        calc.CATALOGO["area_retangulo"] = original
+    assert falas == ["olha"]                     # o passo saiu, mas mudo
+    assert fala_formula.fala(r"\int x\,dx") is None

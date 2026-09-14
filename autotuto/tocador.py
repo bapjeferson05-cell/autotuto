@@ -26,7 +26,8 @@ import sys
 import time
 from pathlib import Path
 
-from autotuto import avaliador as _avaliador, calc, cerebro as _cerebro, classificador, config
+from autotuto import (avaliador as _avaliador, calc, cerebro as _cerebro,
+                      classificador, config, fala_formula)
 from autotuto.classificador import classificar
 from autotuto.estado import EstadoAula
 from autotuto.figuras import lousa
@@ -222,8 +223,13 @@ class Tocador:
                     if i < desde:          # já visto+ouvido antes do barge — não repete
                         continue
                     self.desenhar(lousa.passo_latex(r.passos[i]), f"passo{i + 1}")
-                    if diz_passos and i < len(diz_passos) and diz_passos[i]:
-                        fala = self.falar(diz_passos[i])
+                    # 1º a narração escrita (a palavra do autor sempre vence);
+                    # 2º a leitura automática da fórmula; 3º silêncio com pausa.
+                    narracao = (diz_passos[i]
+                                if diz_passos and i < len(diz_passos) and diz_passos[i]
+                                else fala_formula.fala(r.passos[i]))
+                    if narracao:
+                        fala = self.falar(narracao)
                         if fala:
                             return ("barge", fala, i)
                     elif self.pausas:

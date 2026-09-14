@@ -69,7 +69,7 @@ autotuto/visor.py                  a tela (http.server, zero dep)
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e .
 
-# 1. os testes (266 — cobrem cada módulo + a regra "nunca mentir")
+# 1. os testes (275 — cobrem cada módulo + a regra "nunca mentir")
 .venv/bin/pytest
 
 # 2. o Ciclo do Trapézio, determinístico, sem LLM nem STT — pro vídeo/ensaio
@@ -116,6 +116,7 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 |---|---|
 | `autotuto/config.py` | todo knob do projeto — timings, modelo de LLM/STT, porta do visor, cores da lousa |
 | `autotuto/schema.py` | `Aula`/beat/ramo (dataclasses) + `validar_estrutura()` |
+| `autotuto/fala_formula.py` | LaTeX do projeto → frase falada em PT-BR (o passo não fica mudo quando falta `diz_passos`); na dúvida, cala |
 | `autotuto/calc.py` | Python faz a aritmética (LLM pequeno erra conta), devolve `Resultado(valor, passos_em_LaTeX)` |
 | `autotuto/figuras/canvas.py` | renderizador **universal**: `figura(spec)` compõe pontos/segmentos/polígonos/ângulos/marcas/rótulos/círculos (e fatias de círculo) |
 | `autotuto/figuras/lousa.py` | tema (cores da lousa) + `passo_latex(latex)` |
@@ -143,10 +144,11 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 - ✅ regra "nunca mentir" verificada por 2 rounds de review + testes dedicados
 - ✅ pipeline problema→aula (planejador + schema + validador) · interrupção em 3 camadas
 - ✅ máquina de estado (interrompe/retoma) · beat `pergunta` + fading · ramos genéricos
+- ✅ passo de conta narrado automático quando o plano não traz `diz_passos`
 - ✅ 5 aulas de ouro (a de fração usa a pizza e os brigadeiros) · passos narrados (dual coding) · few-shot dirigido por tópico
 - ✅ voz (Piper + faster-whisper, adapter próprio) · visor · modo voz / texto / roteiro
 - ✅ teclado como caminho principal de interrupção (mic é bônus, `BARGE_IN=0` por padrão)
-- ✅ 266 testes, 0 warnings
+- ✅ 275 testes, 0 warnings
 - ✅ círculo, setor de círculo e a pizza da fração · área/circunferência no `calc`
 - ⏳ mais aulas de ouro (círculo ainda não tem a dela) · renderer ao vivo no
   navegador (Fase 2) · teste do caminho de mic (`BARGE_IN=1`) com hardware real
