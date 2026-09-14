@@ -50,12 +50,30 @@ def test_planeja_valida_e_corrige():
     assert rel.ok and aula.blocos
 
 
-def test_sem_llm_cai_no_trapezio():
+def test_sem_llm_admite_em_vez_de_trocar_de_assunto():
+    # ANTES: sem LLM o fallback era a aula de ouro do TRAPÉZIO — o aluno pedia
+    # porcentagem e o professor começava a falar de terreno, calado. Trocar de
+    # assunto sem avisar é a mentira que a regra única do projeto proíbe.
     def morto(m, **k):
         raise ConnectionError()
 
-    aula, rel = planeja("qualquer coisa", perguntar=morto)
-    assert aula.titulo == carregar("trapezio").titulo and not rel.ok
+    aula, rel = planeja("quanto é 15 por cento de 80", perguntar=morto)
+    assert not rel.ok and rel.erros
+    assert aula.titulo != carregar("trapezio").titulo
+    assert aula.topico == "sem_plano"
+    # e o aluno TEM que ouvir isso, não só o log do dev
+    tudo = " ".join(b.get("diz", "") for b in aula.blocos).lower()
+    assert "nao consegui" in tudo or "não consegui" in tudo
+    # nada de matemática de outro assunto na boca do professor
+    assert "trapezio" not in tudo and "trapézio" not in tudo
+
+
+def test_fallback_ainda_tem_pra_onde_ir_se_o_aluno_interromper():
+    def morto(m, **k):
+        raise ConnectionError()
+
+    aula, _ = planeja("qualquer coisa", perguntar=morto)
+    assert {"por_que", "nao_entendi", "repete"} <= set(aula.ramos)
 
 
 def test_planeja_gerador_de_figura_desconhecido_nao_fica_ok():
@@ -199,3 +217,126 @@ def test_pista_de_fracao():
 def test_pista_de_fracao_nao_rouba_a_regra_de_tres():
     dirigido = _exemplo_dirigido("se 3 cadernos custam 24, quanto custam 5")
     assert json.loads(dirigido)["topico"] == "regra_de_tres"
+
+
+# ───────────── a causa-raiz do "7 de 11 tópicos caem no fallback" (bateria real)
+
+def test_todo_problema_leva_exemplo_no_prompt():
+    # ACHADO: quando nenhuma pista de tópico casava, o prompt ia pro modelo SEM
+    # NENHUM exemplo de JSON. Numa bateria de 11 tópicos, 7 caíam nesse caminho —
+    # e eram exatamente os 7 que voltavam com plano quebrado. Um 7B não acerta
+    # schema aninhado só pela descrição em prosa.
+    from autotuto.planejador import exemplo
+    for problema in ("quanto é 15 por cento de 80", "o que é mmc", "números primos",
+                     "média aritmética de 4 notas", "área do círculo de raio 3",
+                     "", "askdjhaskjdh"):
+        texto, _ = exemplo(problema)
+        assert texto and json.loads(texto)["blocos"], problema
+
+
+def test_planeja_sempre_injeta_o_exemplo_nas_mensagens():
+    vistas = []
+
+    def espia(mensagens, **k):
+        vistas.append(mensagens)
+        raise ConnectionError()      # não interessa a resposta, só o prompt
+
+    planeja("quanto é 15 por cento de 80", perguntar=espia)
+    papeis = [m["role"] for m in vistas[0]]
+    assert papeis == ["system", "user", "assistant", "user"]
+    assert json.loads(vistas[0][2]["content"])["blocos"]     # o exemplo está lá
+
+
+def test_exemplo_generico_manda_nao_copiar_o_assunto():
+    # o risco do exemplo genérico é o modelo copiar o ASSUNTO dele e o professor
+    # sair falando de retângulo pra quem perguntou de porcentagem — o mesmo
+    # estrago do fallback antigo. O cabeçalho tem que dizer isso na cara.
+    vistas = []
+
+    def espia(mensagens, **k):
+        vistas.append(mensagens)
+        raise ConnectionError()
+
+    planeja("quanto é 15 por cento de 80", perguntar=espia)
+    pedido = vistas[0][1]["content"].lower()
+    assert "estrutura" in pedido
+    assert "não copie o assunto" in pedido
+
+
+def test_exemplo_dirigido_ainda_vence_quando_o_topico_casa():
+    from autotuto.planejador import exemplo
+    texto, dirigido = exemplo("área do trapézio")
+    assert dirigido and json.loads(texto)["topico"] == "area_trapezio"
+    texto, dirigido = exemplo("números primos")
+    assert not dirigido
+
+
+def test_exemplo_de_estrutura_e_ele_proprio_uma_aula_valida():
+    # exemplo que ensina erro é pior que exemplo nenhum: se o few-shot tem um
+    # gerador que não existe ou um "senao" órfão, o modelo copia exatamente isso.
+    from autotuto.aulas import EXEMPLO_ESTRUTURA, _com_genericos
+    from autotuto.schema import validar_estrutura
+    from autotuto.validador import avisos_graves, checar_matematica
+
+    dic = _com_genericos(EXEMPLO_ESTRUTURA)
+    assert validar_estrutura(dic) == []
+    assert avisos_graves(checar_matematica(dic)) == []
+
+
+def test_exemplo_de_estrutura_nao_polui_as_aulas_de_ouro():
+    from autotuto.aulas import disponiveis
+    assert "area_retangulo" not in disponiveis()
+    assert "sem_plano" not in disponiveis()
+
+
+# ─────────────────────── "mesma frase falada 2x seguidas" (achado em bateria local)
+
+def _planeja_com(plano):
+    return planeja("um problema", perguntar=lambda m, **k: json.dumps(plano))
+
+
+def test_fala_repetida_em_beats_seguidos_e_removida():
+    aula, rel = _planeja_com({
+        "titulo": "T", "topico": "t", "blocos": [
+            {"diz": "Vamos somar as bases.", "espera": "curta"},
+            {"diz": "Vamos somar as bases.", "espera": "curta"},   # repetido: some
+            {"diz": "Agora divide por dois."},
+        ]})
+    assert [b.get("diz") for b in aula.blocos] == ["Vamos somar as bases.",
+                                                   "Agora divide por dois."]
+    assert any("repetida" in a for a in rel.avisos)
+
+
+def test_fala_repetida_mantem_o_beat_que_tem_figura_ou_calc():
+    # o beat não some: só a fala duplicada sai, o desenho/a conta continuam
+    aula, _ = _planeja_com({
+        "titulo": "T", "topico": "t", "blocos": [
+            {"diz": "Olha o retângulo."},
+            {"diz": "Olha o retângulo.",
+             "calc": {"gerador": "area_retangulo", "params": {"base": 3, "altura": 4}}},
+        ]})
+    assert len(aula.blocos) == 2
+    assert "diz" not in aula.blocos[1] and aula.blocos[1]["calc"]
+
+
+def test_fala_repetida_nao_mexe_em_beat_de_pergunta():
+    # sem `diz` o tocador não pergunta nada e fica escutando um silêncio —
+    # repetir é menos ruim que matar a pergunta
+    aula, _ = _planeja_com({
+        "titulo": "T", "topico": "t",
+        "blocos": [{"diz": "O que acontece aqui?"},
+                   {"diz": "O que acontece aqui?",
+                    "pergunta": {"escuta_s": 10, "senao": "nao_entendi"}}],
+        "ramos": {"nao_entendi": [{"diz": "explico"}]}})
+    assert aula.blocos[1]["diz"] == "O que acontece aqui?"
+
+
+def test_repeticao_entre_ramo_e_principal_e_permitida():
+    # a primeira frase de um ramo PODE repetir a última da principal: ali é
+    # retomada de propósito, não gagueira
+    aula, _ = _planeja_com({
+        "titulo": "T", "topico": "t",
+        "blocos": [{"diz": "Divide por dois."},
+                   {"diz": "Pronto.", "pergunta": {"escuta_s": 10, "senao": "por_que_x"}}],
+        "ramos": {"por_que_x": [{"diz": "Divide por dois."}, {"diz": "Por causa da média."}]}})
+    assert aula.ramos["por_que_x"][0]["diz"] == "Divide por dois."

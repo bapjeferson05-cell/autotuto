@@ -8,9 +8,10 @@
        ↓  aulas._com_genericos — todo plano ganha por_que / nao_entendi / repete
     Aula pronta pros geradores  (+ validador.checar_matematica → avisos não-fatais)
 
-Sem LLM (ConnectionError etc.) ou tentativas esgotadas com erro → cai na aula de
-ouro do trapézio e devolve `Relatorio(ok=False, ...)`. Nunca mente pro aluno: ou
-entrega um plano que valida, ou admite que caiu no fallback.
+Sem LLM (ConnectionError etc.) ou tentativas esgotadas com erro → cai na
+`aulas.AULA_SEM_PLANO`, que DIZ ao aluno que não deu, e devolve
+`Relatorio(ok=False, ...)`. Nunca mente pro aluno: ou entrega um plano que
+valida, ou admite em voz alta — jamais troca de assunto no lugar.
 
 Dependência: só `json`, `re`, `autotuto.config`, `autotuto.llm`, `autotuto.schema`,
 `autotuto.validador`, `autotuto.aulas`.
@@ -83,6 +84,34 @@ _PISTAS: dict[str, tuple] = {
 }
 
 
+def _enxuta(aula: dict) -> str:
+    """JSON compacto de uma aula: 4 blocos e 2 ramos de 1 beat — dá a forma
+    inteira sem estourar o contexto de um modelo pequeno."""
+    return json.dumps({
+        "titulo": aula["titulo"],
+        "topico": aula["topico"],
+        "dados": aula.get("dados", {}),
+        "blocos": aula["blocos"][:4],
+        "ramos": {k: v[:1] for k, v in list(aula.get("ramos", {}).items())[:2]},
+    }, ensure_ascii=False)
+
+
+def exemplo(problema: str) -> tuple[str, bool]:
+    """O few-shot que vai no prompt: `(json, dirigido)`.
+
+    `dirigido=True` quando o tópico casou com uma aula de ouro — aí o exemplo
+    dá ESTRUTURA e TOM do tipo certo. Quando não casa, vai o exemplo de
+    estrutura genérico, porque ir SEM exemplo nenhum é o pior dos mundos:
+    medido numa bateria de 11 tópicos, os 7 que não casavam pista eram
+    exatamente os que voltavam com plano quebrado e caíam no fallback. Modelo
+    de 7B não acerta schema aninhado só pela descrição em prosa.
+    """
+    dirigido = _exemplo_dirigido(problema)
+    if dirigido is not None:
+        return dirigido, True
+    return _enxuta(aulas.EXEMPLO_ESTRUTURA), False
+
+
 def _exemplo_dirigido(problema: str) -> str | None:
     """JSON enxuto da aula de ouro cujo tópico casa com o problema.
 
@@ -97,14 +126,7 @@ def _exemplo_dirigido(problema: str) -> str | None:
         aula = aulas._CATALOGO.get(topico)
         if aula is None:
             continue
-        enxuta = {
-            "titulo": aula["titulo"],
-            "topico": aula["topico"],
-            "dados": aula.get("dados", {}),
-            "blocos": aula["blocos"][:4],
-            "ramos": {k: v[:1] for k, v in list(aula.get("ramos", {}).items())[:2]},
-        }
-        return json.dumps(enxuta, ensure_ascii=False)
+        return _enxuta(aula)
     return None
 
 
@@ -112,6 +134,12 @@ def _exemplo_dirigido(problema: str) -> str | None:
 # Regras da SPEC §3 (pedagogia) + §6 (modelo de dados). Os nomes de gerador estão
 # embutidos como texto (planejador não importa calc/figuras — regra de dep.).
 _SISTEMA = """Você é o PLANEJADOR de um professor de matemática que fala e desenha ao vivo.
+
+TODO texto que o aluno vai OUVIR ou LER — "titulo", "diz", "diz_passos",
+"confirma", "rotulos" — é em PORTUGUÊS DO BRASIL, sempre, do primeiro ao último
+caractere. Nunca escreva em inglês, chinês ou qualquer outro idioma, nem uma
+palavra solta: o aluno não lê. Os NOMES das chaves e dos geradores continuam
+como estão aqui.
 
 Você NÃO desenha e NÃO faz contas (modelo de 8B erra aritmética). Você escreve um
 PLANO em JSON: decide O QUE dizer, QUAL figura pedir e QUAL conta pedir, em passos
@@ -192,8 +220,61 @@ def _extrai_json(txt: str) -> dict:
     return obj
 
 
+def _norm_fala(t) -> str:
+    return " ".join(str(t or "").split()).casefold()
+
+
+def _tira_falas_repetidas(aula: dict) -> list[str]:
+    """Tira `diz` idêntico ao do beat imediatamente anterior. Muta `aula`.
+
+    ACHADO em bateria local: o professor falava a mesma frase duas vezes
+    seguidas. Modelo pequeno repete beat, e ouvir a frase idêntica de novo não
+    acrescenta nada — só faz o professor parecer travado. Cada trilha (a
+    principal e cada ramo) é comparada separadamente: a primeira frase de um
+    ramo PODE repetir a última da principal, ali a repetição é retomada, não
+    gagueira.
+
+    Beat com `pergunta` nunca é mexido: sem `diz` o tocador não pergunta nada e
+    ficaria escutando um silêncio — pior que a repetição.
+    """
+    avisos: list[str] = []
+
+    def limpa(beats: list, onde: str) -> list:
+        saida, anterior = [], None
+        for b in beats:
+            if not isinstance(b, dict):
+                saida.append(b)
+                continue
+            fala = _norm_fala(b.get("diz"))
+            if fala and fala == anterior and not b.get("pergunta"):
+                b = {k: v for k, v in b.items() if k != "diz"}
+                avisos.append(f"{onde}: fala repetida do beat anterior, removida")
+                if not (b.get("figura") or b.get("calc")):
+                    continue                    # beat que virou vazio: some
+            else:
+                anterior = fala or anterior
+            saida.append(b)
+        return saida
+
+    if isinstance(aula.get("blocos"), list):
+        aula["blocos"] = limpa(aula["blocos"], "blocos")
+    ramos = aula.get("ramos")
+    if isinstance(ramos, dict):
+        for nome, beats in ramos.items():
+            if isinstance(beats, list):
+                ramos[nome] = limpa(beats, f"ramo '{nome}'")
+    return avisos
+
+
 def _fallback(erros: list[str]) -> tuple[schema.Aula, Relatorio]:
-    return aulas.carregar("trapezio"), Relatorio(ok=False, erros=erros, avisos=[])
+    """A aula que ADMITE que não deu — nunca a de outro assunto.
+
+    Antes isso devolvia a aula de ouro do trapézio: o aluno perguntava de
+    porcentagem e o professor começava a falar de terreno, sem avisar. Trocar
+    de assunto calado é a mentira que a regra única do projeto proíbe."""
+    import copy
+    dic = aulas._com_genericos(copy.deepcopy(aulas.AULA_SEM_PLANO))
+    return schema.Aula.de_json(dic), Relatorio(ok=False, erros=erros, avisos=[])
 
 
 def planeja(
@@ -211,20 +292,20 @@ def planeja(
     trapézio + `Relatorio(ok=False, ...)`.
     """
     mensagens: list[dict] = [{"role": "system", "content": _SISTEMA}]
-    exemplo = _exemplo_dirigido(problema)
-    if exemplo is not None:
-        mensagens.append({
-            "role": "user",
-            "content": "Exemplo de um plano bom para um problema parecido — copie a "
-                       "ESTRUTURA e o TOM, nunca os números:\n" + exemplo,
-        })
-        mensagens.append({"role": "assistant", "content": exemplo})
+    modelo, dirigido = exemplo(problema)
+    cabecalho = ("Exemplo de um plano bom para um problema parecido — copie a "
+                 "ESTRUTURA e o TOM, nunca os números:\n" if dirigido else
+                 "Exemplo do FORMATO exigido, de outro assunto — copie só a "
+                 "ESTRUTURA do JSON. NÃO copie o assunto, os números, nem as "
+                 "frases: o plano tem que ser sobre o que o aluno pediu:\n")
+    mensagens.append({"role": "user", "content": cabecalho + modelo})
+    mensagens.append({"role": "assistant", "content": modelo})
     mensagens.append({"role": "user", "content": problema})
 
-    # sem few-shot dirigido = tópico fora das 4 aulas de ouro: o modelo pensa
-    # mais, precisa de mais tempo. Não penalizar o caminho conhecido com esse
-    # teto maior (autópsia de 2026-09-12).
-    timeout = PLANEJADOR_TIMEOUT_S if exemplo is not None else PLANEJADOR_TIMEOUT_NOVO_S
+    # tópico fora das aulas de ouro: o exemplo agora é o genérico, o modelo tem
+    # que pensar mais e precisa de mais tempo. Não penalizar o caminho conhecido
+    # com esse teto maior (autópsia de 2026-09-12).
+    timeout = PLANEJADOR_TIMEOUT_S if dirigido else PLANEJADOR_TIMEOUT_NOVO_S
 
     erros: list[str] = ["planejador não rodou"]
     aula_dict: dict | None = None
@@ -270,8 +351,9 @@ def planeja(
     # RULING: mergeia os ramos genéricos ANTES de montar a Aula — todo plano
     # gerado ganha por_que / nao_entendi / repete (a aula sobrescreve por chave).
     aula_dict = aulas._com_genericos(aula_dict)
+    repetidas = _tira_falas_repetidas(aula_dict)
     aula = schema.Aula.de_json(aula_dict)
-    avisos = validador.checar_matematica(aula_dict)
+    avisos = repetidas + validador.checar_matematica(aula_dict)
     # o plano validou a FORMA (schema), mas uma ferramenta pedida pode não
     # existir ou ter explodido com os params que o LLM mandou — aí uma etapa
     # do plano simplesmente não vai acontecer. `ok` tem que contar isso: senão

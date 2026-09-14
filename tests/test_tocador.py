@@ -5,6 +5,7 @@ preparou aquilo. Nunca finge. Estes testes travam esse comportamento.
 """
 from autotuto.aulas import carregar
 from autotuto.tocador import Tocador, HONESTO, _FILLER, _VOLTA
+from autotuto.estado import EstadoAula
 
 
 def roda(nome, *, barge=None, quando=2, resp=None, cerebro=None):
@@ -457,3 +458,37 @@ def test_com_mostra_passos_narra_todos_na_ordem():
     assert desenhos == ["passo1", "passo2", "passo3"]
     assert falas == ["olha a conta", "fórmula geral", "entram os números",
                      "dá oitenta e quatro"]
+
+
+def test_filler_nunca_repete_a_frase_anterior():
+    # ACHADO em bateria local: "mesma frase falada 2x seguidas". Com banco de 3
+    # frases e sorteio com reposição, isso saía 33% das vezes nos dois pontos
+    # onde o professor fala dois fillers seguidos (troca de ramo e F3).
+    from autotuto.tocador import _filler
+    for _ in range(300):
+        a = _filler("por_que")
+        assert _filler("por_que", evitar=a) != a
+
+
+def test_filler_com_banco_de_uma_frase_nao_trava():
+    # degenerado: se o banco tiver 1 opção só, repetir é melhor que estourar
+    from autotuto import tocador
+    from autotuto.tocador import _filler
+    tocador._FILLER["so_uma"] = ("única",)
+    try:
+        assert _filler("so_uma", evitar="única") == "única"
+    finally:
+        del tocador._FILLER["so_uma"]
+
+
+def test_tocador_nao_fala_dois_fillers_iguais_seguidos():
+    falas = []
+    aula = carregar("trapezio")
+    t = Tocador(falar=lambda s: falas.append(s), desenhar=lambda p, r: None,
+                pausas=False, cerebro=None, avaliador=None)
+    est = EstadoAula(aula)
+    t._entra_ramo(est, "por_que_div_2")          # fala um filler
+    t._entra_ramo(est, "por_que_div_2")          # e outro logo em seguida
+    fillers = [f for f in falas if f in
+               ("Boa pergunta.", "Ótima pergunta.", "Faz sentido perguntar isso.")]
+    assert len(fillers) == 2 and fillers[0] != fillers[1]

@@ -78,8 +78,17 @@ _FILLER = {
 _FILLER_DEFAULT = ("Deixa eu ver.", "Um instante.", "Peraí.")
 
 
-def _filler(gat: str) -> str:
-    return random.choice(_FILLER.get(gat, _FILLER_DEFAULT))
+def _filler(gat: str, evitar: str | None = None) -> str:
+    """Frase curta de transição, sorteada — mas nunca a MESMA que a anterior.
+
+    Medido: com banco de 3 frases e sorteio com reposição, 33% das vezes o
+    professor falava a frase idêntica duas vezes seguidas ("Boa pergunta." /
+    "Boa pergunta."). Acontece de verdade no caso F3 (aluno re-pergunta o ramo
+    que já está rolando) e na troca de ramo, que falam dois fillers seguidos.
+    """
+    opcoes = _FILLER.get(gat, _FILLER_DEFAULT)
+    restantes = [f for f in opcoes if f != evitar] or list(opcoes)
+    return random.choice(restantes)
 
 _ACOLHE = "Tranquilo não saber — é pra isso que a gente tá aqui. Olha:"
 _VOLTA = "Voltando de onde a gente parou."
@@ -112,6 +121,7 @@ class Tocador:
         self.pausas = pausas
         self._falas: list[str] = []   # últimos 3 `diz` — contexto da camada 2
         self._n_png = 0
+        self._ultimo_filler: str | None = None
 
     # ───────────────────────────────────────────── stubs (quando nada é injetado)
     def _falar_padrao(self, txt: str):
@@ -223,6 +233,13 @@ class Tocador:
             time.sleep(config.PAUSA.get(bloco.get("espera"), config.PAUSA[None]))
         return None
 
+    def _diz_filler(self, gat: str) -> str:
+        """`_filler` lembrando o que foi dito da última vez — dois fillers
+        seguidos (troca de ramo, ou F3) não podem sair iguais."""
+        f = _filler(gat, evitar=self._ultimo_filler)
+        self._ultimo_filler = f
+        return f
+
     # ─────────────────────────────────────────────── as 3 camadas da interrupção
     def _resolve_interrupcao(self, fala: str, est: EstadoAula) -> str | None:
         ramos = est.aula.ramos
@@ -240,7 +257,7 @@ class Tocador:
         # filler só depois de saber que o ramo existe (senão o aluno ouviria
         # "Deixa eu ver." e logo em seguida "Essa eu não preparei...").
         if filler:
-            self.falar(_filler(gat))
+            self.falar(self._diz_filler(gat))
         for rb in est.drena_ramo():
             r = self._toca_bloco(rb)
             # beat de dentro do ramo interrompido no `diz` que TAMBÉM tem `calc`:
@@ -261,7 +278,7 @@ class Tocador:
                     # F3: o aluno re-pergunta o mesmo ramo que já está rolando.
                     # Não re-entra (loop); reconhece e segue drenando — nunca
                     # ignorar o aluno em silêncio (SPEC §7).
-                    self.falar(_filler(gat))
+                    self.falar(self._diz_filler(gat))
                 elif g2 is None:
                     self.falar(HONESTO)
                 if retomar_calc:

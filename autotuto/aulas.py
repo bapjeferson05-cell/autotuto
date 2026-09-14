@@ -561,6 +561,88 @@ FRACAO: dict = {
     },
 }
 
+
+# ═══════════════════════════════════ EXEMPLO DE ESTRUTURA (few-shot de emergência)
+# NÃO é uma aula de ouro e NÃO entra em `_CATALOGO` — `disponiveis()` não muda.
+# Existe por um motivo só: quando o problema do aluno não casa com nenhuma pista
+# de tópico, o planejador mandava o prompt pro modelo SEM NENHUM exemplo de JSON.
+# Medido: de 11 tópicos de uma bateria real, 7 caíam nesse caminho — e era
+# justamente neles que o plano voltava quebrado e a aula virava fallback.
+# Um modelo de 7B não acerta um schema aninhado só pela descrição em prosa.
+#
+# Propositalmente o assunto mais simples possível, e usando só gerador que
+# existe de verdade: exemplo que inventa ferramenta ensina o modelo a inventar.
+EXEMPLO_ESTRUTURA: dict = {
+    "titulo": "Área do retângulo — o piso da sala",
+    "topico": "area_retangulo",
+    "dados": {"base": 12, "altura": 7, "area": 84},
+    "blocos": [
+        {"diz": "Olha o piso dessa sala. Quatro cantos retos, doze metros de um "
+                "lado e sete do outro. Área é quanto de piso cabe aqui dentro.",
+         "figura": {"gerador": "retangulo", "params": {"base": 12, "altura": 7}},
+         "espera": "media"},
+        {"diz": "Antes de eu fazer a conta, pensa comigo: pra saber quantos "
+                "quadradinhos de um metro cabem aí, você soma doze com sete ou "
+                "multiplica um pelo outro?",
+         "pergunta": {"escuta_s": 10, "senao": "por_que_multiplica",
+                      "acerta": ["multiplica", "vezes", "multiplicar"],
+                      "confirma": "Isso mesmo, multiplica. Somar daria o contorno, "
+                                  "não o que cabe dentro."}},
+        {"diz": "Multiplica a base pela altura, e o resultado já sai em metros "
+                "quadrados porque você contou quadradinhos de um metro por um metro.",
+         "calc": {"gerador": "area_retangulo", "params": {"base": 12, "altura": 7}},
+         "mostra_passos": True,
+         "diz_passos": ["Doze vezes sete dá oitenta e quatro."],
+         "espera": "longa"},
+        {"diz": "Oitenta e quatro metros quadrados de piso.", "espera": "media"},
+    ],
+    "ramos": {
+        "por_que_multiplica": [
+            {"diz": "Multiplica porque a sala é uma grade: sete fileiras de doze "
+                    "quadradinhos cada uma. Somar doze com sete só te daria dois "
+                    "lados, não a grade inteira.",
+             "figura": {"gerador": "retangulo", "params": {"base": 12, "altura": 7}},
+             "espera": "media"},
+        ],
+    },
+}
+
+
+# ═══════════════════════════════════════════ SEM PLANO — o fallback que não mente
+# Quando o planejador não consegue montar a aula, a saída antiga era devolver a
+# aula de ouro do TRAPÉZIO. O aluno perguntava de porcentagem e o professor
+# começava a falar de terreno, sem avisar: exatamente o "professor passa conteúdo
+# que não tem nada a ver" que a regra única proíbe. Trocar de assunto calado é
+# mentir. Aqui ele diz o que aconteceu e devolve a vez pro aluno.
+AULA_SEM_PLANO: dict = {
+    "titulo": "Não consegui preparar essa aula",
+    "topico": "sem_plano",
+    "dados": {},
+    "blocos": [
+        {"diz": "Vou ser sincero com você: eu não consegui montar a aula sobre "
+                "isso agora. E eu não vou te empurrar outro assunto no lugar.",
+         "espera": "media"},
+        {"diz": "Tenta de novo, ou me diz a mesma coisa com outras palavras — "
+                "às vezes na segunda eu pego. Se quiser, manda um exemplo com "
+                "números que fica mais fácil pra mim.",
+         "espera": "media"},
+    ],
+    "ramos": {
+        "por_que": [
+            {"diz": "Porque eu monto a aula antes de falar, e dessa vez a montagem "
+                    "não fechou. Prefiro te dizer isso a inventar uma explicação."},
+        ],
+        "nao_entendi": [
+            {"diz": "É simples: eu falhei em preparar essa aula. Não é você. "
+                    "Me manda o assunto de novo, com outras palavras."},
+        ],
+        "repete": [
+            {"diz": "Não consegui preparar essa aula agora. Manda de novo que "
+                    "eu tento outra vez."},
+        ],
+    },
+}
+
 _CATALOGO = {"trapezio": TRAPEZIO, "pitagoras": PITAGORAS,
              "eq_primeiro_grau": EQ_PRIMEIRO_GRAU, "regra_de_tres": REGRA_DE_TRES,
              "fracao": FRACAO}
