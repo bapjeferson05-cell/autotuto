@@ -71,6 +71,9 @@ _FILLER = {
     "achar_hipotenusa": ("Deixa eu ver.", "Boa.", "Olha só."),
     "e_triangulo": ("Deixa eu ver.", "Boa.", "Olha só."),
     "outro_numero": ("Deixa eu ver.", "Boa.", "Olha só."),
+    "comeca_pelo_de_baixo": ("Boa.", "Olha só.", "Deixa eu mostrar."),
+    "e_se_outro_corte": ("Boa pergunta.", "Olha só.", "Ótima ideia."),
+    "e_se_metade": ("Claro.", "Boa.", "Olha só."),
 }
 _FILLER_DEFAULT = ("Deixa eu ver.", "Um instante.", "Peraí.")
 
@@ -197,18 +200,24 @@ class Tocador:
                 self.falar(LIMITACAO_CALC)
                 r = None
             if r is not None:
-                passos = r.passos if bloco.get("mostra_passos") else r.passos[-1:]
+                # sem `mostra_passos`, só o ÚLTIMO passo vai pra lousa — mas o
+                # índice tem que continuar sendo o índice REAL dele. Fatiar com
+                # [-1:] rebobinava o i pra 0 e o professor narrava `diz_passos[0]`
+                # ("essa é a fórmula geral") enquanto a lousa mostrava o resultado:
+                # a fala dizendo uma coisa e o desenho outra.
                 diz_passos = bloco.get("diz_passos") or []
-                for i, latex in enumerate(passos):
+                ultimo = len(r.passos) - 1
+                indices = range(len(r.passos)) if bloco.get("mostra_passos") else [ultimo]
+                for i in indices:
                     if i < desde:          # já visto+ouvido antes do barge — não repete
                         continue
-                    self.desenhar(lousa.passo_latex(latex), f"passo{i + 1}")
+                    self.desenhar(lousa.passo_latex(r.passos[i]), f"passo{i + 1}")
                     if diz_passos and i < len(diz_passos) and diz_passos[i]:
                         fala = self.falar(diz_passos[i])
                         if fala:
                             return ("barge", fala, i)
                     elif self.pausas:
-                        time.sleep(1.1 if i < len(passos) - 1 else 0.7)
+                        time.sleep(1.1 if i < ultimo else 0.7)
 
         if self.pausas:
             time.sleep(config.PAUSA.get(bloco.get("espera"), config.PAUSA[None]))

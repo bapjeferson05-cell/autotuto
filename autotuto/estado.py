@@ -49,6 +49,15 @@ class EstadoAula:
             return []
 
         blocos = self.aula.ramos[gatilho]
+        # Ramo que existe mas está VAZIO conta como ramo que não existe. Sem isso
+        # a pilha ficava com uma trilha vazia no topo: `entra_ramo` devolvia []
+        # (o tocador lê como "não existe" e fala o fallback honesto), mas a pilha
+        # já tinha sido empilhada — `na_principal` virava False pra sempre e a
+        # aula ACABAVA ali, calada. O schema proíbe ramo vazio, então isso só
+        # chega por aula montada à mão ou não-validada; mas "acaba calado" é o
+        # tipo de falha que o projeto inteiro existe pra não ter.
+        if not blocos:
+            return []
         self._pilha.append(Trilha(blocos, rotulo=f"ramo:{gatilho}"))
         self._historico.append(gatilho)
         return blocos

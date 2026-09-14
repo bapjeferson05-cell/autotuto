@@ -54,3 +54,19 @@ def test_historico_returns_copy():
     # Tentar mutar a cópia não deve afetar o estado interno
     h1.append("fake")
     assert e.historico == ["por_que"]  # não foi afetado
+
+
+def test_ramo_vazio_nao_empilha_e_a_aula_continua():
+    # BUG: `entra_ramo` empilhava a trilha ANTES de ver que o ramo estava vazio e
+    # devolvia [] — que o tocador lê como "ramo não existe". Resultado: fallback
+    # honesto + pilha presa fora da principal = a aula acabava em silêncio no
+    # meio. Um ramo vazio tem que se comportar como ramo inexistente, ponto.
+    aula = Aula.de_json({"blocos": [{"diz": "a"}, {"diz": "b"}, {"diz": "c"}],
+                         "ramos": {"vazio": []}})
+    est = EstadoAula(aula)
+    assert est.proximo() == {"diz": "a"}
+    assert est.entra_ramo("vazio") == []
+    assert est.na_principal                     # a pilha não pode ter mexido
+    assert est.historico == []                  # nem o histórico
+    assert est.proximo() == {"diz": "b"}        # e a aula SEGUE
+    assert est.proximo() == {"diz": "c"}

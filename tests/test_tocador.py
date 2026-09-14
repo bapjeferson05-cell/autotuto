@@ -423,3 +423,37 @@ def test_avaliador_none_ou_errado_mantem_comportamento_antigo():
     est_com = Tocador(falar=lambda t: None, ouvir=lambda s: resposta,
                        pausas=False, cerebro=None, avaliador=fake_errado).toca(aula)
     assert est_sem.historico == est_com.historico == ["nao_entendi"]
+
+
+def test_sem_mostra_passos_a_fala_casa_com_o_passo_que_esta_na_lousa():
+    # BUG: `r.passos[-1:]` rebobinava o índice pra 0. Sem `mostra_passos` a lousa
+    # mostrava o RESULTADO enquanto o professor narrava diz_passos[0] ("essa é a
+    # fórmula geral") — a fala dizendo uma coisa e o desenho outra, que é
+    # exatamente a mentira que a regra do projeto proíbe.
+    falas, desenhos = [], []
+    t = Tocador(falar=lambda s: falas.append(s),
+                desenhar=lambda png, rot: desenhos.append(rot),
+                pausas=False, cerebro=None, avaliador=None)
+    t._toca_bloco({
+        "diz": "olha a conta",
+        "calc": {"gerador": "area_trapezio", "params": {"B": 18, "b": 10, "h": 6}},
+        "diz_passos": ["fórmula geral", "entram os números", "dá oitenta e quatro"],
+    })
+    assert desenhos == ["passo3"]                    # só o último vai pra lousa
+    assert falas[-1] == "dá oitenta e quatro"        # e a fala é a DELE
+
+
+def test_com_mostra_passos_narra_todos_na_ordem():
+    falas, desenhos = [], []
+    t = Tocador(falar=lambda s: falas.append(s),
+                desenhar=lambda png, rot: desenhos.append(rot),
+                pausas=False, cerebro=None, avaliador=None)
+    t._toca_bloco({
+        "diz": "olha a conta",
+        "calc": {"gerador": "area_trapezio", "params": {"B": 18, "b": 10, "h": 6}},
+        "mostra_passos": True,
+        "diz_passos": ["fórmula geral", "entram os números", "dá oitenta e quatro"],
+    })
+    assert desenhos == ["passo1", "passo2", "passo3"]
+    assert falas == ["olha a conta", "fórmula geral", "entram os números",
+                     "dá oitenta e quatro"]
