@@ -14,7 +14,7 @@ OLLAMA_HOST = getattr(config, "OLLAMA_HOST", os.environ.get("OLLAMA_HOST", "http
 LLM_PROVEDOR = config.LLM_PROVEDOR
 
 
-def _ollama(mensagens, timeout, json_mode):
+def _ollama(mensagens, timeout, json_mode, esquema=None):
     """Call Ollama API with messages."""
     url = f"{OLLAMA_HOST}/api/chat"
 
@@ -29,7 +29,11 @@ def _ollama(mensagens, timeout, json_mode):
     }
 
     if json_mode:
-        body["format"] = "json"
+        # "json" solto garante que SAI um JSON — e só. Com um JSON Schema aqui,
+        # o ollama (>=0.3.0) força a FORMA no próprio decoder: `blocos` sai
+        # lista, beat sai objeto, `senao` sai texto. Deixa de ser "pede, recebe
+        # torto, manda corrigir" e passa a não ter como vir torto.
+        body["format"] = esquema if esquema else "json"
 
     data = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
@@ -142,15 +146,22 @@ def _openai_compat(mensagens, timeout, json_mode, provedor):
     return dados["choices"][0]["message"]["content"]
 
 
-def perguntar(mensagens, *, timeout, json_mode=True):
+def perguntar(mensagens, *, timeout, json_mode=True, esquema=None):
     """Manda as mensagens pro provedor configurado e devolve o texto da resposta.
 
     Provedor vem de AUTOTUTO_LLM (ver provedores.py): 'ollama' (local, default) e
-    'claude' têm caminho próprio; o resto vai pelo caminho OpenAI-compatível."""
+    'claude' têm caminho próprio; o resto vai pelo caminho OpenAI-compatível.
+
+    `esquema`: JSON Schema pra constrained decoding. Quem chama é que conhece a
+    forma que quer (o planejador passa `schema.esquema_json()`) — assim este
+    módulo não precisa saber o que é uma Aula. Hoje só o caminho do ollama usa:
+    os provedores de nuvem têm `response_format: json_schema`, mas o suporte
+    varia de um pro outro e eu não tenho como testar cada um daqui. Nos outros
+    o parâmetro é ignorado, e o `json_mode` de sempre continua valendo."""
     provedor = LLM_PROVEDOR
 
     if provedor == "claude":
         return _claude(mensagens, timeout, json_mode)
     if provedor in provedores.PROVEDORES:
         return _openai_compat(mensagens, timeout, json_mode, provedor)
-    return _ollama(mensagens, timeout, json_mode)
+    return _ollama(mensagens, timeout, json_mode, esquema)

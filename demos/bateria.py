@@ -9,6 +9,11 @@ SEU modelo, diz se o conserto pegou. Este script é a régua.
     python demos/bateria.py topicos.txt        # um problema por linha
     AUTOTUTO_LLM=groq python demos/bateria.py  # compara provedor
 
+Pra decidir o constrained decoding, roda os dois e compara fallback e tempo:
+
+    AUTOTUTO_ESQUEMA_ESTRITO=0 python demos/bateria.py
+    AUTOTUTO_ESQUEMA_ESTRITO=1 python demos/bateria.py
+
 Só planeja — não fala, não desenha, não abre visor. Nenhuma dependência nova.
 """
 from __future__ import annotations
@@ -47,7 +52,9 @@ def main(argv: list[str] | None = None) -> int:
     # argumentos de quem a importa (o pytest, por exemplo) e tentar abrir "-W".
     argv = sys.argv[1:] if argv is None else argv
     topicos = _carrega(argv[0]) if argv else TOPICOS
-    print(f"provedor={config.LLM_PROVEDOR}  modelo={config.LLM_MODELO or '(default)'}")
+    estrito = "ON" if config.LLM_ESQUEMA_ESTRITO else "off"
+    print(f"provedor={config.LLM_PROVEDOR}  modelo={config.LLM_MODELO or '(default)'}"
+          f"  esquema-estrito={estrito}")
     print(f"{len(topicos)} tópicos\n")
 
     linhas, fallbacks, com_aviso, total_s = [], 0, 0, 0.0

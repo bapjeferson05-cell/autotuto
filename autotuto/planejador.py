@@ -23,7 +23,7 @@ import json
 import re
 from dataclasses import dataclass, field
 
-from autotuto import aulas, llm, schema, validador
+from autotuto import aulas, config, llm, schema, validador
 from autotuto.config import PLANEJADOR_TIMEOUT_S
 
 # RULING: todo módulo PODE importar autotuto.config (é a raiz, não importa nada).
@@ -415,7 +415,9 @@ def planeja(
 
     for _ in range(max(1, tentativas)):
         try:
-            bruto = perguntar(mensagens, timeout=timeout, json_mode=True)
+            bruto = perguntar(mensagens, timeout=timeout, json_mode=True,
+                              esquema=(schema.esquema_json()
+                                       if config.LLM_ESQUEMA_ESTRITO else None))
         except Exception as e:  # ConnectionError, URLError, TimeoutError...
             return _fallback([f"LLM indisponível: {e!r}"])
 

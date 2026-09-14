@@ -101,3 +101,70 @@ def validar_estrutura(o: dict) -> list[str]:
         for i, b in enumerate(blocos):
             erros += _valida_beat(b, f"ramo['{nome}'][{i}]", ramos)
     return erros
+
+
+# ────────────────────────────────── esquema JSON pro constrained decoding
+# O ollama aceita um JSON Schema em `format` desde a 0.3.0 (llama.cpp: GBNF).
+# Com ele o decoder é OBRIGADO a respeitar a forma — em vez de a gente pedir
+# JSON, receber torto e mandar corrigir num retry.
+#
+# DE PROPÓSITO RASO. Levantamento de 2026 sobre geração declarativa por LLM
+# relata que modelo quantizado pequeno "às vezes retorna arrays vazios em
+# schemas aninhados 3+ níveis". Nossa Aula vai a 5 (blocos → beat → figura →
+# spec → pontos). Então aqui a gente trava só o que quebrava de verdade — que
+# `blocos` é lista, que beat é objeto, que `senao` é texto — e deixa `spec` e
+# `params` como objeto livre. Travar fundo demais é trocar um erro por outro.
+#
+# O schema do `format` NÃO é injetado no prompt: o modelo não o enxerga. Então
+# ele não substitui a descrição da estrutura em `planejador._SISTEMA` — soma.
+_BEAT = {
+    "type": "object",
+    "properties": {
+        "diz": {"type": "string"},
+        "espera": {"type": "string", "enum": sorted(x for x in _ESPERAS if x)},
+        "mostra_passos": {"type": "boolean"},
+        "diz_passos": {"type": "array", "items": {"type": "string"}},
+        "figura": {
+            "type": "object",
+            "properties": {"gerador": {"type": "string"},
+                           "spec": {"type": "object"},      # livre: é fundo demais
+                           "params": {"type": "object"}},
+            "required": ["gerador"],
+        },
+        "calc": {
+            "type": "object",
+            "properties": {"gerador": {"type": "string"},
+                           "params": {"type": "object"}},
+            "required": ["gerador"],
+        },
+        "pergunta": {
+            "type": "object",
+            "properties": {
+                "escuta_s": {"type": "integer", "minimum": 3, "maximum": 60},
+                "senao": {"type": "string"},
+                "acerta": {"type": "array", "items": {"type": "string"}},
+                "confirma": {"type": "string"},
+            },
+            "required": ["senao"],
+        },
+    },
+}
+
+
+def esquema_json() -> dict:
+    """JSON Schema da Aula, raso, pra `format` do ollama / GBNF."""
+    import copy
+    return {
+        "type": "object",
+        "properties": {
+            "titulo": {"type": "string"},
+            "topico": {"type": "string"},
+            "dados": {"type": "object"},
+            "blocos": {"type": "array", "items": copy.deepcopy(_BEAT), "minItems": 1},
+            "ramos": {"type": "object",
+                      "additionalProperties": {"type": "array",
+                                               "items": copy.deepcopy(_BEAT),
+                                               "minItems": 1}},
+        },
+        "required": ["titulo", "blocos"],
+    }

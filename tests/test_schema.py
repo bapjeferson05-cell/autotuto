@@ -74,3 +74,45 @@ def test_beat_string_crua_DENTRO_de_ramo_e_erro_sem_crashar():
     obj = {**AULA_OK, "ramos": {"por_que": [{"diz": "x"}, "string crua"]}}
     erros = validar_estrutura(obj)
     assert any("por_que" in e and "objeto" in e for e in erros)
+
+
+# ───── o JSON Schema pro constrained decoding
+
+def test_esquema_e_raso_de_proposito():
+    # levantamento de 2026: modelo quantizado pequeno devolve array vazio em
+    # schema aninhado 3+ níveis. `spec` e `params` ficam objeto LIVRE porque
+    # travá-los seria trocar um erro por outro.
+    from autotuto.schema import esquema_json
+    e = esquema_json()
+    beat = e["properties"]["blocos"]["items"]["properties"]
+    assert beat["figura"]["properties"]["spec"] == {"type": "object"}
+    assert beat["calc"]["properties"]["params"] == {"type": "object"}
+
+
+def test_esquema_trava_o_que_quebrava_de_verdade():
+    from autotuto.schema import esquema_json
+    e = esquema_json()
+    assert e["properties"]["blocos"]["type"] == "array"
+    assert e["properties"]["blocos"]["minItems"] == 1
+    beat = e["properties"]["blocos"]["items"]["properties"]
+    assert beat["pergunta"]["properties"]["senao"]["type"] == "string"
+    assert beat["pergunta"]["required"] == ["senao"]
+    assert beat["diz_passos"]["type"] == "array"
+
+
+def test_as_aulas_de_ouro_batem_com_o_proprio_esquema():
+    # se o esquema recusasse a nossa própria aula escrita à mão, ele estaria
+    # errado — e a gente estaria forçando o modelo a errar.
+    import pytest
+    jsonschema = pytest.importorskip(
+        "jsonschema", reason="dep de teste: pip install -e '.[test]'")
+    from autotuto.aulas import carregar, disponiveis
+    from autotuto.schema import esquema_json
+    for nome in disponiveis():
+        jsonschema.validate(carregar(nome).para_json(), esquema_json())
+
+
+def test_espera_do_esquema_bate_com_a_validacao():
+    from autotuto.schema import _ESPERAS, esquema_json
+    enum = esquema_json()["properties"]["blocos"]["items"]["properties"]["espera"]["enum"]
+    assert set(enum) == {x for x in _ESPERAS if x}

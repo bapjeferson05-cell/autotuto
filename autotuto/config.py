@@ -37,6 +37,15 @@ LLM_BASE_URL   = env("AUTOTUTO_BASE_URL", "")       # vazio = base do provedor; 
 LLM_CLAUDE     = "claude-sonnet-5"
 CEREBRO_TIMEOUT_S = 8.0                              # LLM curto da interrupção
 AVALIADOR_TIMEOUT_S = 8.0                            # LLM curto da avaliação semântica de resposta
+# Constrained decoding: manda o JSON Schema da Aula no `format` do ollama, em
+# vez do "json" solto. Promete matar o plano-torto na raiz, MAS o paper "Let Me
+# Speak Freely?" mede queda de raciocínio sob formato restrito, pior em
+# matemática — e modelo pequeno quantizado devolve array vazio em schema fundo.
+# Vantagem nossa: o modelo aqui NÃO calcula (quem calcula é o calc.py), ele só
+# estrutura — então o tombo deve nos pegar menos. "Deve" não é medida: fica
+# DESLIGADO até `demos/bateria.py` rodar dos dois jeitos e dizer qual ganha.
+LLM_ESQUEMA_ESTRITO = env("AUTOTUTO_ESQUEMA_ESTRITO", "0") == "1"
+
 PLANEJADOR_TIMEOUT_S = 100.0  # teto ÚNICO. Já foram dois (45s no caminho com few-shot
                               # dirigido, 100s sem), de quando "sem pista" queria dizer
                               # "sem exemplo nenhum". Hoje todo problema leva exemplo e o
