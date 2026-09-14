@@ -254,3 +254,32 @@ def test_circulo_com_raio_invalido_falha_alto():
         figura({"circulos": [{"centro": [0, 0], "raio": 0}]})
     with pytest.raises(ValueError):
         figura({"circulos": [{"centro": [0, 0], "raio": -3}]})
+
+
+def test_reta_numerica_recusa_intervalo_absurdo():
+    # `reta_numerica(0, 1000000)` desenharia um milhão de traços e travaria a
+    # aula — e, como o validador agora DESENHA pra validar, travaria o
+    # planejador antes de o aluno ouvir a primeira frase.
+    import pytest
+
+    from autotuto import config
+    from autotuto.figuras.catalogo import reta_numerica
+    with pytest.raises(ValueError) as e:
+        reta_numerica(inicio=0, fim=1_000_000, passo=1)
+    assert str(config.MAX_MARCAS_RETA) in str(e.value)   # a mensagem ensina o teto
+    # o intervalo normal de aula continua passando
+    assert reta_numerica(inicio=0, fim=10, passo=1)[:4] == b"\x89PNG"
+    assert reta_numerica(inicio=0, fim=1000, passo=100)[:4] == b"\x89PNG"
+
+
+def test_reta_numerica_absurda_vira_aviso_grave_e_nao_trava():
+    import time
+
+    from autotuto.validador import avisos_graves, checar_matematica
+    plano = {"blocos": [{"diz": "olha a reta", "figura": {
+        "gerador": "reta_numerica",
+        "params": {"inicio": 0, "fim": 1_000_000, "passo": 1}}}]}
+    t0 = time.monotonic()
+    avisos = checar_matematica(plano)
+    assert time.monotonic() - t0 < 2.0        # falhou rápido, não desenhou
+    assert avisos_graves(avisos)

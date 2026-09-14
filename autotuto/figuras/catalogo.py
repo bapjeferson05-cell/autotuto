@@ -11,6 +11,7 @@ Depende só de `config` + matplotlib/numpy + stdlib (via canvas/lousa).
 """
 from __future__ import annotations
 
+from autotuto import config
 from autotuto.figuras.canvas import figura
 
 
@@ -122,6 +123,12 @@ def reta_numerica(inicio=0, fim=10, marca=None, passo=1, **_):
     """Reta numérica de `inicio` a `fim` com ticks; destaca `marca` se dado."""
     if passo <= 0:
         raise ValueError(f"reta_numerica: passo tem que ser positivo (recebeu {passo!r})")
+    marcas_previstas = (fim - inicio) / passo + 1
+    if marcas_previstas > config.MAX_MARCAS_RETA:
+        raise ValueError(
+            f"reta_numerica: {int(marcas_previstas)} marcas de {inicio} a {fim} com "
+            f"passo {passo} — o teto é {config.MAX_MARCAS_RETA}. Aumente o passo ou "
+            f"encurte o intervalo.")
     segs = [[[inicio, 0], [fim, 0]]]
     rotulos = []
     n = inicio

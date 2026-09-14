@@ -255,3 +255,68 @@ def test_aulas_de_ouro_passam_no_teste_de_idioma():
         ruim = [a for a in checar_matematica(carregar(nome).para_json())
                 if "não em português" in a]
         assert ruim == [], (nome, ruim)
+
+
+# ───── spec inline de figura (achado local: prova geométrica perdida)
+
+def test_spec_inline_com_ponto_nao_declarado_e_grave():
+    # ANTES: spec inline (gerador="figura") não era validado de jeito nenhum.
+    # Estourava só no tocador, que pede desculpa e segue sem o desenho — o
+    # modelo nunca via o erro. Uma prova geométrica com reta paralela se perdeu
+    # assim, por um ponto citado em "segmentos" e esquecido em "pontos".
+    from autotuto.validador import avisos_graves, checar_matematica
+    plano = {"blocos": [{"diz": "olha a paralela", "figura": {"gerador": "figura", "spec": {
+        "pontos": {"A": [0, 0], "B": [6, 0], "C": [2, 4]},
+        "poligonos": [{"vs": ["A", "B", "C"], "preenche": True}],
+        "segmentos": [{"de": "C", "para": "E", "tracejado": True}]}}}]}
+    avisos = checar_matematica(plano)
+    assert any("'E'" in a and "pontos" in a for a in avisos), avisos
+    assert avisos_graves(avisos)       # volta pro modelo com chance de correção
+
+
+def test_spec_inline_correto_nao_acusa():
+    from autotuto.validador import checar_matematica
+    plano = {"blocos": [{"figura": {"gerador": "figura", "spec": {
+        "pontos": {"A": [0, 0], "B": [6, 0], "C": [2, 4], "E": [4, 4]},
+        "poligonos": [{"vs": ["A", "B", "C"], "preenche": True}],
+        "segmentos": [{"de": "C", "para": "E", "tracejado": True}],
+        "marcas": [{"tipo": "par", "de": "A", "para": "B"}]}}}]}
+    assert checar_matematica(plano) == []
+
+
+def test_gerador_nomeado_com_params_ruins_e_pego_antes_do_ar():
+    from autotuto.validador import avisos_graves, checar_matematica
+    plano = {"blocos": [{"figura": {"gerador": "circulo", "params": {"raio": -5}}}]}
+    assert avisos_graves(checar_matematica(plano))
+
+
+# ───── diz_passos separado do calc (achado local: causa raiz nº 2)
+
+def test_diz_passos_sem_calc_no_mesmo_beat_e_grave():
+    # o tocador só lê diz_passos DENTRO do bloco do calc: separado em outro
+    # beat, a narração inteira some — sem erro, sem log. Os passos apareciam
+    # mudos na lousa.
+    from autotuto.validador import avisos_graves, checar_matematica
+    plano = {"blocos": [
+        {"diz": "vamos à conta",
+         "calc": {"gerador": "area_trapezio", "params": {"B": 18, "b": 10, "h": 6}},
+         "mostra_passos": True},
+        {"diz": "agora eu explico", "diz_passos": ["a fórmula", "os números", "dá 84"]}]}
+    avisos = checar_matematica(plano)
+    assert any(a.startswith("diz_passos sem calc") for a in avisos), avisos
+    assert avisos_graves(avisos)
+
+
+def test_diz_passos_junto_do_calc_nao_acusa():
+    from autotuto.validador import checar_matematica
+    plano = {"blocos": [{
+        "diz": "a conta",
+        "calc": {"gerador": "area_retangulo", "params": {"base": 3, "altura": 4}},
+        "mostra_passos": True, "diz_passos": ["três vezes quatro dá doze"]}]}
+    assert [a for a in checar_matematica(plano) if "diz_passos" in a] == []
+
+
+def test_prompt_mostra_calc_e_diz_passos_no_mesmo_beat():
+    from autotuto.planejador import _SISTEMA
+    assert "MESMO OBJETO de beat" in _SISTEMA
+    assert '"diz_passos": [' in _SISTEMA      # o exemplo concreto está lá

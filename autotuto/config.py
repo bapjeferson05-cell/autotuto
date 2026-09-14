@@ -73,5 +73,12 @@ COR_DESTAQUE="#F2B134"; COR_AZUL="#5AB1E0"; COR_VERDE="#7BD88F"
 #   DISCRETO  só diz "esta é a figura de que estou falando" (polígono, círculo).
 #   PINTADO   É a resposta — a fatia da fração. Em 0.12 o aluno não distinguia
 #             as 3 fatias pintadas da 1 vazia: o desenho não dizia 3/4.
+# Teto de marcas numa reta numérica. Não é estética: `reta_numerica(0, 1000000)`
+# — que um LLM escreve sem pensar — desenharia um milhão de traços e travaria a
+# aula. E como o validador agora DESENHA pra validar, travaria o planejador
+# antes mesmo de o aluno ouvir a primeira frase. Acima disso não é figura de
+# aula nenhuma: falha rápido e o modelo corrige.
+MAX_MARCAS_RETA = 60
+
 ALPHA_FIGURA  = 0.12
 ALPHA_PINTADO = 0.55

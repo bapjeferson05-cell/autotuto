@@ -161,6 +161,16 @@ MODELO DE DADOS (schema):
   Cada bloco precisa de pelo menos um de: diz, figura, calc.
   Se um beat tem "pergunta", o "senao" TEM que ser um gatilho existente em "ramos".
 
+  "calc", "mostra_passos" e "diz_passos" vão SEMPRE NO MESMO OBJETO de beat —
+  nunca em beats separados. `diz_passos` fora do beat do `calc` é jogado fora e
+  a conta aparece muda. Uma frase de `diz_passos` por passo, na ordem. Assim:
+    {"diz": "Agora a conta: soma as bases, vezes a altura, sobre dois.",
+     "calc": {"gerador": "area_trapezio", "params": {"B": 18, "b": 10, "h": 6}},
+     "mostra_passos": true,
+     "diz_passos": ["Essa é a fórmula geral.",
+                    "Agora entram os números do problema.",
+                    "Vinte e oito vezes seis, e a metade disso dá oitenta e quatro."]}
+
   "pergunta.acerta" = exemplos do que o ALUNO diria pra mostrar que respondeu
   CERTO (a resposta dele, não a sua). "pergunta.confirma" = a SUA fala curta
   quando ele acerta (aí pula a derivação). Não confunda os dois papéis:
@@ -178,8 +188,11 @@ REGRAS DE PEDAGOGIA (SPEC §3):
 - Ponha 1 beat "pergunta" antes do passo mais importante (self-explanation).
 - "ramos" são desvios pra quando o aluno interrompe ou responde. SEMPRE inclua um
   "por_que..." e o "nao_entendi". Cada ramo com 1 a 3 beats. A trilha principal
-  retoma de onde parou. (por_que / nao_entendi / repete genéricos são adicionados
-  depois — você pode sobrescrevê-los ou criar gatilhos específicos do tópico.)
+  retoma de onde parou.
+  OS TRÊS RAMOS "por_que", "nao_entendi" e "repete" EXISTEM SEMPRE: são
+  adicionados automaticamente. Pode usar qualquer um deles em "senao" sem
+  declarar, e pode sobrescrever qualquer um escrevendo o seu. Qualquer OUTRO
+  nome que você usar em "senao" tem que estar declarado por você em "ramos".
 
 GERADORES DE CÁLCULO (use no "calc", campo "gerador"):
   area_trapezio(B, b, h) · area_triangulo(base, altura) · area_retangulo(base, altura)
@@ -218,6 +231,23 @@ def _extrai_json(txt: str) -> dict:
     if not isinstance(obj, dict):
         raise ValueError("JSON de topo não é um objeto")
     return obj
+
+
+def _com_genericos_seguro(cand: dict) -> dict:
+    """Mergeia por_que/nao_entendi/repete no candidato ANTES de validar.
+
+    O prompt promete ao modelo que esses três ramos existem sempre. Mas a
+    validação rodava no JSON CRU, antes do merge — então um plano que usava
+    `"senao": "nao_entendi"` (exatamente o que o prompt manda fazer) era
+    rejeitado com "não é um ramo", queimava as três tentativas e caía no
+    fallback. Plano perfeito, reprovado por uma contradição nossa.
+
+    Não mergeia quando `ramos` veio com formato errado: aí quem tem que
+    reclamar é o schema, com a mensagem certa, e não um TypeError aqui.
+    """
+    if not isinstance(cand.get("ramos", {}), dict):
+        return cand
+    return aulas._com_genericos(cand)
 
 
 def _norm_fala(t) -> str:
@@ -323,7 +353,7 @@ def planeja(
             return _fallback([f"LLM indisponível: {e!r}"])
 
         try:
-            candidato = _extrai_json(bruto)
+            candidato = _com_genericos_seguro(_extrai_json(bruto))
             erros = schema.validar_estrutura(candidato)
         except (ValueError, json.JSONDecodeError) as e:
             candidato = None

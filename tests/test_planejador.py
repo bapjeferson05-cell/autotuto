@@ -340,3 +340,69 @@ def test_repeticao_entre_ramo_e_principal_e_permitida():
                    {"diz": "Pronto.", "pergunta": {"escuta_s": 10, "senao": "por_que_x"}}],
         "ramos": {"por_que_x": [{"diz": "Divide por dois."}, {"diz": "Por causa da média."}]}})
     assert aula.ramos["por_que_x"][0]["diz"] == "Divide por dois."
+
+
+# ───────── os ramos genéricos no "senao" (achado local: causa raiz nº 1)
+
+_PLANO_COM_GENERICO = {
+    "titulo": "Porcentagem", "topico": "porcentagem", "dados": {},
+    "blocos": [
+        {"diz": "Quinze por cento de oitenta."},
+        {"diz": "Você lembra o que 'por cento' quer dizer?",
+         "pergunta": {"escuta_s": 10, "senao": "nao_entendi"}},
+        {"diz": "É por cem.",
+         "calc": {"gerador": "porcentagem", "params": {"parte": 12, "todo": 80}}},
+    ]}
+
+
+def test_senao_num_ramo_generico_nao_e_rejeitado():
+    # BUG: o prompt promete que por_que/nao_entendi/repete existem sempre, mas a
+    # validação rodava no JSON CRU, antes do merge. Um plano PERFEITO que usasse
+    # "senao": "nao_entendi" — o que o prompt manda fazer — era reprovado com
+    # "não é um ramo", queimava as 3 tentativas e caía no fallback.
+    n = []
+
+    def responde(m, **k):
+        n.append(1)
+        return json.dumps(_PLANO_COM_GENERICO)
+
+    aula, rel = planeja("quanto é 15 por cento de 80", perguntar=responde)
+    assert len(n) == 1, f"gastou {len(n)} tentativas num plano válido"
+    assert rel.ok and not rel.erros
+    assert aula.titulo == "Porcentagem"          # não virou fallback
+    assert aula.blocos[1]["pergunta"]["senao"] == "nao_entendi"
+
+
+def test_senao_num_ramo_inventado_continua_sendo_erro():
+    # o outro lado: nome que NÃO é genérico e não foi declarado tem que reprovar
+    plano = {**_PLANO_COM_GENERICO, "blocos": [
+        {"diz": "oi"},
+        {"diz": "e aí?", "pergunta": {"escuta_s": 10, "senao": "ramo_que_nao_existe"}}]}
+    pedidos = []
+
+    def responde(m, **k):
+        pedidos.append(m[-1]["content"])
+        return json.dumps(plano)
+
+    planeja("qualquer coisa", perguntar=responde)
+    assert any("ramo_que_nao_existe" in p for p in pedidos[1:])
+
+
+def test_prompt_diz_os_nomes_exatos_dos_ramos_sempre_presentes():
+    from autotuto.planejador import _SISTEMA
+    for nome in ("por_que", "nao_entendi", "repete"):
+        assert f'"{nome}"' in _SISTEMA
+    assert "EXISTEM SEMPRE" in _SISTEMA
+
+
+def test_ramos_em_formato_errado_ainda_reclama_no_schema_sem_estourar():
+    # `ramos` como lista: o merge não pode levantar TypeError antes da validação
+    plano = {"titulo": "T", "topico": "t", "blocos": [{"diz": "oi"}], "ramos": []}
+    pedidos = []
+
+    def responde(m, **k):
+        pedidos.append(m[-1]["content"])
+        return json.dumps(plano)
+
+    aula, rel = planeja("qualquer coisa", perguntar=responde)
+    assert any("ramos" in p for p in pedidos[1:])

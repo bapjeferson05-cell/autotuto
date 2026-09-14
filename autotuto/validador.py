@@ -48,7 +48,9 @@ def _é_grave(aviso: str) -> bool:
             # último candidato válido, não cai pro fallback por causa disso.
             or "promete a conta em voz alta" in aviso
             # fala que saiu em outro idioma: pro aluno a aula acabou ali.
-            or ", não em português" in aviso)
+            or ", não em português" in aviso
+            # narração de passos que o tocador descarta caladamente
+            or aviso.startswith("diz_passos sem calc"))
 
 
 def avisos_graves(avisos: list[str]) -> list[str]:
@@ -193,6 +195,16 @@ def _validar_beat(beat: dict) -> list[str]:
     """Valida um beat individual (pode ter calc e/ou figura)."""
     avisos: list[str] = []
 
+    # ACHADO em bateria local: o modelo separava a conta da narração dela em
+    # dois beats. `diz_passos` só é lido pelo tocador DENTRO do bloco do calc,
+    # então a narração inteira sumia — sem erro, sem log, sem nada. O aluno
+    # via os passos aparecerem mudos.
+    if beat.get("diz_passos") and not beat.get("calc"):
+        avisos.append(
+            "diz_passos sem calc no mesmo beat: a narração dos passos é "
+            "descartada. Ponha 'calc' e 'diz_passos' no MESMO objeto de beat, "
+            "ou tire o 'diz_passos'.")
+
     # Valida calc se presente
     if "calc" in beat:
         avisos.extend(_validar_calc(beat["calc"]))
@@ -247,19 +259,41 @@ def _validar_calc(calc_spec: dict) -> list[str]:
 
 
 def _validar_figura(figura_spec: dict) -> list[str]:
-    """Valida um spec de figura."""
+    """Valida um spec de figura DESENHANDO — igual o calc, que é executado.
+
+    ACHADO em bateria local: uma prova geométrica de verdade, com reta
+    paralela, se perdeu. Spec inline (gerador="figura") não era validado de
+    jeito nenhum — passava batido aqui e só estourava no tocador, que captura,
+    pede desculpa (LIMITACAO_VISUAL) e segue sem o desenho. O modelo nunca via
+    o erro; costuma ser um ponto citado em "segmentos" e esquecido em "pontos".
+
+    Desenhar custa ~17 ms por figura, contra os segundos de uma chamada de LLM:
+    é barato pagar isso pra transformar uma figura perdida num erro que volta
+    pro modelo com chance de correção.
+    """
     avisos: list[str] = []
     gerador = figura_spec.get("gerador")
 
     if not gerador:
         return avisos
 
-    # Specs inline (gerador="figura") não são validados aqui
-    if gerador == "figura":
-        return avisos
-
-    # Checa se gerador nomeado existe
     if gerador not in figuras_catalogo.GERADORES:
         avisos.append(f"gerador de figura desconhecido: {gerador}")
+        return avisos
+
+    fn = figuras_catalogo.GERADORES[gerador]
+    try:
+        if gerador == "figura":
+            fn(figura_spec.get("spec") or {})
+        else:
+            fn(**(figura_spec.get("params") or {}))
+    except KeyError as e:
+        # o caso de longe mais comum: nome citado em segmentos/poligonos/
+        # angulos/marcas que não foi declarado em "pontos".
+        avisos.append(
+            f"figura {gerador} falhou: o ponto {e} é usado mas não está em "
+            f'"pontos". Declare "pontos": {{{e}: [x, y]}} ou tire quem o cita.')
+    except Exception as e:
+        avisos.append(f"figura {gerador} falhou: {e!r}")
 
     return avisos
