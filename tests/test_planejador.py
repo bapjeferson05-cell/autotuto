@@ -404,9 +404,9 @@ def test_senao_num_ramo_inventado_continua_sendo_erro():
 
 def test_prompt_diz_os_nomes_exatos_dos_ramos_sempre_presentes():
     from autotuto.planejador import _SISTEMA
-    for nome in ("por_que", "nao_entendi", "repete"):
+    for nome in ("por_que", "nao_entendi", "repete", "de_onde_veio"):
         assert f'"{nome}"' in _SISTEMA
-    assert "EXISTEM SEMPRE" in _SISTEMA
+    assert "EXISTEM" in _SISTEMA and "SEMPRE" in _SISTEMA
 
 
 def test_ramos_em_formato_errado_ainda_reclama_no_schema_sem_estourar():

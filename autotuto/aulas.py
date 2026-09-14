@@ -42,6 +42,22 @@ RAMOS_GENERICOS: dict = {
         {"diz": "Claro, deixa eu repetir. Presta atenção só na última parte, "
                 "que é onde costuma escapar."},
     ],
+    # "de onde veio essa fórmula?" — humanizar o conteúdo é estratégia didática
+    # de verdade (mostrar que matemática é conhecimento humano, não decreto).
+    # O GENÉRICO não pode contar história nenhuma: numa aula gerada por LLM ele
+    # não faz ideia de qual fórmula é, e inventar origem seria exatamente a
+    # mentira que a regra única proíbe. Então ele diz o que é verdade pra
+    # QUALQUER fórmula e devolve a pergunta. Cada aula de ouro sobrescreve
+    # este ramo com a história de verdade da dela.
+    "de_onde_veio": [
+        {"diz": "Ninguém acordou um dia e decretou essa fórmula. Fórmula é "
+                "atalho: alguém fez a mesma conta tantas vezes que cansou, "
+                "achou o caminho curto e anotou pros outros não precisarem "
+                "refazer tudo de novo."},
+        {"diz": "Dessa aqui eu não sei te contar a história certa, e não vou "
+                "inventar uma. Me diz qual parte te deu essa curiosidade que "
+                "eu te mostro de onde ela sai na conta."},
+    ],
 }
 
 
@@ -112,6 +128,18 @@ TRAPEZIO: dict = {
          "espera": "media"},
     ],
     "ramos": {
+        # de onde veio (sobrescreve o genérico)
+        "de_onde_veio": [
+            {"diz": "Área não nasceu na escola, nasceu na cobrança de imposto. "
+                    "No Egito o rio Nilo enchia todo ano e apagava as divisas "
+                    "dos terrenos. Quando a água baixava, alguém tinha que "
+                    "remedir tudo pra saber quem devia quanto.",
+             "espera": "media"},
+            {"diz": "A palavra geometria é literalmente isso: geo, que é terra, "
+                    "e metria, que é medida. Medir terra. Essa conta que você "
+                    "está vendo é filha dessa necessidade, não de um decreto.",
+             "espera": "longa"},
+        ],
         # "por que divide por dois?" — os dois retângulos
         "por_que_div_2": [
             {"diz": "Divide por dois porque a gente troca o trapézio por um retângulo "
@@ -211,6 +239,19 @@ PITAGORAS: dict = {
          "espera": "media"},
     ],
     "ramos": {
+        # de onde veio (sobrescreve o genérico)
+        "de_onde_veio": [
+            {"diz": "O nome é de um grego, mas o conhecimento é bem mais velho "
+                    "que ele. Tabuinhas de argila da Babilônia, de mais de mil "
+                    "anos antes de Pitágoras nascer, já traziam trios de "
+                    "números que fecham exatamente essa relação.",
+             "espera": "media"},
+            {"diz": "E quem construía já usava isso na obra: um triângulo de "
+                    "lados três, quatro e cinco dá canto reto certinho. Usavam "
+                    "muito antes de existir fórmula, e muito antes de existir "
+                    "nome pra fórmula.",
+             "espera": "longa"},
+        ],
         # override do genérico: por que a2 + b2 = c2
         "por_que": [
             {"diz": "Desenha um quadrado sobre cada lado. O quadrado do chão tem área "
@@ -320,6 +361,19 @@ EQ_PRIMEIRO_GRAU: dict = {
          "espera": "media"},
     ],
     "ramos": {
+        # de onde veio (sobrescreve o genérico)
+        "de_onde_veio": [
+            {"diz": "A palavra álgebra vem de um livro escrito em Bagdá, por "
+                    "volta do ano oitocentos e vinte, por um matemático "
+                    "chamado al-Khwarizmi. No título tinha al-jabr, que era o "
+                    "nome de justamente arrumar a equação passando termo de um "
+                    "lado pro outro.",
+             "espera": "media"},
+            {"diz": "E o nome dele virou outra palavra que você usa até hoje "
+                    "sem pensar: algoritmo. Então quando você resolve uma "
+                    "equação, está repetindo um gesto com mais de mil anos.",
+             "espera": "longa"},
+        ],
         # override do genérico: por que mexer nos dois lados
         "por_que": [
             {"diz": "A balança só fica reta enquanto os dois pratos pesam igual. "
@@ -403,6 +457,18 @@ REGRA_DE_TRES: dict = {
          "espera": "media"},
     ],
     "ramos": {
+        # de onde veio (sobrescreve o genérico)
+        "de_onde_veio": [
+            {"diz": "Essa aí é a conta do comerciante. Muito antes de virar "
+                    "matéria de escola, era ferramenta de quem comprava e "
+                    "vendia: se tanto custa tanto, quanto custa isso aqui?",
+             "espera": "media"},
+            {"diz": "Ela aparecia nos manuais de aritmética comercial e chegou "
+                    "a ser chamada de regra de ouro, de tão útil que era pra "
+                    "fechar negócio. Não é acaso ela ser a conta que você mais "
+                    "vai usar fora da escola.",
+             "espera": "longa"},
+        ],
         # override do genérico: por que a proporção funciona
         "por_que": [
             {"diz": "Os cadernos são todos iguais, então o preço de cada um é fixo. "
@@ -507,6 +573,26 @@ FRACAO: dict = {
          "espera": "media"},
     ],
     "ramos": {
+        # de onde veio (sobrescreve o genérico)
+        "de_onde_veio": [
+            {"diz": "Os egípcios escreviam quase toda fração como soma de "
+                    "pedaços de um só: um meio, um terço, um quarto. Pra eles, "
+                    "três quartos virava um meio mais um quarto. Dava um "
+                    "trabalho enorme, mas funcionava.",
+             "figura": {"gerador": "figura", "spec": {
+                 "pontos": {"O": [0, 0]},
+                 "circulos": _pizza(1, 2, centro=(-3.6, 0), raio=2.6)
+                             + _pizza(1, 4, centro=(3.6, 0), raio=2.6),
+                 "rotulos": [{"xy": [-3.6, -3.6], "texto": "1/2"},
+                             {"xy": [3.6, -3.6], "texto": "1/4"},
+                             {"xy": [0, 0], "texto": "+"}]}},
+             "espera": "media"},
+            {"diz": "Aquele risquinho que separa o de cima do de baixo veio "
+                    "depois, da matemática árabe. Antes dele, cada povo "
+                    "escrevia fração do seu jeito — o traço que você usa hoje "
+                    "é uma invenção, não uma lei da natureza.",
+             "espera": "longa"},
+        ],
         # sobrescreve o genérico: aqui o "por que" tem resposta própria
         "por_que": [
             {"diz": "Porque o de baixo é o tamanho do pedaço e o de cima é quantos "

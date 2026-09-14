@@ -75,6 +75,7 @@ _FILLER = {
     "comeca_pelo_de_baixo": ("Boa.", "Olha só.", "Deixa eu mostrar."),
     "e_se_outro_corte": ("Boa pergunta.", "Olha só.", "Ótima ideia."),
     "e_se_metade": ("Claro.", "Boa.", "Olha só."),
+    "de_onde_veio": ("Essa é boa.", "Adoro essa pergunta.", "Olha só essa história."),
 }
 _FILLER_DEFAULT = ("Deixa eu ver.", "Um instante.", "Peraí.")
 

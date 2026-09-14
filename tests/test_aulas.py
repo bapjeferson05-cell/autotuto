@@ -20,7 +20,8 @@ def test_aula_de_ouro_valida(nome):
 
 @pytest.mark.parametrize("nome", NOMES)
 def test_tem_ramos_genericos(nome):
-    assert {"por_que", "nao_entendi", "repete"} <= set(carregar(nome).ramos)
+    assert {"por_que", "nao_entendi", "repete",
+            "de_onde_veio"} <= set(carregar(nome).ramos)
 
 
 def test_aula_sobrescreve_generico():
@@ -119,3 +120,45 @@ def test_carregar_nao_vaza_mutacao_entre_execucoes():
     a1.blocos[0]["_resultado"] = "sujeira"
     a2 = carregar("trapezio")
     assert "_resultado" not in a2.blocos[0]
+
+
+# ───────────────────── "de onde veio essa fórmula?" (humanizar o conteúdo)
+
+@pytest.mark.parametrize("nome", NOMES)
+def test_toda_aula_tem_de_onde_veio(nome):
+    assert carregar(nome).ramos["de_onde_veio"]
+
+
+@pytest.mark.parametrize("nome", NOMES)
+def test_cada_aula_de_ouro_conta_a_historia_DELA(nome):
+    # se a aula não sobrescreve, o aluno ouve o genérico admitindo que não sabe
+    # — aceitável num plano de LLM, inaceitável numa aula escrita à mão.
+    generico = RAMOS_GENERICOS["de_onde_veio"][0]["diz"]
+    assert carregar(nome).ramos["de_onde_veio"][0]["diz"] != generico
+
+
+def test_o_generico_admite_que_nao_sabe_em_vez_de_inventar():
+    # ESTE é o teste que importa. Num plano gerado por LLM sobre um tópico
+    # qualquer, o ramo genérico não faz ideia de qual fórmula é. Inventar uma
+    # origem histórica ali seria a mentira que a regra única do projeto proíbe.
+    texto = " ".join(b["diz"] for b in RAMOS_GENERICOS["de_onde_veio"]).lower()
+    assert "não vou inventar" in texto or "nao vou inventar" in texto
+    assert "não sei" in texto or "nao sei" in texto
+    # e não pode citar povo, século, nem nome próprio de matemático
+    for pista in ("egito", "grécia", "babilôn", "árabe", "pitágoras",
+                  "euclides", "século"):
+        assert pista not in texto, pista
+
+
+def test_generico_devolve_a_pergunta_pro_aluno():
+    # admitir que não sabe não pode virar beco sem saída: tem que convidar
+    texto = " ".join(b["diz"] for b in RAMOS_GENERICOS["de_onde_veio"]).lower()
+    assert "me diz" in texto or "me conta" in texto
+
+
+def test_plano_de_llm_sem_historia_cai_no_generico_honesto():
+    from autotuto.aulas import _com_genericos
+    plano = {"titulo": "Números primos", "topico": "primos",
+             "blocos": [{"diz": "um número primo só é divisível por 1 e por ele"}]}
+    d = _com_genericos(plano)
+    assert d["ramos"]["de_onde_veio"] == RAMOS_GENERICOS["de_onde_veio"]

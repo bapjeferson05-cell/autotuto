@@ -5,7 +5,8 @@
        ↓  llm.perguntar (Ollama local OU Claude), saída JSON
     JSON bruto
        ↓  schema.validar_estrutura — se falhar, devolve os erros pro LLM e tenta de novo
-       ↓  aulas._com_genericos — todo plano ganha por_que / nao_entendi / repete
+       ↓  aulas._com_genericos — todo plano ganha por_que / nao_entendi /
+                                 repete / de_onde_veio
     Aula pronta pros geradores  (+ validador.checar_matematica → avisos não-fatais)
 
 Sem LLM (ConnectionError etc.) ou tentativas esgotadas com erro → cai na
@@ -116,13 +117,29 @@ def _enxuta(aula: dict) -> str:
     figura inline por extenso — dá a forma inteira sem estourar o contexto de um
     modelo pequeno (ver `_uma_figura_so`)."""
     ja_mostrou: list = []
+    blocos = _uma_figura_so(aula["blocos"][:4], ja_mostrou)
+    ramos = aula.get("ramos", {})
+
+    # Cortar "os 2 primeiros ramos" não pode cortar JUSTO o ramo que um
+    # `pergunta.senao` dos blocos mantidos aponta — o exemplo sairia
+    # auto-inconsistente e ensinaria ao modelo o erro que o schema rejeita
+    # ("senao=X não é um ramo"). Os apontados entram primeiro, sempre.
+    apontados = [b["pergunta"]["senao"] for b in blocos
+                 if isinstance(b.get("pergunta"), dict) and b["pergunta"].get("senao")
+                 and b["pergunta"]["senao"] in ramos]
+    escolhidos = list(dict.fromkeys(apontados))
+    for k in ramos:
+        if len(escolhidos) >= max(2, len(apontados)):
+            break
+        if k not in escolhidos:
+            escolhidos.append(k)
+
     return json.dumps({
         "titulo": aula["titulo"],
         "topico": aula["topico"],
         "dados": aula.get("dados", {}),
-        "blocos": _uma_figura_so(aula["blocos"][:4], ja_mostrou),
-        "ramos": {k: _uma_figura_so(v[:1], ja_mostrou)
-                  for k, v in list(aula.get("ramos", {}).items())[:2]},
+        "blocos": blocos,
+        "ramos": {k: _uma_figura_so(ramos[k][:1], ja_mostrou) for k in escolhidos},
     }, ensure_ascii=False)
 
 
@@ -219,10 +236,14 @@ REGRAS DE PEDAGOGIA (SPEC §3):
 - "ramos" são desvios pra quando o aluno interrompe ou responde. SEMPRE inclua um
   "por_que..." e o "nao_entendi". Cada ramo com 1 a 3 beats. A trilha principal
   retoma de onde parou.
-  OS TRÊS RAMOS "por_que", "nao_entendi" e "repete" EXISTEM SEMPRE: são
-  adicionados automaticamente. Pode usar qualquer um deles em "senao" sem
-  declarar, e pode sobrescrever qualquer um escrevendo o seu. Qualquer OUTRO
-  nome que você usar em "senao" tem que estar declarado por você em "ramos".
+  OS QUATRO RAMOS "por_que", "nao_entendi", "repete" e "de_onde_veio" EXISTEM
+  SEMPRE: são adicionados automaticamente. Pode usar qualquer um deles em
+  "senao" sem declarar, e pode sobrescrever qualquer um escrevendo o seu.
+  Qualquer OUTRO nome que você usar em "senao" tem que estar declarado por você
+  em "ramos".
+  Sobrescreva "de_onde_veio" SÓ se você souber a origem histórica de verdade
+  do que está ensinando. Se não souber, não escreva esse ramo: o genérico
+  admite que não sabe, e isso é melhor que uma história inventada.
 
 GERADORES DE CÁLCULO (use no "calc", campo "gerador"):
   area_trapezio(B, b, h) · area_triangulo(base, altura) · area_retangulo(base, altura)
@@ -264,7 +285,7 @@ def _extrai_json(txt: str) -> dict:
 
 
 def _com_genericos_seguro(cand: dict) -> dict:
-    """Mergeia por_que/nao_entendi/repete no candidato ANTES de validar.
+    """Mergeia os ramos genéricos no candidato ANTES de validar.
 
     O prompt promete ao modelo que esses três ramos existem sempre. Mas a
     validação rodava no JSON CRU, antes do merge — então um plano que usava
@@ -418,7 +439,8 @@ def planeja(
             return _fallback(erros)
 
     # RULING: mergeia os ramos genéricos ANTES de montar a Aula — todo plano
-    # gerado ganha por_que / nao_entendi / repete (a aula sobrescreve por chave).
+    # gerado ganha por_que / nao_entendi / repete / de_onde_veio (a aula
+    # sobrescreve por chave).
     aula_dict = aulas._com_genericos(aula_dict)
     repetidas = _tira_falas_repetidas(aula_dict)
     aula = schema.Aula.de_json(aula_dict)

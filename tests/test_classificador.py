@@ -98,3 +98,30 @@ def test_gatilhos_de_fracao_nao_vazam_pra_outras_aulas():
 def test_por_que_divide_por_dois_continua_ganhando_de_metade():
     # "metade" aparece nas duas regras; no trapézio a específica tem que vencer
     assert classificar("por que divide pela metade?", RAMOS_TRAP) == "por_que_div_2"
+
+
+def test_gatilho_de_onde_veio():
+    ramos = ["por_que", "nao_entendi", "repete", "de_onde_veio"]
+    for fala in ("de onde veio essa fórmula?", "de onde saiu isso?",
+                 "quem inventou isso?", "quem foi que descobriu isso?",
+                 "como descobriram isso?", "quem criou essa conta?",
+                 "qual a história dessa fórmula?"):
+        assert classificar(fala, ramos) == "de_onde_veio", fala
+
+
+def test_de_onde_veio_vence_o_por_que_generico():
+    # a regra larga do por_que (\bpor ?que\b) engoliria "por que essa fórmula
+    # existe" — a específica tem que vir antes
+    ramos = ["por_que", "nao_entendi", "repete", "de_onde_veio"]
+    assert classificar("por que essa formula existe?", ramos) == "de_onde_veio"
+    # mas um "por que" comum continua indo pro por_que
+    assert classificar("mas por que isso funciona?", ramos) == "por_que"
+
+
+def test_de_onde_veio_nao_rouba_o_por_que_div_2_do_trapezio():
+    # "de onde vem esse dois" é pergunta sobre o PASSO, não sobre a história
+    assert classificar("de onde vem esse dois?", RAMOS_TRAP) == "por_que_div_2"
+
+
+def test_de_onde_veio_nao_vaza_pra_aula_que_nao_tem():
+    assert classificar("quem inventou isso?", ["por_que", "repete"]) in (None, "por_que")

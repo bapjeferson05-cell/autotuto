@@ -90,6 +90,14 @@ _REGRAS = [
     ("comeca_pelo_de_baixo", (r"come[cç]a\b.{0,20}\b(por onde|qual|de baixo|de cima|pelo)",
                               r"\b(qual|quem) (vem|entra) primeiro\b",
                               r"\b(de cima|de baixo|numerador|denominador)\b.{0,20}\b(primeiro|antes)\b")),
+    # "de onde veio isso?" — vem ANTES do por_que genérico, senão a regra larga
+    # do por_que engole a pergunta e o aluno recebe outra resposta.
+    ("de_onde_veio", (r"de onde (veio|vem|saiu|surgiu|tiraram)",
+                      r"quem (inventou|criou|descobriu|bolou|fez) (isso|essa|esse|a |o )",
+                      r"quem foi que (inventou|criou|descobriu)",
+                      r"como (foi que )?(inventaram|descobriram|chegaram nisso)",
+                      r"hist[óo]ria (dessa|desta|desse|deste|da|do) (formula|conta|regra)",
+                      r"por que (essa|esta) formula existe")),
     ("decompor", (r"outr[oa] (jeito|forma)", r"sem (a )?formula", r"nao decorei")),
     ("repete", (r"\b(repete|repetir|repetiu|de novo|outra vez|mais uma vez)\b",
                 r"\b(nao ouvi|nao escutei|fala de novo)\b",

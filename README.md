@@ -59,8 +59,11 @@ autotuto/visor.py                  a tela (http.server, zero dep)
   devolve a pergunta e **espera** o aluno tentar explicar antes de dar a resposta
   (*self-explanation*). Se o aluno acerta (`acerta`), `confirma` dá um retorno curto e
   **pula a derivação** (*fading* — worked example atrapalha quem já sabe).
-- **ramos genéricos obrigatórios** — toda aula tem `por_que`/`nao_entendi`/`repete`
-  (`aulas.RAMOS_GENERICOS`), então o fallback sempre tem pra onde ir.
+- **ramos genéricos obrigatórios** — toda aula tem `por_que`/`nao_entendi`/`repete`/
+  `de_onde_veio` (`aulas.RAMOS_GENERICOS`), então o fallback sempre tem pra onde ir.
+- **`de_onde_veio`** — de onde a fórmula saiu. Cada aula de ouro conta a história
+  dela (o Nilo, as tabuinhas da Babilônia, al-Khwarizmi); o genérico **admite que
+  não sabe** em vez de inventar origem pra uma aula que o LLM montou.
 
 ---
 
@@ -69,7 +72,7 @@ autotuto/visor.py                  a tela (http.server, zero dep)
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e .
 
-# 1. os testes (275 — cobrem cada módulo + a regra "nunca mentir")
+# 1. os testes (292 — cobrem cada módulo + a regra "nunca mentir")
 .venv/bin/pytest
 
 # 2. o Ciclo do Trapézio, determinístico, sem LLM nem STT — pro vídeo/ensaio
@@ -91,7 +94,7 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 ```
 
 Abre `http://localhost:8080`. **Teclado é o caminho principal de interrupção** — teclas
-`1` (por quê) · `2` (não entendi) · `3` (e se fosse um triângulo) · `0` (responder) — ou
+`1` (por quê) · `2` (não entendi) · `3` (e se fosse um triângulo) · `0` (responder) · `4` (de onde veio) — ou
 a caixa de texto. Voz é bônus: `AUTOTUTO_BARGE_IN=0` por padrão (o mic não interrompe
 sozinho — liga com `AUTOTUTO_BARGE_IN=1` se o ambiente tiver echo-cancel).
 
@@ -148,7 +151,7 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 - ✅ 5 aulas de ouro (a de fração usa a pizza e os brigadeiros) · passos narrados (dual coding) · few-shot dirigido por tópico
 - ✅ voz (Piper + faster-whisper, adapter próprio) · visor · modo voz / texto / roteiro
 - ✅ teclado como caminho principal de interrupção (mic é bônus, `BARGE_IN=0` por padrão)
-- ✅ 275 testes, 0 warnings
+- ✅ 292 testes, 0 warnings
 - ✅ círculo, setor de círculo e a pizza da fração · área/circunferência no `calc`
 - ⏳ mais aulas de ouro (círculo ainda não tem a dela) · renderer ao vivo no
   navegador (Fase 2) · teste do caminho de mic (`BARGE_IN=1`) com hardware real
