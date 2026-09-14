@@ -15,9 +15,11 @@ def test_estado_e_frame():
     try:
         v.desenhar(b"\x89PNG_fake", "x")
         v.mostrar_fala("olá")
-        s = json.loads(urllib.request.urlopen("http://127.0.0.1:8123/estado").read())
+        with urllib.request.urlopen("http://127.0.0.1:8123/estado") as resp:
+            s = json.loads(resp.read())
         assert s["professor"] == "olá" and s["frame"] == 1
-        png = urllib.request.urlopen("http://127.0.0.1:8123/frame.png").read()
+        with urllib.request.urlopen("http://127.0.0.1:8123/frame.png") as resp:
+            png = resp.read()
         assert png == b"\x89PNG_fake"
     finally:
         v.stop()

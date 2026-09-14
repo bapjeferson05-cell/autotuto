@@ -24,7 +24,8 @@ from autotuto.visor import Visor
 def main() -> None:
     sys.stdout.reconfigure(line_buffering=True)  # senão o print() some até o processo sair
     caminho = sys.argv[1] if len(sys.argv) > 1 else "roteiros/trapezio.json"
-    r = json.load(open(caminho, encoding="utf-8"))
+    with open(caminho, encoding="utf-8") as f:
+        r = json.load(f)
 
     visor = Visor(ritmo=float(r.get("ritmo", 0.06))).start()
     time.sleep(float(r.get("espera", 3)))  # tempo pra começar a gravar a tela
