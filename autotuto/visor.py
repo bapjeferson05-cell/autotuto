@@ -11,6 +11,7 @@ A página faz polling de `/estado` a cada `config.VISOR_POLL_MS` ms e troca a
 CONTINGÊNCIA — teclado é o 1º caminho de interrupção. Teclas na página simulam a
 fala do aluno:
   1 = "por que que divide por dois?"   2 = "não entendi essa parte"
+  4 = "de onde veio essa fórmula?"
   3 = "e se fosse um triângulo?"        0 = "acho que vira um triângulo"
 Elas fazem POST /interromper; o `falar` devolve esse texto no lugar do microfone.
 """
@@ -27,6 +28,7 @@ _TECLAS = {
     "1": "por que que divide por dois?",
     "2": "não entendi essa parte",
     "3": "e se fosse um triângulo?",
+    "4": "de onde veio essa fórmula?",
     "0": "acho que vira um triângulo",
 }
 
@@ -77,7 +79,7 @@ def _pagina() -> str:
     placeholder="Digite o assunto ou cole a questão… (Enter)"></form>
 </footer>
 <div id="resumo"></div>
-<div id="dicas">1 por quê · 2 não entendi · 3 triângulo · 0 responder</div>
+<div id="dicas">1 por quê · 2 não entendi · 3 triângulo · 4 de onde veio · 0 responder</div>
 <script>
 const R = {{ falando:"falando", ouvindo:"ouvindo", pensando:"pensando" }};
 const TECLAS = {json.dumps(_TECLAS, ensure_ascii=False)};
@@ -129,7 +131,7 @@ class Visor:
         self._frame = 0
         self._rotulo = ""
         self._st = {"estado": "pronto", "professor": "", "aluno": "", "resumo": ""}
-        self._injecao: str | None = None       # interrupção via teclado (1/2/3/0)
+        self._injecao: str | None = None       # interrupção via teclado (1/2/3/4/0)
         self._pergunta: str | None = None      # pergunta digitada na caixa
         self._srv: ThreadingHTTPServer | None = None
 

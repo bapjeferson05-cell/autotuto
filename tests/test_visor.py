@@ -64,3 +64,27 @@ def test_html_keydown_ignora_input():
         assert 'e.target.tagName === "TEXTAREA"' in html
     finally:
         v.stop()
+
+
+def test_toda_tecla_do_visor_cai_num_gatilho_de_ramo_real():
+    # o README promete o que cada tecla faz; se a frase da tecla não casa
+    # nenhum gatilho, o aluno aperta e recebe o fallback honesto — a tecla
+    # vira decoração e a documentação vira mentira.
+    from autotuto.aulas import RAMOS_GENERICOS, carregar
+    from autotuto.classificador import classificar
+    from autotuto.visor import _TECLAS
+
+    trap = carregar("trapezio")
+    for tecla, frase in _TECLAS.items():
+        if tecla == "0":
+            continue                       # "0" é resposta a pergunta, não gatilho
+        assert classificar(frase, trap.ramos) is not None, (tecla, frase)
+    # e o 4 tem que achar ramo até numa aula que só tem os genéricos
+    assert classificar(_TECLAS["4"], RAMOS_GENERICOS) == "de_onde_veio"
+
+
+def test_legenda_da_tela_lista_as_teclas_que_existem():
+    from autotuto.visor import _TECLAS, _pagina
+    pagina = _pagina()
+    for tecla in _TECLAS:
+        assert f">{tecla} " in pagina or f"· {tecla} " in pagina, tecla
