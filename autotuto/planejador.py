@@ -281,7 +281,7 @@ def planeja(
     problema: str,
     *,
     tentativas: int = 3,
-    perguntar=llm.perguntar,
+    perguntar=None,
 ) -> tuple[schema.Aula, Relatorio]:
     """Problema em texto → (Aula, Relatorio).
 
@@ -291,6 +291,11 @@ def planeja(
     Qualquer exceção de `perguntar` OU tentativas esgotadas com erro → fallback
     trapézio + `Relatorio(ok=False, ...)`.
     """
+    # `perguntar=None` e não `perguntar=llm.perguntar`: o default de uma
+    # função é avaliado no import, então a segunda forma CONGELA a função
+    # daquele instante — trocar `llm.perguntar` depois (um mock, um
+    # provedor escolhido em runtime) não tinha efeito nenhum aqui.
+    perguntar = perguntar or llm.perguntar
     mensagens: list[dict] = [{"role": "system", "content": _SISTEMA}]
     modelo, dirigido = exemplo(problema)
     cabecalho = ("Exemplo de um plano bom para um problema parecido — copie a "

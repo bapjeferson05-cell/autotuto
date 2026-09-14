@@ -47,3 +47,34 @@ def test_parece_pergunta_ignora_ruido_e_aceita_pergunta_real():
     assert not _parece_pergunta("Legendado pela comunidade Amara.org")  # alucinação do whisper
     assert _parece_pergunta("por que divide por dois")
     assert _parece_pergunta("quero entender trapézio")
+
+
+def test_bateria_roda_sem_llm_e_conta_os_fallbacks():
+    # a régua tem que funcionar offline (planejador sem LLM = tudo fallback) e
+    # contar certo — senão ela mede errado justamente quando mais importa
+    import demos.bateria as bateria
+
+    chamadas = []
+
+    def morto(m, **k):
+        chamadas.append(m)
+        raise ConnectionError("sem llm")
+
+    original = bateria.planejador.llm.perguntar
+    bateria.planejador.llm.perguntar = morto
+    try:
+        codigo = bateria.main([])
+    finally:
+        bateria.planejador.llm.perguntar = original
+    assert codigo == 1                       # saiu != 0 porque houve fallback
+    assert len(chamadas) == len(bateria.TOPICOS)
+
+
+def test_bateria_tem_os_11_topicos_do_achado():
+    # 4 com aula de ouro, 7 sem — é a composição que expôs o bug
+    from autotuto.planejador import _exemplo_dirigido
+    import demos.bateria as bateria
+
+    assert len(bateria.TOPICOS) == 11
+    sem_pista = sum(_exemplo_dirigido(t) is None for t in bateria.TOPICOS)
+    assert sem_pista == 7, sem_pista

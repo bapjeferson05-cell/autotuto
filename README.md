@@ -69,7 +69,7 @@ autotuto/visor.py                  a tela (http.server, zero dep)
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e .
 
-# 1. os testes (239 — cobrem cada módulo + a regra "nunca mentir")
+# 1. os testes (242 — cobrem cada módulo + a regra "nunca mentir")
 .venv/bin/pytest
 
 # 2. o Ciclo do Trapézio, determinístico, sem LLM nem STT — pro vídeo/ensaio
@@ -81,6 +81,10 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 
 # 4. modo voz — com Piper (TTS) + faster-whisper (STT), zero jarvis
 .venv/bin/python demos/demo_voz.py
+
+# 5. a régua: 11 tópicos pelo planejador, mede quantos ele planeja de verdade
+#    (quantos caem no fallback, quantos saem com aviso, e quanto tempo leva)
+.venv/bin/python demos/bateria.py
 ```
 
 Abre `http://localhost:8080`. **Teclado é o caminho principal de interrupção** — teclas
@@ -124,6 +128,7 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 | `autotuto/visor.py` | a tela: `http.server` stdlib, tema lousa, caixa de texto, teclas de contingência |
 | `autotuto/voz.py` | adapter fino: Piper (TTS) + faster-whisper (STT) direto — **zero jarvis**, pré-aquece no boot |
 | `demos/demo_texto.py` / `demo_voz.py` / `demo_roteiro.py` | os 3 pontos de entrada |
+| `demos/bateria.py` | régua do planejador: N tópicos → quantos planejam, quantos caem no fallback, tempo por tópico |
 | `roteiros/trapezio.json` · `roteiros/fracao.json` | modo gravação — interrupções e respostas scriptadas, pro vídeo não depender de STT |
 | `docs/SPEC.md` | a spec: a regra única, as ideias que sobrevivem, o que NÃO fazer, arquitetura completa |
 | `docs/superpowers/plans/2026-09-10-autotuto-v2.md` | o plano de 15 tasks (TDD) que reescreveu o projeto do zero |
@@ -138,7 +143,7 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 - ✅ 5 aulas de ouro (a de fração usa a pizza e os brigadeiros) · passos narrados (dual coding) · few-shot dirigido por tópico
 - ✅ voz (Piper + faster-whisper, adapter próprio) · visor · modo voz / texto / roteiro
 - ✅ teclado como caminho principal de interrupção (mic é bônus, `BARGE_IN=0` por padrão)
-- ✅ 239 testes, 0 warnings
+- ✅ 242 testes, 0 warnings
 - ✅ círculo, setor de círculo e a pizza da fração · área/circunferência no `calc`
 - ⏳ mais aulas de ouro (círculo ainda não tem a dela) · renderer ao vivo no
   navegador (Fase 2) · teste do caminho de mic (`BARGE_IN=1`) com hardware real

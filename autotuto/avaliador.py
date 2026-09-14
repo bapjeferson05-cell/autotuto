@@ -46,7 +46,7 @@ _SIS = ('Você avalia a resposta de um aluno a UMA pergunta de aula. Julgue pelo
 
 
 def avalia_resposta(pergunta: str, esperado: list[str], resposta: str, *,
-                     perguntar=_llm.perguntar) -> str | None:
+                     perguntar=None) -> str | None:
     """
     Avalia semanticamente `resposta` (o que o aluno disse) contra `esperado`
     (a lista `pergunta.acerta` do beat) para a `pergunta` (o `diz` do beat).
@@ -58,6 +58,7 @@ def avalia_resposta(pergunta: str, esperado: list[str], resposta: str, *,
     Retorna "certo", "parcial", "errado", ou None se o LLM falhar ou devolver
     algo fora desse vocabulário (o chamador trata None como "sem veredito").
     """
+    perguntar = perguntar or _llm.perguntar   # late binding — ver planejador.planeja
     if not esperado or not resposta or not resposta.strip():
         return None
     usr = (f'Pergunta do professor: "{pergunta}"\n'

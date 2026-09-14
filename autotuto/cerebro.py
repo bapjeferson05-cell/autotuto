@@ -30,7 +30,7 @@ def _catalogo(ramos: dict) -> str:
     return "\n".join(f"- {n}: {(b[0].get('diz','') if b else '')[:80]}" for n, b in ramos.items())
 
 
-def roteia_interrupcao(fala, contexto, ramos, *, perguntar=_llm.perguntar) -> str | None:
+def roteia_interrupcao(fala, contexto, ramos, *, perguntar=None) -> str | None:
     """
     Roteia uma interrupção do aluno para um ramo preparado ou "nenhum".
 
@@ -51,6 +51,7 @@ def roteia_interrupcao(fala, contexto, ramos, *, perguntar=_llm.perguntar) -> st
         Nome do ramo escolhido (string) se válido e em ramos.
         None se: LLM diz "nenhum", ramo não existe, LLM falha, ou JSON é inválido.
     """
+    perguntar = perguntar or _llm.perguntar   # late binding — ver planejador.planeja
     usr = (f"O professor vinha dizendo:\n{contexto or '(começo)'}\n\n"
            f'O aluno interrompeu: "{fala}"\n\nTópicos preparados:\n{_catalogo(ramos)}')
     try:
