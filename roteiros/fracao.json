@@ -1,0 +1,7 @@
+{
+  "aula": "fracao",
+  "ritmo": 0.06,
+  "espera": 4,
+  "interrupcoes": {"2": "e_se_outro_corte"},
+  "respostas": {"3": "pelo quatro"}
+}

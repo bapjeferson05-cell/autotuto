@@ -11,7 +11,7 @@ import pytest
 from autotuto.aulas import carregar
 from autotuto.tocador import Tocador
 
-ROTEIRO = "roteiros/trapezio.json"
+ROTEIROS = ["roteiros/trapezio.json", "roteiros/fracao.json"]
 
 
 @pytest.mark.parametrize("mod", ["demos.demo_texto", "demos.demo_voz", "demos.demo_roteiro"])
@@ -20,7 +20,8 @@ def test_demos_importam(mod):
     importlib.import_module(mod)
 
 
-def test_roteiro_headless():
+@pytest.mark.parametrize("ROTEIRO", ROTEIROS)
+def test_roteiro_headless(ROTEIRO):
     with open(ROTEIRO, encoding="utf-8") as f:
         r = json.load(f)
     est = Tocador(pausas=False, cerebro=None, avaliador=None).toca(
@@ -29,6 +30,11 @@ def test_roteiro_headless():
         respostas={int(k): v for k, v in r.get("respostas", {}).items()},
     )
     assert est.historico  # disparou pelo menos a interrupção scriptada
+    # o ramo scriptado tem que existir mesmo (nome errado no JSON viraria
+    # fallback honesto silencioso, e o vídeo sairia com o professor se
+    # desculpando em vez de explicar)
+    for gat in r.get("interrupcoes", {}).values():
+        assert gat in carregar(r["aula"]).ramos, (ROTEIRO, gat)
 
 
 def test_parece_pergunta_ignora_ruido_e_aceita_pergunta_real():

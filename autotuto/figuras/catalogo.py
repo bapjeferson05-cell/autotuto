@@ -173,7 +173,7 @@ def fracao(num=3, den=4, raio=5, **_):
     # que é como a pizza é desenhada no quadro.
     circulos = [{"centro": "O", "raio": r,
                  "setor": [90 + i * passo, 90 + (i + 1) * passo],
-                 "preenche": i < num}
+                 "pintado": i < num}
                 for i in range(den)]
     return figura({
         "pontos": {"O": [0, 0]},

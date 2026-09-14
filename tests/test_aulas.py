@@ -5,7 +5,7 @@ from autotuto.calc import CATALOGO as CALC_CATALOGO
 from autotuto.figuras.canvas import figura
 from autotuto.schema import validar_estrutura
 
-NOMES = ["trapezio", "pitagoras", "eq_primeiro_grau", "regra_de_tres"]
+NOMES = ["trapezio", "pitagoras", "eq_primeiro_grau", "regra_de_tres", "fracao"]
 
 
 def test_disponiveis():

@@ -2,6 +2,8 @@ from autotuto.classificador import classificar, _norm
 
 RAMOS_TRAP = ["por_que_div_2", "nao_entendi", "e_triangulo", "repete"]
 RAMOS_PITA = ["por_que", "nao_entendi", "repete"]
+RAMOS_FRAC = ["por_que", "nao_entendi", "repete", "comeca_pelo_de_baixo",
+              "e_se_outro_corte", "e_se_metade"]
 
 def test_por_que_especifico():
     assert classificar("por que que divide por dois?", RAMOS_TRAP) == "por_que_div_2"
@@ -73,3 +75,26 @@ def test_mesma_resposta_numerica_so_com_acerta_atomico():
     assert mesma_resposta_numerica("três triângulos", "triângulo tem três lados") is False
     assert mesma_resposta_numerica("dividido por dois", "porque divide por 2") is False
     assert mesma_resposta_numerica("metade de um retângulo", "porque divide por 2") is False
+
+
+def test_gatilhos_da_aula_de_fracao():
+    # os ramos da aula de fração precisam de caminho na camada 1 (regex) — se só
+    # o cerebro (LLM) alcançasse, o modo determinístico nunca chegaria neles.
+    assert classificar("e se cortasse em mais pedaços?", RAMOS_FRAC) == "e_se_outro_corte"
+    assert classificar("seis oitavos não é a mesma coisa?", RAMOS_FRAC) == "e_se_outro_corte"
+    assert classificar("e se fosse a metade?", RAMOS_FRAC) == "e_se_metade"
+    assert classificar("começa por onde?", RAMOS_FRAC) == "comeca_pelo_de_baixo"
+    assert classificar("qual vem primeiro?", RAMOS_FRAC) == "comeca_pelo_de_baixo"
+
+
+def test_gatilhos_de_fracao_nao_vazam_pra_outras_aulas():
+    # aula sem esses ramos não pode receber um gatilho que ela não tem
+    for fala in ("e se fosse a metade?", "e se cortasse em mais pedaços?",
+                 "começa por onde?"):
+        assert classificar(fala, RAMOS_PITA) in (None, "por_que", "nao_entendi",
+                                                 "repete"), fala
+
+
+def test_por_que_divide_por_dois_continua_ganhando_de_metade():
+    # "metade" aparece nas duas regras; no trapézio a específica tem que vencer
+    assert classificar("por que divide pela metade?", RAMOS_TRAP) == "por_que_div_2"

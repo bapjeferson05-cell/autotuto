@@ -80,6 +80,16 @@ _REGRAS = [
     ("achar_hipotenusa", (r"\bhipotenusa\b", r"lado (maior|comprido)")),
     ("outro_numero", (r"\boutro numero\b", r"e se (fosse|desse) (outro|-?\d)")),
     ("e_se_menos", (r"\b(menos|menor|diminui|cai)\b.*\b(preco|valor|custa)",)),
+    # fração: "e se cortasse em mais pedaços?" é a pergunta que leva à
+    # equivalência (3/4 = 6/8), o pulo do gato do assunto.
+    ("e_se_outro_corte", (r"(corta|cortar|cortasse|dividir|dividisse|partir)\b.{0,20}\b(mais|outro|outra|oito|8|dobro|metade) ",
+                          r"\b(mais|outro|outra|menos) (peda[cç]os?|fatias?|partes?)\b",
+                          r"\b(seis oitavos|6 ?/ ?8)\b",
+                          r"\b(equivalent|mesma fracao|da na mesma|mesma coisa)\b")),
+    ("e_se_metade", (r"\bmetade\b", r"\b(um meio|1 ?/ ?2)\b")),
+    ("comeca_pelo_de_baixo", (r"come[cç]a\b.{0,20}\b(por onde|qual|de baixo|de cima|pelo)",
+                              r"\b(qual|quem) (vem|entra) primeiro\b",
+                              r"\b(de cima|de baixo|numerador|denominador)\b.{0,20}\b(primeiro|antes)\b")),
     ("decompor", (r"outr[oa] (jeito|forma)", r"sem (a )?formula", r"nao decorei")),
     ("repete", (r"\b(repete|repetir|repetiu|de novo|outra vez|mais uma vez)\b",
                 r"\b(nao ouvi|nao escutei|fala de novo)\b",

@@ -1,4 +1,4 @@
-"""aulas.py — as 4 aulas de ouro, escritas à mão.
+"""aulas.py — as 5 aulas de ouro, escritas à mão.
 
 Não são geradas por LLM. São a referência: a pedagogia que a gente QUER, no
 schema do projeto. Servem pra três coisas:
@@ -425,8 +425,145 @@ REGRA_DE_TRES: dict = {
     },
 }
 
+# ═══════════════════════════════════════════════ FRAÇÃO — a pizza e os brigadeiros
+# A aula que o círculo destravou. Fração é o assunto onde o desenho não é enfeite:
+# "três quartos" só vira ideia quando o aluno VÊ três pedaços de quatro pintados.
+# Duas representações de propósito (dual coding): a pizza (parte de UMA coisa) e
+# os doze brigadeiros (parte de uma QUANTIDADE) — é a ponte entre as duas que
+# costuma faltar, e é onde o aluno trava na hora de calcular 3/4 de 12.
+
+def _pizza(num, den, centro=(0.0, 0.0), raio=3.0):
+    """Spec inline de uma pizza `num`/`den`: `den` fatias iguais, `num` pintadas."""
+    passo = 360.0 / den
+    return [{"centro": list(centro), "raio": raio,
+             "setor": [90 + i * passo, 90 + (i + 1) * passo],
+             "pintado": i < num}
+            for i in range(den)]
+
+
+def _brigadeiros(levados=9, total=12, por_grupo=3):
+    """Os 12 brigadeiros em 4 grupos de 3 — os `levados` primeiros pintados."""
+    circulos, rotulos = [], []
+    for n in range(total):
+        g, i = divmod(n, por_grupo)
+        x = g * 4.0 + i * 1.1
+        circulos.append({"centro": [x, 0.0], "raio": 0.45, "pintado": n < levados})
+    for g in range(total // por_grupo):
+        meio = g * 4.0 + (por_grupo - 1) * 1.1 / 2
+        rotulos.append({"xy": [meio, -1.3],
+                        "texto": "levou" if g * por_grupo < levados else "ficou"})
+    return circulos, rotulos
+
+
+_BRIG_CIRC, _BRIG_ROT = _brigadeiros()
+_BRIG_VAZIO, _ = _brigadeiros(levados=0)
+
+FRACAO: dict = {
+    "titulo": "Fração — a pizza e os doze brigadeiros",
+    "topico": "fracao_de",
+    "dados": {"num": 3, "den": 4, "todo": 12, "resultado": 9},
+    "blocos": [
+        {"diz": "Olha essa pizza. Alguém cortou ela em quatro pedaços, e repara numa "
+                "coisa: os quatro pedaços são do mesmo tamanho. Esse detalhe é o que "
+                "quase todo mundo pula, e sem ele fração nenhuma funciona.",
+         "figura": {"gerador": "figura", "spec": {
+             "circulos": _pizza(0, 4),
+             "rotulos": [{"xy": [0, -4.2], "texto": "4 pedacos iguais"}]}},
+         "espera": "media"},
+        {"diz": "Agora imagina que você comeu três desses quatro pedaços. Foi isso "
+                "que você comeu: tres quartos da pizza. O número de baixo conta em "
+                "quantos pedaços a pizza foi cortada; o de cima conta quantos você "
+                "pegou.",
+         "figura": {"gerador": "figura", "spec": {
+             "circulos": _pizza(3, 4),
+             "rotulos": [{"xy": [0, -4.2], "texto": "3/4"}]}},
+         "espera": "media"},
+        # beat PERGUNTA — o aluno decide o caminho antes de ver a conta
+        {"diz": "Peraí, antes de eu continuar. Agora não é mais pizza: é uma caixa "
+                "com doze brigadeiros, e você vai levar três quartos dela. Pensa "
+                "comigo: pra começar, você olha primeiro pro três ou pro quatro?",
+         "figura": {"gerador": "figura", "spec": {
+             "circulos": _BRIG_VAZIO,
+             "rotulos": [{"xy": [7.1, -2.6], "texto": "12 brigadeiros"}]}},
+         "pergunta": {"escuta_s": 12, "senao": "comeca_pelo_de_baixo",
+                      "acerta": ["quatro", "4", "de baixo", "dividir", "dividindo",
+                                 "denominador"],
+                      "confirma": "Isso. Começa pelo de baixo: ele é quem parte a "
+                                  "caixa em grupos iguais. Só depois o de cima diz "
+                                  "quantos grupos você leva."}},
+        {"diz": "O quatro parte os doze em quatro grupos iguais, e cada grupo fica "
+                "com três brigadeiros. Aí o três manda levar três desses grupos. "
+                "Três grupos de três: nove brigadeiros.",
+         "figura": {"gerador": "figura", "spec": {
+             "circulos": _BRIG_CIRC, "rotulos": _BRIG_ROT}},
+         "calc": {"gerador": "fracao_de", "params": {"num": 3, "den": 4, "todo": 12}},
+         "mostra_passos": True,
+         "diz_passos": ["Três quartos de doze — é isso que a gente quer.",
+                        "Três vezes doze dá trinta e seis, dividido por quatro dá nove."],
+         "espera": "longa"},
+        {"diz": "Nove brigadeiros. E repara que é a mesma pizza de antes: três "
+                "pedaços de quatro, só que agora cada pedaço vale três brigadeiros "
+                "em vez de uma fatia.",
+         "espera": "media"},
+    ],
+    "ramos": {
+        # sobrescreve o genérico: aqui o "por que" tem resposta própria
+        "por_que": [
+            {"diz": "Porque o de baixo é o tamanho do pedaço e o de cima é quantos "
+                    "pedaços. Se você só multiplicasse por três, ia levar trinta e "
+                    "seis brigadeiros — três caixas, não três quartos de uma.",
+             "espera": "media"},
+        ],
+        "comeca_pelo_de_baixo": [
+            {"diz": "Começa pelo de baixo, o quatro. Ele é quem corta: doze "
+                    "brigadeiros em quatro grupos iguais dá três em cada grupo. "
+                    "Esse é o tamanho do pedaço.",
+             "figura": {"gerador": "figura", "spec": {
+                 "circulos": _BRIG_VAZIO,
+                 "rotulos": [{"xy": [1.1, -1.3], "texto": "3"},
+                             {"xy": [5.1, -1.3], "texto": "3"},
+                             {"xy": [9.1, -1.3], "texto": "3"},
+                             {"xy": [13.1, -1.3], "texto": "3"},
+                             {"xy": [7.1, -2.6], "texto": "4 grupos de 3"}]}},
+             "espera": "media"},
+            {"diz": "Só depois entra o de cima: leva três dos quatro grupos. "
+                    "Nove brigadeiros.",
+             "figura": {"gerador": "figura", "spec": {
+                 "circulos": _BRIG_CIRC, "rotulos": _BRIG_ROT}},
+             "espera": "longa"},
+        ],
+        # "e se o corte fosse outro?" — equivalência, o pulo do gato da fração
+        "e_se_outro_corte": [
+            {"diz": "Boa, olha as duas juntas. À esquerda a pizza cortada em quatro "
+                    "com três pedaços comidos; à direita a mesma pizza cortada em "
+                    "oito, com seis comidos. É exatamente a mesma pizza faltando.",
+             "figura": {"gerador": "figura", "spec": {
+                 "circulos": _pizza(3, 4, centro=(-3.6, 0), raio=3.0)
+                             + _pizza(6, 8, centro=(3.6, 0), raio=3.0),
+                 "rotulos": [{"xy": [-3.6, -4.2], "texto": "3/4"},
+                             {"xy": [3.6, -4.2], "texto": "6/8"},
+                             {"xy": [0, 0], "texto": "="}]}},
+             "espera": "media"},
+            {"diz": "Cortar em mais pedaços não muda quanto você comeu: muda só o "
+                    "tamanho de cada pedaço. Por isso três quartos e seis oitavos "
+                    "são a mesma fração escrita de dois jeitos.",
+             "espera": "longa"},
+        ],
+        # "e se fosse a metade?" — o caso mais fácil, âncora pra quem travou
+        "e_se_metade": [
+            {"diz": "Metade é a fração mais fácil: um de dois. Corta em dois pedaços "
+                    "iguais e leva um. Dos doze brigadeiros, metade é seis.",
+             "figura": {"gerador": "figura", "spec": {
+                 "circulos": _pizza(1, 2),
+                 "rotulos": [{"xy": [0, -4.2], "texto": "1/2"}]}},
+             "espera": "media"},
+        ],
+    },
+}
+
 _CATALOGO = {"trapezio": TRAPEZIO, "pitagoras": PITAGORAS,
-             "eq_primeiro_grau": EQ_PRIMEIRO_GRAU, "regra_de_tres": REGRA_DE_TRES}
+             "eq_primeiro_grau": EQ_PRIMEIRO_GRAU, "regra_de_tres": REGRA_DE_TRES,
+             "fracao": FRACAO}
 
 
 def carregar(nome: str) -> Aula:

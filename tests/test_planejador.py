@@ -186,3 +186,16 @@ def test_exemplo_literal_do_usuario_fluxo_completo_de_correcao():
     assert rel.ok and not rel.avisos                          # EXECUTOU limpo
     assert "argumento desconhecido" in corrigido_recebido[-1]  # o LLM recebeu o motivo
     assert "'x'" in corrigido_recebido[-1]
+
+
+def test_pista_de_fracao():
+    # "3/4" e "metade" são sinal forte de fração e têm que vencer a regra de três
+    for problema in ("quanto é 3/4 de 12", "não entendo fração",
+                     "o que é a metade de 20", "três quartos de 40",
+                     "me explica numerador e denominador"):
+        assert json.loads(_exemplo_dirigido(problema))["topico"] == "fracao_de", problema
+
+
+def test_pista_de_fracao_nao_rouba_a_regra_de_tres():
+    dirigido = _exemplo_dirigido("se 3 cadernos custam 24, quanto custam 5")
+    assert json.loads(dirigido)["topico"] == "regra_de_tres"

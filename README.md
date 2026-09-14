@@ -69,11 +69,12 @@ autotuto/visor.py                  a tela (http.server, zero dep)
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e .
 
-# 1. os testes (198 — cobrem cada módulo + a regra "nunca mentir")
+# 1. os testes (211 — cobrem cada módulo + a regra "nunca mentir")
 .venv/bin/pytest
 
 # 2. o Ciclo do Trapézio, determinístico, sem LLM nem STT — pro vídeo/ensaio
 .venv/bin/python demos/demo_roteiro.py roteiros/trapezio.json
+#    (ou roteiros/fracao.json — a pizza, os brigadeiros e a equivalência 3/4 = 6/8)
 
 # 3. modo texto — o aluno digita o assunto ou cola a questão (leve, sem voz)
 .venv/bin/python demos/demo_texto.py
@@ -113,7 +114,7 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 | `autotuto/figuras/lousa.py` | tema (cores da lousa) + `passo_latex(latex)` |
 | `autotuto/figuras/catalogo.py` | geradores nomeados (trapézio, balança, tabela de proporção, círculo, a pizza da fração...) usados pelo planejador |
 | `autotuto/estado.py` | `EstadoAula` — pilha de trilhas. Interrupção empilha ramo, `drena_ramo()` toca e desempilha, a principal retoma |
-| `autotuto/aulas.py` | **4 aulas de ouro** escritas à mão: `trapezio`, `pitagoras`, `eq_primeiro_grau`, `regra_de_tres` — o MVP e o few-shot do planejador |
+| `autotuto/aulas.py` | **5 aulas de ouro** escritas à mão: `trapezio`, `pitagoras`, `eq_primeiro_grau`, `regra_de_tres`, `fracao` — o MVP e o few-shot do planejador |
 | `autotuto/classificador.py` | fala do aluno → gatilho de ramo (regex; nunca devolve gatilho que a aula não tem) |
 | `autotuto/llm.py` | uma função — `perguntar(mensagens, timeout)` — Ollama local ou Claude API |
 | `autotuto/cerebro.py` | LLM **curto**, só na interrupção: fala + contexto + ramos disponíveis → escolhe um ramo real ou `None` |
@@ -123,7 +124,7 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 | `autotuto/visor.py` | a tela: `http.server` stdlib, tema lousa, caixa de texto, teclas de contingência |
 | `autotuto/voz.py` | adapter fino: Piper (TTS) + faster-whisper (STT) direto — **zero jarvis**, pré-aquece no boot |
 | `demos/demo_texto.py` / `demo_voz.py` / `demo_roteiro.py` | os 3 pontos de entrada |
-| `roteiros/trapezio.json` | modo gravação — interrupções e respostas scriptadas, pro vídeo não depender de STT |
+| `roteiros/trapezio.json` · `roteiros/fracao.json` | modo gravação — interrupções e respostas scriptadas, pro vídeo não depender de STT |
 | `docs/SPEC.md` | a spec: a regra única, as ideias que sobrevivem, o que NÃO fazer, arquitetura completa |
 | `docs/superpowers/plans/2026-09-10-autotuto-v2.md` | o plano de 15 tasks (TDD) que reescreveu o projeto do zero |
 
@@ -134,10 +135,10 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 - ✅ regra "nunca mentir" verificada por 2 rounds de review + testes dedicados
 - ✅ pipeline problema→aula (planejador + schema + validador) · interrupção em 3 camadas
 - ✅ máquina de estado (interrompe/retoma) · beat `pergunta` + fading · ramos genéricos
-- ✅ 4 aulas de ouro · passos narrados (dual coding) · few-shot dirigido por tópico
+- ✅ 5 aulas de ouro (a de fração usa a pizza e os brigadeiros) · passos narrados (dual coding) · few-shot dirigido por tópico
 - ✅ voz (Piper + faster-whisper, adapter próprio) · visor · modo voz / texto / roteiro
 - ✅ teclado como caminho principal de interrupção (mic é bônus, `BARGE_IN=0` por padrão)
-- ✅ 198 testes, 0 warnings
+- ✅ 211 testes, 0 warnings
 - ✅ círculo, setor de círculo e a pizza da fração · área/circunferência no `calc`
-- ⏳ mais aulas de ouro (círculo e fração ainda não têm a delas) · renderer ao vivo no
+- ⏳ mais aulas de ouro (círculo ainda não tem a dela) · renderer ao vivo no
   navegador (Fase 2) · teste do caminho de mic (`BARGE_IN=1`) com hardware real

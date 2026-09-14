@@ -4,14 +4,21 @@
   pontos     {nome: [x, y]}
   segmentos  [[a, b], ...]            a/b = nome de ponto ou [x, y] cru
              ou {"de": a, "para": b, "tracejado": bool}   (traço pontilhado)
-  poligonos  [{"vs": [nomes/coords], "preenche": bool}]
+  poligonos  [{"vs": [nomes/coords], "preenche": bool, "pintado": bool}]
   angulos    [{"vertice", "de", "para"}]   arco (ou quadradinho se ~90°)
   marcas     [{"tipo": "cong"|"par", "de", "para"}]   ticks de congruência/paralelismo
   rotulos    [{"xy": [x, y], "texto": str}]
   circulos   [{"centro": nome ou [x,y], "raio": float,
                "preenche": bool,                 (default False)
+               "pintado": bool,                  (preenchimento FORTE — ver abaixo)
                "setor": [ini, fim],              (graus; fatia em vez do círculo todo)
                "tracejado": bool}]
+
+Dois níveis de preenchimento, porque ele tem dois papéis:
+  "preenche"  discreto — só diz "é desta figura que eu estou falando".
+  "pintado"   forte — o preenchimento É a resposta: a fatia comida da pizza, os
+              brigadeiros que você levou. No nível discreto o aluno não distingue
+              o pintado do vazio na lousa escura, e o desenho deixa de dizer 3/4.
 
 Depende só de `config` + matplotlib/numpy + stdlib.
 """
@@ -31,6 +38,12 @@ def _resolver(spec, n):
     return np.asarray(n, dtype=float)
 
 
+def _alpha(item) -> float:
+    """Opacidade do preenchimento: forte quando o fill É a mensagem ("pintado"),
+    discreta quando ele só marca a figura de que se está falando ("preenche")."""
+    return config.ALPHA_PINTADO if item.get("pintado", False) else config.ALPHA_FIGURA
+
+
 def _desenha_poligono(ax, spec, pol):
     pts = [_resolver(spec, v) for v in pol.get("vs", [])]
     if len(pts) < 2:
@@ -39,8 +52,8 @@ def _desenha_poligono(ax, spec, pol):
     ys = [p[1] for p in pts]
     # o `alpha` de um patch dilui a face E a borda — então o preenchimento vai
     # sem borda e o contorno de giz é desenhado à parte, opacidade cheia (F4).
-    if pol.get("preenche", False):
-        ax.fill(xs, ys, facecolor=config.COR_AZUL, alpha=config.ALPHA_FIGURA,
+    if pol.get("preenche", False) or pol.get("pintado", False):
+        ax.fill(xs, ys, facecolor=config.COR_AZUL, alpha=_alpha(pol),
                 edgecolor="none", zorder=2)
     ax.plot(xs + [xs[0]], ys + [ys[0]], color=config.COR_GIZ, lw=2, zorder=3)
 
@@ -125,12 +138,9 @@ def _desenha_circulo(ax, spec, circ):
 
     if setor is not None:
         ini, fim = float(setor[0]), float(setor[1])
-        if circ.get("preenche", False):
-            # fatia pintada = a resposta da fração, então vai OPACA o bastante
-            # pra se distinguir da fatia vazia ao lado (ALPHA_PINTADO).
+        if circ.get("preenche", False) or circ.get("pintado", False):
             ax.add_patch(Wedge(tuple(c), r, ini, fim, facecolor=config.COR_AZUL,
-                               alpha=config.ALPHA_PINTADO, edgecolor="none",
-                               zorder=2))
+                               alpha=_alpha(circ), edgecolor="none", zorder=2))
         # contorno da fatia: os dois raios + o arco
         for a in (ini, fim):
             ponta = c + r * np.array([np.cos(np.radians(a)), np.sin(np.radians(a))])
@@ -139,10 +149,9 @@ def _desenha_circulo(ax, spec, circ):
         ax.add_patch(Arc(tuple(c), 2 * r, 2 * r, angle=0.0, theta1=ini, theta2=fim,
                          color=config.COR_GIZ, lw=2, linestyle=ls, zorder=3))
     else:
-        if circ.get("preenche", False):
+        if circ.get("preenche", False) or circ.get("pintado", False):
             ax.add_patch(Circle(tuple(c), r, facecolor=config.COR_AZUL,
-                                alpha=config.ALPHA_FIGURA, edgecolor="none",
-                                zorder=2))
+                                alpha=_alpha(circ), edgecolor="none", zorder=2))
         ax.add_patch(Circle(tuple(c), r, facecolor="none", edgecolor=config.COR_GIZ,
                             lw=2, linestyle=ls, zorder=3))
 

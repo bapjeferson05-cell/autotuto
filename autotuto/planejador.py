@@ -49,6 +49,16 @@ _PISTAS: dict[str, tuple] = {
         r"primeiro grau",
         r"pensei num n[úu]mero",
     ),
+    # fração vem cedo: "3/4" e "metade" são sinal forte, e sem isso uma pergunta
+    # como "quanto custa a metade" ia parar na regra de três.
+    "fracao": (
+        r"fra[çc]",                        # fração, frações, fracao, fracionar
+        r"\b\d+\s*/\s*\d+\b",            # "3/4"
+        r"\bmetade\b",
+        r"\b(um|dois|tr[êe]s) (ter[çc]os?|quartos?|quintos?|oitavos?)\b",
+        r"\bnumerador\b|\bdenominador\b",
+        r"\bpeda[çc]os? iguais\b",
+    ),
     "regra_de_tres": (
         r"regra de tr[êe]s",
         r"propor[çc]",
@@ -162,8 +172,10 @@ GERADORES DE FIGURA (use no "figura", campo "gerador"):
   ângulos marcados) use {"gerador": "figura", "spec": {...}} com as
   chaves: pontos, poligonos, segmentos, angulos, marcas, rotulos, circulos.
   Um item de "circulos" é {"centro": [x,y] ou nome de ponto, "raio": n,
-  "preenche": bool, "setor": [ini, fim] em graus} — com "setor" sai uma FATIA
-  em vez do círculo inteiro.
+  "preenche": bool, "pintado": bool, "setor": [ini, fim] em graus} — com "setor"
+  sai uma FATIA em vez do círculo inteiro. Use "pintado" (e não "preenche")
+  quando o preenchimento É a resposta — a fatia comida, a parte que o aluno
+  levou; "preenche" é só o tom discreto de "é desta figura que eu falo".
 
 RESPONDA SÓ com o objeto JSON do plano — nada antes, nada depois, sem cercas de código.
 """
