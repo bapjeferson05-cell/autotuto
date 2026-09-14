@@ -1,10 +1,39 @@
 import os
+from pathlib import Path
+
+
+def _carrega_env(caminho=".env") -> None:
+    """Lê um .env simples (CHAVE=valor por linha) pro os.environ, se existir.
+
+    Sem python-dotenv: são 6 linhas e a regra do projeto é 'deps exatas'. O que
+    já está no ambiente GANHA do arquivo — exportar na mão continua mandando.
+    É o que faz `python -m autotuto.chaves` valer: ele escreve aqui, e pronto."""
+    try:
+        texto = Path(caminho).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return
+    for linha in texto.splitlines():
+        linha = linha.strip()
+        if not linha or linha.startswith("#") or "=" not in linha:
+            continue
+        chave, _, valor = linha.partition("=")
+        os.environ.setdefault(chave.strip(), valor.strip().strip("'\""))
+
+
+_carrega_env()
 
 env = lambda k, d: os.environ.get(k, d)
 
 # LLM
-LLM_PROVEDOR   = env("AUTOTUTO_LLM", "ollama")      # ollama | claude
-LLM_MODELO     = env("AUTOTUTO_MODELO", "qwen2.5:7b")
+LLM_PROVEDOR   = env("AUTOTUTO_LLM", "ollama")      # ollama | claude | groq |
+                                                     # openrouter | nvidia | github |
+                                                     # gemini | openai (ver provedores.py)
+LLM_MODELO     = env("AUTOTUTO_MODELO", "qwen2.5:7b")  # modelo do ollama
+LLM_MODELO_NUVEM = env("AUTOTUTO_MODELO", "")       # mesma env var: vazio = usa o
+                                                     # default do provedor de nuvem
+LLM_BASE_URL   = env("AUTOTUTO_BASE_URL", "")       # vazio = base do provedor; setar
+                                                     # pra apontar num endpoint próprio
+                                                     # (vLLM, LM Studio, llama.cpp...)
 LLM_CLAUDE     = "claude-sonnet-5"
 CEREBRO_TIMEOUT_S = 8.0                              # LLM curto da interrupção
 AVALIADOR_TIMEOUT_S = 8.0                            # LLM curto da avaliação semântica de resposta

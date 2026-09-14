@@ -3,7 +3,9 @@ import os
 import urllib.request
 import urllib.error
 
-from autotuto import config
+from autotuto import config, provedores
+
+_SO_JSON = "\n\nResponda APENAS com o objeto JSON, sem cercas de código."
 
 # Get Ollama host from config or environment
 OLLAMA_HOST = getattr(config, "OLLAMA_HOST", os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
@@ -97,21 +99,58 @@ def _claude(mensagens, timeout, json_mode):
     return "".join(text_parts)
 
 
+def _openai_compat(mensagens, timeout, json_mode, provedor):
+    """Qualquer provedor que fale a API OpenAI (POST {base}/chat/completions).
+
+    É o caminho de Groq, OpenRouter, NVIDIA, GitHub Models, Gemini e de qualquer
+    endpoint próprio (vLLM/LM Studio) via AUTOTUTO_BASE_URL. Um caminho só, porque
+    a API é a mesma — o que muda é base, chave e nome do modelo."""
+    info = provedores.PROVEDORES[provedor]
+    chave = os.environ.get(info["chave_env"])
+    if not chave:
+        raise ConnectionError(
+            f"{info['chave_env']} não está definida (provedor '{provedor}'). "
+            f"Pega a chave em {info['onde']} — ou roda: python -m autotuto.chaves")
+
+    base = (config.LLM_BASE_URL or info["base"]).rstrip("/")
+    modelo = config.LLM_MODELO_NUVEM or info["modelo"]
+
+    msgs = [dict(m) for m in mensagens]
+    if json_mode:
+        # Instrução no system serve em TODO provedor; o response_format nativo é
+        # bônus só pra quem aceita (mandar pra quem não aceita vira erro 400).
+        sistema = next((m for m in msgs if m["role"] == "system"), None)
+        if sistema:
+            sistema["content"] += _SO_JSON
+        else:
+            msgs.insert(0, {"role": "system", "content": _SO_JSON.strip()})
+
+    body = {"model": modelo, "messages": msgs, "temperature": 0.2}
+    if json_mode and info["json_nativo"]:
+        body["response_format"] = {"type": "json_object"}
+
+    req = urllib.request.Request(
+        f"{base}/chat/completions",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json",
+                 "Authorization": f"Bearer {chave}"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        dados = json.loads(resp.read().decode("utf-8"))
+
+    return dados["choices"][0]["message"]["content"]
+
+
 def perguntar(mensagens, *, timeout, json_mode=True):
-    """
-    Ask an LLM (Ollama or Claude) a question.
+    """Manda as mensagens pro provedor configurado e devolve o texto da resposta.
 
-    Args:
-        mensagens: List of message dicts with role and content
-        timeout: Timeout in seconds for the HTTP request
-        json_mode: If True, request JSON response format
-
-    Returns:
-        String response from the LLM
-    """
+    Provedor vem de AUTOTUTO_LLM (ver provedores.py): 'ollama' (local, default) e
+    'claude' têm caminho próprio; o resto vai pelo caminho OpenAI-compatível."""
     provedor = LLM_PROVEDOR
 
     if provedor == "claude":
         return _claude(mensagens, timeout, json_mode)
-    else:  # default to ollama
-        return _ollama(mensagens, timeout, json_mode)
+    if provedor in provedores.PROVEDORES:
+        return _openai_compat(mensagens, timeout, json_mode, provedor)
+    return _ollama(mensagens, timeout, json_mode)

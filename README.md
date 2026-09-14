@@ -87,9 +87,18 @@ Abre `http://localhost:8080`. **Teclado é o caminho principal de interrupção*
 a caixa de texto. Voz é bônus: `AUTOTUTO_BARGE_IN=0` por padrão (o mic não interrompe
 sozinho — liga com `AUTOTUTO_BARGE_IN=1` se o ambiente tiver echo-cancel).
 
-Cérebro: `AUTOTUTO_LLM=claude` (precisa de `ANTHROPIC_API_KEY`, rápido) ou `ollama` +
-`qwen2.5:7b` local (default). Todos os knobs (timings, modelo, portas, cores da lousa)
-vivem em `autotuto/config.py`.
+Cérebro: `ollama` + `qwen2.5:7b` local (default) ou **qualquer provedor de nuvem** —
+inclusive os grátis sem cartão (groq, gemini, openrouter, github, nvidia):
+
+```bash
+python -m autotuto.chaves      # escolhe o provedor, cola a chave, pronto
+```
+
+Grava num `.env` (permissão 600, já no `.gitignore`) que o `config.py` carrega sozinho.
+Quase todo provedor fala a API OpenAI-compatível, então trocar é só mudar
+`AUTOTUTO_LLM` — ver **[docs/PROVEDORES.md](docs/PROVEDORES.md)** pra tabela de tiers
+grátis, armadilhas e como apontar pro seu próprio endpoint (vLLM/LM Studio). Todos os
+knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 
 ---
 
