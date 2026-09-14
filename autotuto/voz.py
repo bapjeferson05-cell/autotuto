@@ -17,6 +17,7 @@ Garantias:
 """
 from __future__ import annotations
 
+import os
 import random
 import subprocess
 import sys
@@ -170,6 +171,13 @@ class Voz:
 
         t0 = time.monotonic()
         print("[voz] carregando Piper + faster-whisper…", flush=True)
+        if not os.path.exists(config.TTS_VOICE):
+            # erro que ENSINA: sem isso o Piper estoura com um traceback de
+            # arquivo não encontrado e ninguém sabe o que baixar nem pra onde.
+            raise FileNotFoundError(
+                f"voz do Piper não encontrada em {config.TTS_VOICE}.\n"
+                f"Baixe com:\n    {config.COMO_BAIXAR_VOZ}\n"
+                f"Ou aponte AUTOTUTO_TTS_VOICE pro .onnx que você já tem.")
         self.piper = piper.PiperVoice.load(config.TTS_VOICE)
         self.stt = faster_whisper.WhisperModel(
             modelo, device=config.STT_DEVICE,

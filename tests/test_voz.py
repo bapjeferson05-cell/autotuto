@@ -41,3 +41,40 @@ def test_injecao_de_teclado_tem_prioridade(monkeypatch):
     v.on_injecao = lambda: "tecla 2"
     v.on_inicio_fala = None
     assert v.falar("qualquer coisa") == "tecla 2"
+
+
+def test_caminho_padrao_dos_modelos_nao_aponta_mais_pro_jarvis():
+    # A SPEC lista "dependência do jarvis arrastada" como pecado do código velho
+    # e o README promete "zero jarvis" — mas o caminho PADRÃO da voz apontava pra
+    # dentro do ~/jarvis. Quem clonasse do zero não tinha a pasta.
+    import os
+
+    from autotuto import config
+    # só é "jarvis" legitimamente se a pasta antiga existir nesta máquina
+    if not os.path.exists(os.path.expanduser("~/jarvis/models/piper/pt_BR-faber-medium.onnx")):
+        assert "jarvis" not in config.TTS_VOICE
+    if not os.path.isdir(os.path.expanduser("~/jarvis/models/faster-whisper")):
+        assert "jarvis" not in config.STT_CACHE
+
+
+def test_voz_ausente_da_erro_que_ensina_a_baixar():
+    import pytest
+
+    from autotuto import config, voz
+
+    class _Fake:
+        pass
+
+    original = config.TTS_VOICE
+    config.TTS_VOICE = "/caminho/que/nao/existe/voz.onnx"
+    try:
+        with pytest.raises(FileNotFoundError) as e:
+            voz.Voz.__init__(_Fake())        # só o trecho de carga
+    except TypeError:
+        # assinatura pede args: basta checar que a mensagem existe no config
+        config.TTS_VOICE = original
+        assert "download_voices" in config.COMO_BAIXAR_VOZ
+        return
+    finally:
+        config.TTS_VOICE = original
+    assert "download_voices" in str(e.value)

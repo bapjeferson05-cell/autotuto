@@ -48,8 +48,25 @@ PLANEJADOR_TIMEOUT_NOVO_S = 100.0  # autópsia de 2026-09-12: SEM few-shot dirig
 # Voz
 STT_MODELO     = env("AUTOTUTO_STT", "base")         # tiny | base | small
 STT_DEVICE     = "cpu"
-TTS_VOICE      = env("AUTOTUTO_TTS_VOICE", os.path.expanduser("~/jarvis/models/piper/pt_BR-faber-medium.onnx"))
-STT_CACHE      = env("AUTOTUTO_STT_CACHE", os.path.expanduser("~/jarvis/models/faster-whisper"))
+# A SPEC lista "dependência do jarvis arrastada" como pecado do código velho, e o
+# README promete "zero jarvis" — mas o caminho PADRÃO dos modelos continuava
+# apontando pra dentro do ~/jarvis. Quem clonasse do zero não tinha essa pasta e
+# só descobria isso com um stack trace do Piper. Agora o padrão é a pasta do
+# próprio autotuto; o caminho antigo segue valendo se ainda existir na máquina,
+# pra não quebrar quem já tem os modelos baixados lá.
+_VOZ_NOVA  = os.path.expanduser("~/.local/share/autotuto/vozes/pt_BR-faber-medium.onnx")
+_VOZ_VELHA = os.path.expanduser("~/jarvis/models/piper/pt_BR-faber-medium.onnx")
+_STT_NOVO  = os.path.expanduser("~/.local/share/autotuto/faster-whisper")
+_STT_VELHO = os.path.expanduser("~/jarvis/models/faster-whisper")
+
+TTS_VOICE      = env("AUTOTUTO_TTS_VOICE",
+                     _VOZ_VELHA if os.path.exists(_VOZ_VELHA) else _VOZ_NOVA)
+STT_CACHE      = env("AUTOTUTO_STT_CACHE",
+                     _STT_VELHO if os.path.isdir(_STT_VELHO) else _STT_NOVO)
+# Vozes pt-BR do Piper: faber, cadu, edresson, jeff (medium). Baixar com
+#     python -m piper.download_voices pt_BR-faber-medium
+COMO_BAIXAR_VOZ = ("python -m piper.download_voices pt_BR-faber-medium "
+                   "--download-dir ~/.local/share/autotuto/vozes")
 BARGE_IN       = env("AUTOTUTO_BARGE_IN", "0") == "1" # mic interrompe? padrão NÃO
 FALA_TIMEOUT_S = 12.0                                # cão-de-guarda do Piper
 GRAVA_RESTO_S  = 2.0                                 # quanto grava após o corte
