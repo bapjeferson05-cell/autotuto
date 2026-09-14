@@ -23,7 +23,7 @@ import re
 from dataclasses import dataclass, field
 
 from autotuto import aulas, llm, schema, validador
-from autotuto.config import PLANEJADOR_TIMEOUT_NOVO_S, PLANEJADOR_TIMEOUT_S
+from autotuto.config import PLANEJADOR_TIMEOUT_S
 
 # RULING: todo módulo PODE importar autotuto.config (é a raiz, não importa nada).
 
@@ -84,15 +84,45 @@ _PISTAS: dict[str, tuple] = {
 }
 
 
+def _uma_figura_so(beats: list, ja_mostrou: list) -> list:
+    """Deixa o spec inline COMPLETO só na primeira figura do exemplo.
+
+    Medido: quase METADE do few-shot dirigido eram coordenadas cruas de spec
+    inline (4238 chars na aula de equação, 45% disso em `spec`). Isso não ensina
+    estrutura — a estrutura é `{"gerador": "figura", "spec": {...}}`, e uma
+    ocorrência basta. O que as outras três cópias faziam era inchar o prompt e
+    convidar o modelo a copiar as coordenadas do trapézio pro problema do aluno.
+
+    Beats seguintes perdem a chave `figura` inteira em vez de ganharem um `spec`
+    truncado: beat sem figura é válido, beat com `spec` de mentira ensinaria
+    justamente o erro que o schema rejeita.
+    """
+    saida = []
+    for b in beats:
+        fig = b.get("figura")
+        inline = isinstance(fig, dict) and fig.get("gerador") == "figura"
+        if inline and ja_mostrou:
+            b = {k: v for k, v in b.items() if k != "figura"}
+            if not (b.get("diz") or b.get("calc")):
+                continue                     # beat que ficaria vazio
+        elif inline:
+            ja_mostrou.append(True)
+        saida.append(b)
+    return saida
+
+
 def _enxuta(aula: dict) -> str:
-    """JSON compacto de uma aula: 4 blocos e 2 ramos de 1 beat — dá a forma
-    inteira sem estourar o contexto de um modelo pequeno."""
+    """JSON compacto de uma aula: 4 blocos e 2 ramos de 1 beat, com só UMA
+    figura inline por extenso — dá a forma inteira sem estourar o contexto de um
+    modelo pequeno (ver `_uma_figura_so`)."""
+    ja_mostrou: list = []
     return json.dumps({
         "titulo": aula["titulo"],
         "topico": aula["topico"],
         "dados": aula.get("dados", {}),
-        "blocos": aula["blocos"][:4],
-        "ramos": {k: v[:1] for k, v in list(aula.get("ramos", {}).items())[:2]},
+        "blocos": _uma_figura_so(aula["blocos"][:4], ja_mostrou),
+        "ramos": {k: _uma_figura_so(v[:1], ja_mostrou)
+                  for k, v in list(aula.get("ramos", {}).items())[:2]},
     }, ensure_ascii=False)
 
 
@@ -337,10 +367,14 @@ def planeja(
     mensagens.append({"role": "assistant", "content": modelo})
     mensagens.append({"role": "user", "content": problema})
 
-    # tópico fora das aulas de ouro: o exemplo agora é o genérico, o modelo tem
-    # que pensar mais e precisa de mais tempo. Não penalizar o caminho conhecido
-    # com esse teto maior (autópsia de 2026-09-12).
-    timeout = PLANEJADOR_TIMEOUT_S if dirigido else PLANEJADOR_TIMEOUT_NOVO_S
+    # Um teto só. O par curto/longo vinha de quando o caminho SEM pista ia pro
+    # modelo sem exemplo nenhum: ali o modelo pensava mais e merecia mais tempo.
+    # Depois que todo problema passou a levar exemplo, a relação INVERTEU — o
+    # dirigido carrega uma aula de ouro e tem o prompt maior — e o teto curto
+    # ficou no lado errado. A bateria de 2026-09-15 mostrou isso na cara: os 3
+    # únicos fracassos foram tópicos COM aula de ouro, todos em 45.0s cravados,
+    # enquanto os genéricos (prompt menor, teto de 100s) passaram folgados.
+    timeout = PLANEJADOR_TIMEOUT_S
 
     erros: list[str] = ["planejador não rodou"]
     aula_dict: dict | None = None

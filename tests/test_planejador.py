@@ -106,22 +106,36 @@ def test_planeja_calc_com_kwarg_invalido_nao_fica_ok():
     assert any("argumento desconhecido" in a for a in rel.avisos)
 
 
-def test_timeout_maior_quando_nao_ha_few_shot_dirigido():
-    # autópsia 2026-09-12: sem few-shot (tópico fora das 4 aulas de ouro) o
-    # modelo demora mais — não pode usar o timeout curto do caminho feliz.
-    from autotuto.config import PLANEJADOR_TIMEOUT_NOVO_S, PLANEJADOR_TIMEOUT_S
+def test_timeout_e_o_mesmo_nos_dois_caminhos():
+    # O par curto/longo (45s com pista, 100s sem) nasceu quando "sem pista"
+    # queria dizer "sem exemplo nenhum". Depois que todo problema passou a levar
+    # exemplo, a relação INVERTEU: o dirigido é o de prompt MAIOR, e ficou com o
+    # teto CURTO. A bateria de 2026-09-15 mostrou na cara — os 3 únicos
+    # fracassos foram tópicos COM aula de ouro, todos em 45.0s cravados,
+    # enquanto os genéricos passavam em ~20s com o teto de 100s.
+    from autotuto.config import PLANEJADOR_TIMEOUT_S
     vistos = []
 
     def fake(m, *, timeout, **k):
         vistos.append(timeout)
         return json.dumps(carregar("trapezio").para_json())
 
-    planeja("me explica o universo", perguntar=fake)   # sem pista -> timeout maior
-    assert vistos[-1] == PLANEJADOR_TIMEOUT_NOVO_S
+    planeja("me explica o universo", perguntar=fake)    # sem pista
+    planeja("resolva 2x - 8 = 0", perguntar=fake)        # com pista
+    assert vistos == [PLANEJADOR_TIMEOUT_S, PLANEJADOR_TIMEOUT_S]
 
-    vistos.clear()
-    planeja("resolva 2x - 8 = 0", perguntar=fake)       # bate a pista -> timeout curto
-    assert vistos[-1] == PLANEJADOR_TIMEOUT_S
+
+def test_o_caminho_dirigido_nao_pode_ter_teto_menor_que_o_generico():
+    # guarda contra a inversão voltar: quem tem o prompt maior não pode ganhar
+    # menos tempo. Mede os dois prompts de verdade.
+    from autotuto.planejador import _SISTEMA, exemplo
+    dirigido, _ = exemplo("resolva 2x - 8 = 0")
+    generico, marcado = exemplo("o que são números primos")
+    assert not marcado
+    maior = len(_SISTEMA) + 2 * len(dirigido)
+    menor = len(_SISTEMA) + 2 * len(generico)
+    assert maior > menor          # o dirigido É o mais pesado
+    # ...e por isso os dois usam o mesmo teto (ver teste acima)
 
 
 # P1.1 — fixture de regressão: o plano REAL que o qwen2.5:7b gerou na autópsia
@@ -406,3 +420,43 @@ def test_ramos_em_formato_errado_ainda_reclama_no_schema_sem_estourar():
 
     aula, rel = planeja("qualquer coisa", perguntar=responde)
     assert any("ramos" in p for p in pedidos[1:])
+
+
+# ───── enxugar o few-shot dirigido (achado: 45% dele era coordenada crua)
+
+def test_exemplo_dirigido_mostra_uma_figura_inline_e_so_uma():
+    # uma ocorrência ensina a forma {"gerador":"figura","spec":{...}}; as outras
+    # três só inchavam o prompt e convidavam a copiar as coordenadas do trapézio
+    from autotuto.planejador import exemplo
+    for problema in ("resolva 2x - 8 = 0", "área do trapézio",
+                     "teorema de pitágoras", "regra de três"):
+        d = json.loads(exemplo(problema)[0])
+        beats = list(d["blocos"]) + [b for v in d.get("ramos", {}).values() for b in v]
+        inline = [b for b in beats
+                  if isinstance(b.get("figura"), dict)
+                  and b["figura"].get("gerador") == "figura"]
+        assert len(inline) == 1, (problema, len(inline))
+        assert isinstance(inline[0]["figura"]["spec"], dict)   # completo, não truncado
+
+
+def test_exemplo_dirigido_continua_sendo_uma_aula_valida():
+    # exemplo que ensina erro é pior que exemplo nenhum: depois de enxugar, ele
+    # ainda tem que passar no schema e na checagem matemática
+    from autotuto.aulas import _com_genericos
+    from autotuto.planejador import exemplo
+    from autotuto.schema import validar_estrutura
+    from autotuto.validador import avisos_graves, checar_matematica
+    for problema in ("resolva 2x - 8 = 0", "área do trapézio",
+                     "teorema de pitágoras", "regra de três", "3/4 de 12"):
+        d = _com_genericos(json.loads(exemplo(problema)[0]))
+        assert validar_estrutura(d) == [], problema
+        assert avisos_graves(checar_matematica(d)) == [], problema
+
+
+def test_nenhum_beat_do_exemplo_fica_vazio_depois_de_enxugar():
+    from autotuto.planejador import exemplo
+    for problema in ("resolva 2x - 8 = 0", "área do trapézio", "3/4 de 12"):
+        d = json.loads(exemplo(problema)[0])
+        beats = list(d["blocos"]) + [b for v in d.get("ramos", {}).values() for b in v]
+        for b in beats:
+            assert b.get("diz") or b.get("figura") or b.get("calc"), (problema, b)

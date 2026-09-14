@@ -320,3 +320,53 @@ def test_prompt_mostra_calc_e_diz_passos_no_mesmo_beat():
     from autotuto.planejador import _SISTEMA
     assert "MESMO OBJETO de beat" in _SISTEMA
     assert '"diz_passos": [' in _SISTEMA      # o exemplo concreto está lá
+
+
+# ───── contrato de params da FIGURA (achado da bateria local)
+
+def test_kwarg_errado_em_gerador_de_figura_e_grave():
+    # O `**_` de todo gerador de figura ENGOLE o kwarg errado em silêncio: o
+    # render não estoura, e a figura sai com o valor PADRÃO no lugar do que o
+    # enunciado pedia. O aluno vê um retângulo que não é o do problema e
+    # ninguém fica sabendo. `_validar_calc` tinha esse contrato desde sempre;
+    # `_validar_figura` nunca ganhou.
+    from autotuto.validador import avisos_graves, checar_matematica
+    plano = {"blocos": [{"diz": "olha o terreno", "figura": {
+        "gerador": "retangulo", "params": {"base": 12, "largura": 20}}}]}
+    avisos = checar_matematica(plano)
+    assert any("largura" in a and "base, altura" in a for a in avisos), avisos
+    assert avisos_graves(avisos)
+
+
+def test_kwarg_engolido_produzia_mesmo_png_do_default():
+    # a prova de que o render sozinho NUNCA pegaria isso
+    from autotuto.figuras.catalogo import retangulo
+    assert retangulo(base=12, largura=20) == retangulo(base=12, altura=7)
+
+
+def test_params_certos_de_figura_nao_acusam():
+    from autotuto.validador import checar_matematica
+    for gerador, params in (("retangulo", {"base": 12, "altura": 20}),
+                            ("trapezio", {"B": 18, "b": 10, "h": 6}),
+                            ("circulo", {"raio": 5}),
+                            ("fracao", {"num": 3, "den": 4}),
+                            ("triangulo", {"tipo": "reto", "base": 8, "altura": 6}),
+                            ("reta_numerica", {"inicio": 0, "fim": 10, "passo": 1})):
+        plano = {"blocos": [{"figura": {"gerador": gerador, "params": params}}]}
+        assert checar_matematica(plano) == [], (gerador, checar_matematica(plano))
+
+
+def test_spec_inline_nao_passa_pelo_contrato_de_kwargs():
+    # gerador="figura" recebe `spec`, não kwargs nomeados — o contrato não se
+    # aplica e não pode inventar aviso
+    from autotuto.validador import checar_matematica
+    plano = {"blocos": [{"figura": {"gerador": "figura", "spec": {
+        "pontos": {"A": [0, 0], "B": [1, 1]}, "segmentos": [["A", "B"]]}}}]}
+    assert checar_matematica(plano) == []
+
+
+def test_aulas_de_ouro_passam_no_contrato_de_figura():
+    from autotuto.aulas import carregar, disponiveis
+    from autotuto.validador import checar_matematica
+    for nome in disponiveis():
+        assert checar_matematica(carregar(nome).para_json()) == [], nome

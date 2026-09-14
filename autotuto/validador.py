@@ -24,6 +24,17 @@ def _params_desconhecidos(fn, params: dict) -> list[str]:
     return sorted(set(params) - set(parametros))
 
 
+def _kwargs_fora_da_assinatura(fn, params: dict) -> list[str]:
+    """Chaves de `params` sem parâmetro nomeado correspondente em `fn`.
+
+    Diferente de `_params_desconhecidos`: aqui o `**kwargs` NÃO é passe livre.
+    Os geradores de figura usam `**_` pra serem tolerantes, e essa tolerância é
+    exatamente o que faz um kwarg errado virar figura errada em silêncio."""
+    nomeados = {n for n, p in inspect.signature(fn).parameters.items()
+                if p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)}
+    return sorted(set(params) - nomeados)
+
+
 def _é_gerador_area_ou_comprimento(nome: str) -> bool:
     """Verifica se nome refere-se a um gerador de área ou comprimento."""
     return nome.startswith(("area_", "comprimento_", "perimetro_"))
@@ -282,6 +293,25 @@ def _validar_figura(figura_spec: dict) -> list[str]:
         return avisos
 
     fn = figuras_catalogo.GERADORES[gerador]
+
+    # Contrato de parâmetros — o mesmo que `_validar_calc` já tinha, e que a
+    # figura nunca ganhou. Aqui NÃO dá pra reusar `_params_desconhecidos`: todo
+    # gerador de figura termina em `**_`, e aquela função devolve [] assim que vê
+    # um VAR_KEYWORD. Justamente esse `**_` é o problema — ele ENGOLE o kwarg
+    # errado em silêncio, então nem o render pega: `retangulo(base=12,
+    # largura=20)` não levanta nada e desenha o retângulo com a ALTURA PADRÃO. O
+    # aluno vê uma figura que não é a do enunciado, e ninguém fica sabendo.
+    if gerador != "figura":
+        ruins = _kwargs_fora_da_assinatura(fn, figura_spec.get("params") or {})
+        if ruins:
+            aceitos = ", ".join(p for p in inspect.signature(fn).parameters
+                                if p != "_")
+            avisos.append(
+                f"{gerador}: argumento desconhecido {ruins} — {gerador} só aceita "
+                f"({aceitos}). O gerador IGNORA o que não conhece e desenha com o "
+                f"valor padrão, então a figura sai errada sem dar erro.")
+            return avisos
+
     try:
         if gerador == "figura":
             fn(figura_spec.get("spec") or {})

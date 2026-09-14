@@ -37,13 +37,14 @@ LLM_BASE_URL   = env("AUTOTUTO_BASE_URL", "")       # vazio = base do provedor; 
 LLM_CLAUDE     = "claude-sonnet-5"
 CEREBRO_TIMEOUT_S = 8.0                              # LLM curto da interrupção
 AVALIADOR_TIMEOUT_S = 8.0                            # LLM curto da avaliação semântica de resposta
-PLANEJADOR_TIMEOUT_S = 45.0  # medido ao vivo NO CAMINHO CONHECIDO (few-shot dirigido
-                              # bate, ~35-45s): se não respondeu nisso, tá travado —
-                              # melhor cair no fallback honesto do que esperar minutos.
-PLANEJADOR_TIMEOUT_NOVO_S = 100.0  # autópsia de 2026-09-12: SEM few-shot dirigido (tópico
-                              # nunca visto) o modelo pensa mais e passa dos 45s — chegou
-                              # a ~90s num caso real. Não pode penalizar o caminho feliz
-                              # com esse teto maior, então só entra quando não há few-shot.
+PLANEJADOR_TIMEOUT_S = 100.0  # teto ÚNICO. Já foram dois (45s no caminho com few-shot
+                              # dirigido, 100s sem), de quando "sem pista" queria dizer
+                              # "sem exemplo nenhum". Hoje todo problema leva exemplo e o
+                              # dirigido é o de prompt MAIOR: a bateria de 2026-09-15
+                              # falhou em 3 tópicos, todos com aula de ouro, todos em
+                              # 45.0s cravados, enquanto os genéricos passavam em ~20s.
+                              # Teto generoso não custa nada quando o modelo é rápido
+                              # (ele responde antes) e salva a aula quando não é.
 
 # Voz
 STT_MODELO     = env("AUTOTUTO_STT", "base")         # tiny | base | small
