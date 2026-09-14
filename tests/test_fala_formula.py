@@ -10,8 +10,11 @@ from autotuto.fala_formula import fala
 
 def test_le_as_construcoes_que_o_projeto_gera():
     casos = [
+        # numerador composto ganha ", tudo isso sobre": sem isso, "3 vezes 10
+        # sobre 4" no ouvido é (3x10)/4 ou 3x(10/4) — o aluno não tem como saber
         (r"A = \dfrac{(B + b)\cdot h}{2}",
-         "A é igual a abre parênteses B mais b fecha parênteses vezes h sobre 2"),
+         "A é igual a abre parênteses B mais b fecha parênteses vezes h, "
+         "tudo isso sobre 2"),
         (r"c^2 = a^2 + b^2",
          "c ao quadrado é igual a a ao quadrado mais b ao quadrado"),
         (r"c = \sqrt{25} = 5", "c é igual a raiz quadrada de 25 é igual a 5"),
@@ -69,3 +72,35 @@ def test_nao_importa_nada_do_projeto():
     import pathlib
     fonte = pathlib.Path("autotuto/fala_formula.py").read_text()
     assert not re.search(r"^\s*(from|import)\s+autotuto", fonte, re.M)
+
+
+# ───── ambiguidade de fração no ouvido (achada revisando o próprio diff)
+
+def test_numerador_composto_nao_sai_ambiguo():
+    # "3 vezes 10 sobre 4" pode ser (3x10)/4 ou 3x(10/4). Na lousa a barra
+    # resolve; no ouvido, não. Professor fala "tudo isso sobre".
+    assert fala(r"\dfrac{3 \cdot 10}{4}") == "3 vezes 10, tudo isso sobre 4"
+    assert fala(r"\dfrac{a + b}{2}") == "a mais b, tudo isso sobre 2"
+
+
+def test_numerador_simples_continua_curto():
+    # o "tudo isso" só entra quando há ambiguidade — senão vira encheção
+    assert fala(r"\dfrac{168}{2}") == "168 sobre 2"
+    assert fala(r"\dfrac{15}{2}") == "15 sobre 2"
+
+
+def test_fracao_seguida_de_multiplicacao_ganha_pausa():
+    # o outro lado: "12 sobre 80 vezes 100" é (12/80)x100 ou 12/(80x100)?
+    assert fala(r"\dfrac{12}{80}\cdot 100") == "12 sobre 80, vezes 100"
+    # mas `+` e `-` são lidos soltos e não confundem — nada de vírgula à toa
+    assert fala(r"\dfrac{12}{80} + 3") == "12 sobre 80 mais 3"
+
+
+def test_parser_aguenta_entrada_torta_sem_estourar():
+    # `fala` roda sobre LaTeX que veio do calc, mas um gerador novo pode
+    # escrever qualquer coisa. Travar a aula por causa da NARRAÇÃO seria
+    # trocar um problema pequeno por um grande.
+    for ruim in ("", " ", "\\", "{", "}", "^", "^{", r"\dfrac{1}", r"\sqrt",
+                 "a" * 3000, r"\dfrac{" * 150 + "1" + "}" * 150, "=" * 500,
+                 r"\mathrm{", "😀", "\x00", r"\cdot" * 300):
+        fala(ruim)          # não pode levantar; None é resposta legítima

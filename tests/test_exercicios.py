@@ -121,3 +121,47 @@ def test_cli_lista_e_ajuda_nao_quebram(capsys):
     assert main(["--lista"]) == 0
     assert main([]) == 0
     assert main(["nao_existe_isso"]) == 2
+
+
+# ───── defeitos que eu mesmo encontrei revisando o próprio diff
+
+@pytest.mark.parametrize("topico", topicos())
+@pytest.mark.parametrize("dif", [1, 2, 3])
+def test_serie_entrega_a_quantidade_que_prometeu(topico, dif):
+    # BUG meu: `serie("pitagoras", 10)` devolvia 6 CALADO, porque a receita
+    # tinha 6 pares decorados e esgotava. Folha de treino que entrega menos do
+    # que o aluno pediu, sem avisar, é a folha mentindo.
+    assert len(serie(topico, 10, dificuldade=dif, semente=1)) == 10
+
+
+def test_serie_falha_alto_quando_nao_tem_como_encher():
+    # e quando de fato não dá, tem que DIZER — com quantas dá e o que fazer.
+    with pytest.raises(ValueError) as e:
+        serie("pitagoras", 500, dificuldade=1)
+    assert "só rende" in str(e.value) and "500" in str(e.value)
+
+
+def test_ternos_pitagoricos_sao_gerados_e_todos_fecham():
+    # lista decorada era jukebox voltando pela porta dos fundos. Agora vêm da
+    # parametrização de Euclides — e todo par TEM que ter hipotenusa inteira.
+    import math
+
+    from autotuto.exercicios import _TERNOS
+    for dif, pares in _TERNOS.items():
+        assert len(pares) >= 10, dif
+        for a, b in pares:
+            c = math.isqrt(a * a + b * b)
+            assert c * c == a * a + b * b, (a, b)
+
+
+def test_dificuldade_1_de_pitagoras_e_so_a_familia_do_3_4_5():
+    # não é "número menor", é a família que o aluno RECONHECE: a hipotenusa
+    # sai múltipla de 5 e ele confere de cabeça. (5,12,13) no nível 1 é dar
+    # terno que ele nunca viu e chamar de fácil.
+    import math
+
+    from autotuto.exercicios import _TERNOS
+    for a, b in _TERNOS[1]:
+        k = math.gcd(a, b)
+        assert (a // k, b // k) == (3, 4), (a, b)
+        assert math.isqrt(a * a + b * b) % 5 == 0

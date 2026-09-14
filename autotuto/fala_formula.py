@@ -58,6 +58,18 @@ def _chaves(s: str, i: int) -> tuple[str, int]:
     raise ValueError("chave não fechada")
 
 
+# Palavras que denunciam numerador COMPOSTO. "3 vezes 10 sobre 4" é ambíguo
+# no ouvido: (3x10)/4 ou 3x(10/4)? Professor resolve isso com uma vírgula e um
+# "tudo isso sobre", que é como se fala de verdade no quadro.
+_OPERADORES = ("vezes", "mais", "menos", "sobre", "raiz quadrada",
+               "elevado", "ao quadrado", "ao cubo")
+
+
+def _diz_fracao(num: str, den: str) -> str:
+    composto = any(op in num for op in _OPERADORES)
+    return f"{num}, tudo isso sobre {den}" if composto else f"{num} sobre {den}"
+
+
 def fala(latex: str) -> str | None:
     """Frase falada em PT-BR, ou None se aparecer algo fora do vocabulário."""
     try:
@@ -90,7 +102,13 @@ def _traduz(s: str) -> str:
             if cmd in (r"\dfrac", r"\frac", r"\tfrac"):
                 num, i = _chaves(s, i)
                 den, i = _chaves(s, i)
-                saida.append(f"{_traduz(num)} sobre {_traduz(den)}")
+                saida.append(_diz_fracao(_traduz(num), _traduz(den)))
+                # "12 sobre 80 vezes 100" também é ambíguo pelo outro lado:
+                # (12/80)x100 ou 12/(80x100)? A vírgula fecha a fração como
+                # unidade antes do "vezes". Só o `\cdot` precisa: `+` e `-`
+                # já são lidos soltos e ninguém confunde.
+                if re.match(r"\s*\\cdot", s[i:]):
+                    saida.append(",")
             elif cmd == r"\sqrt":
                 dentro, i = _chaves(s, i)
                 saida.append(f"raiz quadrada de {_traduz(dentro)}")

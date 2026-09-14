@@ -50,6 +50,38 @@ def _limpa_num(v):
     return str(v)
 
 
+def _ternos_pitagoricos(teto: int) -> list[tuple[int, int]]:
+    """Pares de catetos com hipotenusa inteira, gerados — não decorados.
+
+    Parametrização de Euclides: a = m²-n², b = 2mn, c = m²+n². Dá infinitos;
+    aqui a gente corta no `teto` porque é aluno de 7º ano, não olimpíada.
+    Uma lista fixa de seis pares era jukebox: `serie(10)` esgotava e devolvia
+    seis em silêncio.
+    """
+    import math
+    fora = set()
+    for m in range(2, 12):
+        for n in range(1, m):
+            if math.gcd(m, n) != 1 or (m - n) % 2 == 0:
+                continue
+            a, b = m * m - n * n, 2 * m * n
+            for k in range(1, teto):
+                ka, kb = a * k, b * k
+                if max(ka, kb) > teto:
+                    break
+                fora.add((min(ka, kb), max(ka, kb)))
+    return sorted(fora)
+
+
+# Dificuldade 1 é SÓ a família do 3-4-5. Não é por ser número menor — é por ser
+# a que o aluno reconhece: a hipotenusa sai múltipla de 5 e ele confere de
+# cabeça. Jogar (5,12,13) e (8,15,17) no nível 1 é dar terno que ele nunca viu
+# e chamar de fácil.
+_TERNOS = {1: [(3 * k, 4 * k) for k in range(1, 11)],
+           2: _ternos_pitagoricos(40),
+           3: _ternos_pitagoricos(70)}
+
+
 # ─────────────────────────────────────────────────────────────── as receitas
 # topico -> (gerador do calc, sorteia params, molda o enunciado)
 # `dif` 1..3 mexe só no tamanho dos números e em deixar armadilha entrar.
@@ -121,9 +153,7 @@ _RECEITAS: dict[str, tuple] = {
     "comprimento_circunferencia": (
         "comprimento_circunferencia", lambda r, d: {"raio": _inteiro(r, 2, 15)},
         "Qual é o comprimento de uma circunferência de raio {raio}?"),
-    "pitagoras": ("pitagoras",
-                  lambda r, d: dict(zip(("a", "b"), r.choice(
-                      [(3, 4), (6, 8), (5, 12), (8, 15), (9, 12), (7, 24)]))),
+    "pitagoras": ("pitagoras", lambda r, d: dict(zip(("a", "b"), r.choice(_TERNOS[d]))),
                   "Um triângulo retângulo tem catetos {a} e {b}. "
                   "Quanto mede a hipotenusa?"),
     # "2x + (-10) = 0" é saída de computador. Prova escreve "2x - 10 = 0".
@@ -179,7 +209,7 @@ def serie(topico: str, quantas: int = 5, dificuldade: int = 2,
     rng = random.Random(semente)
     vistos: set[str] = set()
     saida: list[Exercicio] = []
-    for _ in range(quantas * 30):            # teto: evita laço infinito
+    for _ in range(quantas * 40):            # teto: evita laço infinito
         if len(saida) >= quantas:
             break
         e = gerar(topico, dificuldade, semente=rng.randrange(2**31))
@@ -187,6 +217,13 @@ def serie(topico: str, quantas: int = 5, dificuldade: int = 2,
             continue
         vistos.add(e.enunciado)
         saida.append(e)
+    if len(saida) < quantas:
+        # devolver menos CALADO é mentir a folha de treino: o aluno pede dez,
+        # recebe seis e não fica sabendo. Falha alto dizendo quantas dá.
+        raise ValueError(
+            f"{topico!r} na dificuldade {dificuldade} só rende {len(saida)} "
+            f"questões distintas, e você pediu {quantas}. Sobe a dificuldade "
+            f"ou pede menos.")
     return saida
 
 
