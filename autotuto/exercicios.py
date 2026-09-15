@@ -23,6 +23,7 @@ import random
 from dataclasses import dataclass, field
 
 from autotuto import calc
+from autotuto.config import TREINO_ESCUTA_S
 
 
 @dataclass
@@ -32,6 +33,22 @@ class Exercicio:
     resposta: str                       # o que o Python calculou
     passos: list[str] = field(default_factory=list)   # LaTeX, do próprio calc
     calc: dict = field(default_factory=dict)          # pra o tocador resolver na lousa
+
+    @property
+    def acerta(self) -> list[str]:
+        """Formas aceitas da resposta, pro crivo do tocador.
+
+        Número vai sozinho: o crivo numérico do tocador já cobre "47",
+        "quarenta e sete" e "acho que é 47". Resposta de texto vai INTEIRA —
+        mandar só a primeira palavra de "não existe" viraria um `acerta` com
+        "não", que casaria com "não sei" e daria acerto a quem se rendeu.
+        """
+        bruto = self.resposta.split(" ")[0]
+        try:
+            float(bruto)
+        except ValueError:
+            return [self.resposta]
+        return [bruto]
 
     def como_beat(self) -> dict:
         """Vira um beat de aula — o professor resolve na lousa, com passos."""
@@ -230,6 +247,7 @@ def serie(topico: str, quantas: int = 5, dificuldade: int = 2,
 # ─────────────────────────────────────────────────────── folha de treino (CLI)
 _AJUDA = """uso:  python -m autotuto.exercicios <tópico> [quantas] [dificuldade]
       python -m autotuto.exercicios prova                 (a folha da prova toda)
+      python -m autotuto.exercicios treino <tópico> [n] [dif]   (ele PERGUNTA e espera)
       python -m autotuto.exercicios --lista
 
 O gabarito sai DEPOIS, separado. Responde tudo antes de rolar a tela — se você
@@ -251,6 +269,37 @@ def folha(topicos_: list[str], quantas: int = 3, dificuldade: int = 2,
     return fora
 
 
+def _treino(topico: str, quantas: int, dif: int, entrada=input) -> int:
+    """Treino no terminal: o professor pergunta, ESPERA você digitar, corrige.
+
+    Usa o `Tocador` de verdade — mesmo beat `pergunta`, mesmo crivo de resposta,
+    mesmo fading. Só troca voz e lousa por print e input. Sem LLM, sem rede:
+    roda em qualquer máquina que abra um terminal.
+    """
+    from autotuto.aulas import _com_genericos
+    from autotuto.schema import Aula
+    from autotuto.tocador import Tocador
+
+    aula = aula_de_treino(topico, quantas, dif)
+    est = Tocador(
+        falar=lambda t: print(f"\n{t}"),
+        ouvir=lambda _seg: entrada("\n  sua resposta > ").strip(),
+        desenhar=lambda _png, _rot: None,     # terminal não tem lousa
+        pausas=False, cerebro=None, avaliador=None,
+    ).toca(Aula.de_json(_com_genericos(aula)))
+
+    errados = erros_do_treino(est.historico)
+    print("\n" + "─" * 60)
+    if not errados:
+        print(f"Acertou as {quantas}. Esse tópico você não precisa mais revisar.")
+    else:
+        print(f"Errou {len(errados)} de {quantas}: questões "
+              f"{', '.join(map(str, errados))}.")
+        print("Refaz amanhã — errar tentando lembrar é o que faz grudar.")
+    print("─" * 60 + "\n")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     import sys
     argv = sys.argv[1:] if argv is None else argv
@@ -260,6 +309,15 @@ def main(argv: list[str] | None = None) -> int:
     if argv[0] == "--lista":
         print("\n".join(topicos()))
         return 0
+
+    if argv[0] == "treino":
+        if len(argv) < 2 or argv[1] not in _RECEITAS:
+            print("uso: ... treino <tópico> [n] [dif]\ntem:\n  "
+                  + "\n  ".join(topicos()))
+            return 2
+        return _treino(argv[1],
+                       int(argv[2]) if len(argv) > 2 else 5,
+                       int(argv[3]) if len(argv) > 3 else 2)
 
     if argv[0] == "prova":
         quantas = int(argv[1]) if len(argv) > 1 else 3
@@ -284,6 +342,66 @@ def main(argv: list[str] | None = None) -> int:
     print()
     return 0
 
+
+
+# ──────────────────────────────────────────────── modo treino (o ciclo fechado)
+# O gerador acima produz a questão; o `tocador` já sabia PERGUNTAR E ESPERAR
+# (beat `pergunta`) desde sempre. Ninguém tinha ligado os dois — e sem isso o
+# gerador é folha de papel, não treino.
+#
+# Aqui o professor pergunta, CALA, ouve, e:
+#   acertou  -> confirma curto e vai pra próxima (fading: não explica o que ele
+#               já sabe, que é o erro clássico de quem revisa por vídeo)
+#   errou/calou -> resolve na lousa com os passos, e segue
+#
+# Quem corrige é o crivo que já existia em `classificador` — pega "47",
+# "quarenta e sete" e "acho que é 47" pelo número, e "não existe" por texto.
+
+_CONFIRMA = ("Isso.", "Certo.", "Exatamente isso.", "Boa, é isso mesmo.",
+             "Acertou.")
+
+
+def aula_de_treino(topico: str, quantas: int = 5, dificuldade: int = 2,
+                   semente: int | None = None) -> dict:
+    """Aula em que o professor COBRA: uma pergunta por questão, e espera."""
+    exs = serie(topico, quantas, dificuldade, semente)
+    blocos: list[dict] = [
+        {"diz": f"Vou te dar {len(exs)} questões. Responde cada uma, que eu "
+                f"corrijo na hora. Se errar, eu resolvo junto com você.",
+         "espera": "media"},
+    ]
+    ramos: dict[str, list] = {}
+    for i, e in enumerate(exs, 1):
+        nome = f"resolve_{i}"
+        blocos.append({
+            "diz": f"Questão {i}. {e.enunciado}",
+            "pergunta": {
+                "escuta_s": TREINO_ESCUTA_S,
+                "senao": nome,
+                "acerta": e.acerta,
+                "confirma": _CONFIRMA[(i - 1) % len(_CONFIRMA)],
+            },
+        })
+        ramos[nome] = [{
+            "diz": "Deixa eu fazer com você.",
+            "calc": e.calc, "mostra_passos": True, "espera": "longa",
+        }]
+    blocos.append({"diz": "Acabou. O que você errou aqui é o que estudar — "
+                          "o resto você já sabe.", "espera": "media"})
+    return {"titulo": f"Treino — {topico}", "topico": topico,
+            "dados": {"quantas": len(exs), "dificuldade": dificuldade},
+            "blocos": blocos, "ramos": ramos}
+
+
+def erros_do_treino(historico: list[str]) -> list[int]:
+    """Quais questões o aluno errou, lendo o histórico do `EstadoAula`.
+
+    Cada ramo `resolve_N` só é tocado quando a resposta não bateu — então o
+    histórico já É a lista de erros, de graça. Sem placar paralelo pra
+    dessincronizar.
+    """
+    return sorted({int(g.split("_")[1]) for g in historico
+                   if g.startswith("resolve_") and g.split("_")[1].isdigit()})
 
 if __name__ == "__main__":
     raise SystemExit(main())

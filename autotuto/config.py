@@ -119,6 +119,11 @@ MAX_MARCAS_RETA = 60
 # (o 43° e o 47° que juntos fecham o canto reto) desenhados no mesmo raio
 # viram um arco contínuo só — o aluno vê um ângulo de 90°, não dois. Cada
 # ângulo pode pedir o seu com "raio" no spec.
+# Quanto o professor espera o aluno responder no modo treino. Conta de ângulo
+# ou de área pede lápis e papel — 12s (o default do beat `pergunta`) é tempo de
+# quem já sabe, não de quem está treinando.
+TREINO_ESCUTA_S = 25
+
 RAIO_ARCO     = 0.6
 
 # A interrupção é a razão de existir do projeto — e o aluno não tem como
