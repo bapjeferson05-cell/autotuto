@@ -1,4 +1,4 @@
-"""aulas.py — as 6 aulas de ouro, escritas à mão.
+"""aulas.py — as 7 aulas de ouro, escritas à mão.
 
 Não são geradas por LLM. São a referência: a pedagogia que a gente QUER, no
 schema do projeto. Servem pra três coisas:
@@ -761,6 +761,151 @@ ANGULOS: dict = {
 }
 
 
+# ═══════════════════════════════ ÂNGULO INSCRITO — prova que a arquitetura já aguenta
+# Este tópico NÃO PRECISOU de gerador de figura novo. Só um gerador de CONTA
+# (calc.angulo_inscrito) e o `{"gerador": "figura", "spec": {...}}` que existe
+# desde a reescrita — "circulos" (com "setor" pra fatia), "segmentos", "angulos"
+# (com "raio" pra não emendar arcos vizinhos) e "rotulos". Zero código novo de
+# desenho. Prova a tese: o que falta pra tópico novo é AULA, não biblioteca.
+#
+# Coordenadas conferidas numericamente antes de escrever a aula (não "no olho"):
+# A=130°, B=50°, C=260°, D=190° na circunferência de raio 5. Ângulo central
+# AOB = 80° exatos; ângulo inscrito ACB = 40.0000°; ângulo inscrito ADB =
+# 40.0000° também — mesmo arco, dois vértices diferentes, o MESMO ângulo. É
+# essa invariância que a aula existe pra mostrar, não só a metade.
+_O = [0, 0]
+_R = 5
+_A = [-3.214, 3.83]
+_B = [3.214, 3.83]
+_C = [-0.868, -4.924]
+_D = [-4.924, -0.868]
+
+_INSCRITO_SPEC = {
+    "pontos": {"O": _O, "A": _A, "B": _B, "C": _C},
+    "circulos": [{"centro": "O", "raio": _R}],
+    "segmentos": [["O", "A"], ["O", "B"], ["C", "A"], ["C", "B"]],
+    # raios diferentes: o ângulo central (em O) e o inscrito (em C) não podem
+    # emendar arco — são dois ângulos, em dois vértices, de tamanhos diferentes.
+    "angulos": [{"vertice": "O", "de": "A", "para": "B", "raio": 1.1},
+                {"vertice": "C", "de": "A", "para": "B", "raio": 0.9}],
+    "rotulos": [{"xy": [0, 1.7], "texto": "80°"},
+                {"xy": [-0.868, -3.6], "texto": "40°"},
+                {"xy": [0.15, -0.35], "texto": "O"},
+                {"xy": [-3.5, 4.25], "texto": "A"},
+                {"xy": [3.5, 4.25], "texto": "B"},
+                {"xy": [-0.868, -5.55], "texto": "C"}],
+}
+
+# a segunda figura: só troca C por D, pra mostrar que o ângulo NÃO MUDA
+_INVARIANCIA_SPEC = {
+    "pontos": {"O": _O, "A": _A, "B": _B, "C": _C, "D": _D},
+    "circulos": [{"centro": "O", "raio": _R}],
+    "segmentos": [["D", "A"], ["D", "B"],
+                  {"de": "C", "para": "A", "tracejado": True},
+                  {"de": "C", "para": "B", "tracejado": True}],
+    "angulos": [{"vertice": "D", "de": "A", "para": "B", "raio": 0.9},
+                {"vertice": "C", "de": "A", "para": "B", "raio": 0.9}],
+    "rotulos": [{"xy": [-3.5, 4.25], "texto": "A"},
+                {"xy": [3.5, 4.25], "texto": "B"},
+                {"xy": [-0.868, -5.55], "texto": "C"},
+                {"xy": [-5.55, -0.868], "texto": "D"},
+                {"xy": [-2.6, -1.3], "texto": "40°"},
+                {"xy": [-0.868, -3.6], "texto": "40°"}],
+}
+
+ANGULO_INSCRITO: dict = {
+    "titulo": "Ângulo inscrito — metade do centro, do jeito que for",
+    "topico": "angulo_inscrito",
+    "dados": {"arco": 80, "inscrito": 40},
+    "blocos": [
+        {"diz": "Olha essa circunferência. O ponto O é o centro, e A e B estão "
+                "na borda. O ângulo que sai do CENTRO até A e B — o AOB — eu "
+                "vou chamar de ângulo central. Esse aqui mede oitenta graus.",
+         "figura": {"gerador": "figura", "spec": {
+             "pontos": {"O": _O, "A": _A, "B": _B},
+             "circulos": [{"centro": "O", "raio": _R}],
+             "segmentos": [["O", "A"], ["O", "B"]],
+             "angulos": [{"vertice": "O", "de": "A", "para": "B"}],
+             "rotulos": [{"xy": [0, 1.7], "texto": "80°"},
+                         {"xy": [-3.5, 4.25], "texto": "A"},
+                         {"xy": [3.5, 4.25], "texto": "B"}]}},
+         "espera": "media"},
+        {"diz": "Agora bota um terceiro ponto na borda, o C, só que do outro "
+                "lado da circunferência. Liga ele até A e até B. Esse ângulo "
+                "novo, o ACB, tem um nome: ângulo inscrito.",
+         "figura": {"gerador": "figura", "spec": _INSCRITO_SPEC},
+         "espera": "media"},
+        # beat PERGUNTA — antes de eu revelar o valor, ele tenta prever
+        {"diz": "Antes de eu te falar quanto vale o ACB: repara que ele "
+                "enxerga a MESMA corda AB que o ângulo central enxerga. "
+                "Você acha que ele vai ser maior, menor, ou igual ao ângulo "
+                "central de oitenta graus?",
+         "figura": {"gerador": "figura", "spec": _INSCRITO_SPEC},
+         "pergunta": {"escuta_s": 12, "senao": "nao_sabia_a_metade",
+                      "acerta": ["menor", "metade", "40", "quarenta"],
+                      "confirma": "Isso, menor — e não é menor de qualquer "
+                                  "jeito. É exatamente a METADE."}},
+        {"diz": "O ângulo inscrito vale sempre metade do ângulo central que "
+                "enxerga a mesma corda. Oitenta dividido por dois é quarenta.",
+         "figura": {"gerador": "figura", "spec": _INSCRITO_SPEC},
+         "calc": {"gerador": "angulo_inscrito", "params": {"arco": 80}},
+         "mostra_passos": True,
+         "diz_passos": ["O ângulo inscrito é o arco dividido por dois.",
+                        "Oitenta graus dividido por dois dá quarenta."],
+         "espera": "longa"},
+        {"diz": "Quarenta graus. Metade de oitenta, sempre — não importa o "
+                "raio nem onde exatamente A e B estão.", "espera": "media"},
+    ],
+    "ramos": {
+        # "e se o vértice fosse outro ponto da circunferência?" — a invariância
+        "e_se_mudar_o_vertice": [
+            {"diz": "Boa pergunta. Olha: troquei o C de lugar, pro D, do outro "
+                    "lado. A corda AB é a mesma, o arco é o mesmo. O ângulo "
+                    "em D também dá quarenta graus. Continua sendo metade.",
+             "figura": {"gerador": "figura", "spec": _INVARIANCIA_SPEC},
+             "espera": "longa"},
+            {"diz": "Isso vale pra QUALQUER ponto que você escolher na parte "
+                    "de baixo da circunferência: o ângulo vai dar sempre "
+                    "quarenta. Só muda se o vértice for pro outro lado do "
+                    "arco — aí é outra conta, com outro arco.",
+             "espera": "media"},
+        ],
+        "nao_sabia_a_metade": [
+            {"diz": "Tranquilo. O jeito de guardar é olhar o desenho: o "
+                    "ângulo central fica no meio do círculo, bem na ponta da "
+                    "fatia. O inscrito fica na borda, mais aberto, mais "
+                    "longe — e por isso ele enxerga a mesma corda com metade "
+                    "do ângulo.",
+             "figura": {"gerador": "figura", "spec": _INSCRITO_SPEC},
+             "espera": "longa"},
+        ],
+        "por_que": [
+            {"diz": "A demonstração de verdade usa triângulo isósceles: "
+                    "liga o centro O até o C, e repara que OC, OA e OB são "
+                    "todos raio — o mesmo tamanho. Isso cria dois triângulos "
+                    "isósceles dentro do desenho, e a soma dos ângulos deles "
+                    "é o que fecha a conta em exatamente metade.",
+             "figura": {"gerador": "figura", "spec": _INSCRITO_SPEC},
+             "espera": "longa"},
+        ],
+        "de_onde_veio": [
+            {"diz": "Esse teorema está no Livro Três dos Elementos de "
+                    "Euclides, escrito por volta do ano trezentos antes de "
+                    "Cristo, em Alexandria. E ele não inventou isso do nada: "
+                    "é uma consequência direta de triângulo isósceles, que "
+                    "os gregos já dominavam havia séculos.",
+             "espera": "media"},
+            {"diz": "Um caso particular dele é famoso com nome próprio: "
+                    "quando a corda AB passa pelo centro — vira um diâmetro "
+                    "— o ângulo central dá cento e oitenta, e todo ângulo "
+                    "inscrito nesse arco dá exatamente noventa. Isso se chama "
+                    "Teorema de Tales no círculo.",
+             "espera": "longa"},
+        ],
+    },
+}
+
+
 # ═══════════════════════════════════ EXEMPLO DE ESTRUTURA (few-shot de emergência)
 # NÃO é uma aula de ouro e NÃO entra em `_CATALOGO` — `disponiveis()` não muda.
 # Existe por um motivo só: quando o problema do aluno não casa com nenhuma pista
@@ -844,7 +989,8 @@ AULA_SEM_PLANO: dict = {
 
 _CATALOGO = {"trapezio": TRAPEZIO, "pitagoras": PITAGORAS,
              "eq_primeiro_grau": EQ_PRIMEIRO_GRAU, "regra_de_tres": REGRA_DE_TRES,
-             "fracao": FRACAO, "angulos": ANGULOS}
+             "fracao": FRACAO, "angulos": ANGULOS,
+             "angulo_inscrito": ANGULO_INSCRITO}
 
 
 def carregar(nome: str) -> Aula:

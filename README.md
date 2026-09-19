@@ -72,7 +72,7 @@ autotuto/visor.py                  a tela (http.server, zero dep)
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e '.[test]'
 
-# 1. os testes (485 — cobrem cada módulo + a regra "nunca mentir")
+# 1. os testes (500 — cobrem cada módulo + a regra "nunca mentir")
 .venv/bin/pytest
 
 # 2. o Ciclo do Trapézio, determinístico, sem LLM nem STT — pro vídeo/ensaio
@@ -135,7 +135,7 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 | `autotuto/figuras/lousa.py` | tema (cores da lousa) + `passo_latex(latex)` |
 | `autotuto/figuras/catalogo.py` | geradores nomeados (trapézio, balança, tabela de proporção, círculo, a pizza da fração...) usados pelo planejador |
 | `autotuto/estado.py` | `EstadoAula` — pilha de trilhas. Interrupção empilha ramo, `drena_ramo()` toca e desempilha, a principal retoma |
-| `autotuto/aulas.py` | **6 aulas de ouro** escritas à mão: `trapezio`, `pitagoras`, `eq_primeiro_grau`, `regra_de_tres`, `fracao`, `angulos` — o MVP e o few-shot do planejador |
+| `autotuto/aulas.py` | **6 aulas de ouro** escritas à mão: `trapezio`, `pitagoras`, `eq_primeiro_grau`, `regra_de_tres`, `fracao`, `angulos`, `angulo_inscrito` — o MVP e o few-shot do planejador |
 | `autotuto/classificador.py` | fala do aluno → gatilho de ramo (regex; nunca devolve gatilho que a aula não tem) |
 | `autotuto/llm.py` | uma função — `perguntar(mensagens, timeout)` — Ollama local ou Claude API |
 | `autotuto/cerebro.py` | LLM **curto**, só na interrupção: fala + contexto + ramos disponíveis → escolhe um ramo real ou `None` |
@@ -160,10 +160,11 @@ knobs (timings, modelo, portas, cores da lousa) vivem em `autotuto/config.py`.
 - ✅ passo de conta narrado automático quando o plano não traz `diz_passos`
 - ✅ gerador de exercício + **modo treino**: pergunta, espera, corrige — o projeto
   passou a **cobrar**, não só explicar (é o degrau que vídeo não sobe)
-- ✅ 6 aulas de ouro (a de ângulos saiu de uma prova real de 7º ano) · passos narrados (dual coding) · few-shot dirigido por tópico
+- ✅ 7 aulas de ouro (ângulos saiu de prova real; ângulo inscrito prova que tópico
+  novo não precisa de gerador de FIGURA novo, só de gerador de CONTA) · passos narrados (dual coding) · few-shot dirigido por tópico
 - ✅ voz (Piper + faster-whisper, adapter próprio) · visor · modo voz / texto / roteiro
 - ✅ teclado como caminho principal de interrupção (mic é bônus, `BARGE_IN=0` por padrão)
-- ✅ 485 testes, 0 warnings
+- ✅ 500 testes, 0 warnings
 - ✅ círculo, setor de círculo e a pizza da fração · área/circunferência no `calc`
 - ⏳ mais aulas de ouro (círculo ainda não tem a dela) · renderer ao vivo no
   navegador (Fase 2) · teste do caminho de mic (`BARGE_IN=1`) com hardware real

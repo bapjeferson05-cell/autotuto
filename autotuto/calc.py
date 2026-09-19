@@ -146,6 +146,24 @@ def suplemento(angulo) -> Resultado:
         rf"S = 180^\circ - {_n(angulo)}^\circ = {_n(v)}^\circ"], "°")
 
 
+# Teorema do ângulo inscrito: veio de mostrar que a arquitetura já aguenta
+# tópico novo sem gerador de FIGURA novo — só precisou de UM gerador de CONTA
+# (esta função) e uma aula usando o `gerador: "figura"` que já existe desde a
+# reescrita. `arco` é o ângulo central que enxerga a mesma corda que o ângulo
+# inscrito enxerga; a metade é o ângulo inscrito, sempre, não importa onde na
+# circunferência o vértice dele esteja (é a parte que costuma parecer mágica).
+def angulo_inscrito(arco) -> Resultado:
+    """O ângulo inscrito vale metade do arco (ângulo central) que ele enxerga."""
+    if not 0 < arco < 360:
+        raise ValueError(f"angulo_inscrito: arco tem que estar entre 0 e 360 "
+                         f"graus (recebeu {arco!r})")
+    v = arco / 2
+    return Resultado(_n(v), [
+        r"\text{ângulo inscrito} = \dfrac{\text{arco}}{2}",
+        rf"\text{{ângulo inscrito}} = \dfrac{{{_n(arco)}^\circ}}{{2}} = {_n(v)}^\circ"],
+        "°")
+
+
 CATALOGO = {"area_trapezio": area_trapezio, "area_triangulo": area_triangulo,
             "area_retangulo": area_retangulo, "pitagoras": pitagoras,
             "eq_primeiro_grau": eq_primeiro_grau, "regra_de_tres": regra_de_tres,
@@ -153,4 +171,5 @@ CATALOGO = {"area_trapezio": area_trapezio, "area_triangulo": area_triangulo,
             "area_circulo": area_circulo,
             "comprimento_circunferencia": comprimento_circunferencia,
             "fracao_de": fracao_de,
-            "complemento": complemento, "suplemento": suplemento}
+            "complemento": complemento, "suplemento": suplemento,
+            "angulo_inscrito": angulo_inscrito}

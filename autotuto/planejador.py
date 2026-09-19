@@ -51,6 +51,15 @@ _PISTAS: dict[str, tuple] = {
         r"primeiro grau",
         r"pensei num n[úu]mero",
     ),
+    # ângulo inscrito TEM que vir antes de "angulos" (a genérica casaria
+    # "ângulo" primeiro e mandaria pra complemento/suplemento, tópico errado).
+    "angulo_inscrito": (
+        r"inscrit",
+        r"[âa]ngulo.{0,20}(central|circunfer|circulo|c[íi]rculo)",
+        r"(central|circunfer|circulo|c[íi]rculo).{0,20}[âa]ngulo",
+        r"teorema de tales",
+        r"arco.{0,15}[âa]ngulo",
+    ),
     # ângulos: veio de prova real de 7º ano — era a questão que o aluno deixou
     # em branco, e o tópico não casava NADA aqui.
     "angulos": (
@@ -264,6 +273,8 @@ GERADORES DE CÁLCULO (use no "calc", campo "gerador"):
     ATENÇÃO: ângulo de 90° ou mais NÃO TEM complemento — o gerador já devolve
     "não existe", e essa É a resposta certa. Nunca escreva no "diz" que dá um
     número negativo.)
+  · angulo_inscrito(arco)  (o "arco" é o ângulo CENTRAL que enxerga a mesma
+    corda; devolve o ângulo inscrito, que é sempre metade)
   NÃO improvise um cálculo com um gerador que não é dele (ex.: usar eq_primeiro_grau
   pra simular porcentagem ou MDC) — se não existe gerador certo, admita no "diz" e
   siga sem o número exato.

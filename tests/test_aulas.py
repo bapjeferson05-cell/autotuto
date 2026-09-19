@@ -6,7 +6,7 @@ from autotuto.figuras.canvas import figura
 from autotuto.schema import validar_estrutura
 
 NOMES = ["trapezio", "pitagoras", "eq_primeiro_grau", "regra_de_tres", "fracao",
-         "angulos"]
+         "angulos", "angulo_inscrito"]
 
 
 def test_disponiveis():
@@ -163,3 +163,56 @@ def test_plano_de_llm_sem_historia_cai_no_generico_honesto():
              "blocos": [{"diz": "um número primo só é divisível por 1 e por ele"}]}
     d = _com_genericos(plano)
     assert d["ramos"]["de_onde_veio"] == RAMOS_GENERICOS["de_onde_veio"]
+
+
+# ───── ângulo inscrito: a prova de que tópico novo não pede gerador de figura
+
+def test_angulo_inscrito_usa_so_o_gerador_figura_universal():
+    # a tese inteira do tópico: NENHUM beat pode chamar gerador de figura
+    # nomeado (retangulo, circulo, ...) — só o "figura" genérico com spec.
+    aula = carregar("angulo_inscrito")
+    for beat in _todos_os_beats(aula):
+        fig = beat.get("figura")
+        if fig:
+            assert fig["gerador"] == "figura", (aula.titulo, fig)
+
+
+def test_angulo_inscrito_geometria_bate_com_o_teorema():
+    # confere as COORDENADAS da aula, não só o gerador de conta: o ângulo
+    # central desenhado tem que dar 80° e o inscrito 40°, de verdade, medido
+    # nos pontos que o spec usa — não só "a conta separada dá 40".
+    import numpy as np
+    aula = carregar("angulo_inscrito")
+    spec = next(b["figura"]["spec"] for b in aula.blocos if b.get("figura")
+               and "circulos" in b["figura"]["spec"]
+               and len(b["figura"]["spec"].get("angulos", [])) == 2)
+    pts = {k: np.array(v, dtype=float) for k, v in spec["pontos"].items()}
+    O, A, B, C = pts["O"], pts["A"], pts["B"], pts["C"]
+
+    def angulo(v, a, b):
+        va, vb = a - v, b - v
+        cos = np.dot(va, vb) / (np.linalg.norm(va) * np.linalg.norm(vb))
+        return np.degrees(np.arccos(np.clip(cos, -1, 1)))
+
+    assert abs(angulo(O, A, B) - 80) < 0.01
+    assert abs(angulo(C, A, B) - 40) < 0.01                     # metade exata
+
+
+def test_angulo_inscrito_invariante_no_ramo_do_segundo_vertice():
+    # o ramo "e_se_mudar_o_vertice" é a prova visual de que o ângulo NÃO MUDA
+    # trocando o vértice — precisa bater matematicamente, não só "parecer".
+    import numpy as np
+    aula = carregar("angulo_inscrito")
+    spec = aula.ramos["e_se_mudar_o_vertice"][0]["figura"]["spec"]
+    pts = {k: np.array(v, dtype=float) for k, v in spec["pontos"].items()}
+    A, B, D = pts["A"], pts["B"], pts["D"]
+    DA, DB = A - D, B - D
+    cos = np.dot(DA, DB) / (np.linalg.norm(DA) * np.linalg.norm(DB))
+    assert abs(np.degrees(np.arccos(cos)) - 40) < 0.01
+
+
+def test_angulo_inscrito_ramo_da_pegadinha_aponta_certo():
+    aula = carregar("angulo_inscrito")
+    pg = next(b["pergunta"] for b in aula.blocos if b.get("pergunta"))
+    assert pg["senao"] in aula.ramos
+    assert any("metade" in a or a in ("40", "quarenta") for a in pg["acerta"])

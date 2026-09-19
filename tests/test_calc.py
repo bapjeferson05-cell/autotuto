@@ -2,7 +2,7 @@ import math
 from autotuto.calc import (Resultado, area_trapezio, area_triangulo, area_retangulo,
                            pitagoras, eq_primeiro_grau, regra_de_tres,
                            porcentagem, mdc, mmc, area_circulo, complemento,
-                           suplemento,
+                           suplemento, angulo_inscrito,
                            comprimento_circunferencia, fracao_de, CATALOGO)
 
 def test_trapezio_valor_e_passos():
@@ -46,7 +46,7 @@ def test_catalogo_tem_as_seis():
                              "pitagoras", "eq_primeiro_grau", "regra_de_tres",
                              "porcentagem", "mdc", "mmc", "area_circulo",
                              "comprimento_circunferencia", "fracao_de",
-                             "complemento", "suplemento"}
+                             "complemento", "suplemento", "angulo_inscrito"}
 
 
 def test_porcentagem():
@@ -141,3 +141,18 @@ def test_nao_levanta_no_caso_impossivel():
     plano = {"blocos": [{"diz": "olha",
                          "calc": {"gerador": "complemento", "params": {"angulo": 145}}}]}
     assert avisos_graves(checar_matematica(plano)) == []
+
+
+# ───── ângulo inscrito (prova que tópico novo não precisa de gerador de FIGURA)
+
+def test_angulo_inscrito_e_sempre_metade():
+    assert angulo_inscrito(80).valor == "40"
+    assert angulo_inscrito(60).valor == "30"
+    assert angulo_inscrito(180).valor == "90"       # o caso Tales: diâmetro
+
+
+def test_angulo_inscrito_rejeita_arco_impossivel():
+    import pytest
+    for ruim in (0, -10, 360, 400):
+        with pytest.raises(ValueError):
+            angulo_inscrito(ruim)
