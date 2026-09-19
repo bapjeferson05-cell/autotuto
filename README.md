@@ -56,9 +56,24 @@ professor/visor.py                 a tela (http.server, zero dep)
 
 ## Rodar
 
+Caminho rápido — **catálogo primeiro, LLM por último**: as aulas de ouro
+(`professor/aulas.py`) tocam sem rede, sem chave de API, sem planejador nenhum.
+O LLM só entra se você pedir um tópico que não está no catálogo, e só se insistir.
+
 ```bash
 python3 -m venv .venv && .venv/bin/pip install matplotlib numpy pillow
 
+.venv/bin/python autotuto                 # lista as aulas de ouro
+.venv/bin/python autotuto trapezio        # toca, zero LLM — abre http://localhost:8080
+.venv/bin/python autotuto --texto pitagoras   # idem, e fica esperando outro tópico na caixa
+.venv/bin/python autotuto --novo circulo  # não está no catálogo -> insiste, chama o planejador
+```
+
+O resto abaixo (`demo.py`, `exemplos.py`, o modo web, voz) são as portas antigas —
+ainda funcionam, mas passam pelo LLM no caminho feliz. O comando `autotuto` acima é
+o caminho recomendado pra ver o produto funcionando de verdade.
+
+```bash
 # 1. renderizador — bate a lista das ~100 figuras geométricas (97/98)
 .venv/bin/python treinar.py                # → COBERTURA.md + out/treinar/*
 
