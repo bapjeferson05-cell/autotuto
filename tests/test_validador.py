@@ -229,6 +229,31 @@ def test_valida_bloco_bloco_vazio():
     assert not rel.ok
 
 
+# ───────────────────────────────────────────── gerador inexistente é FATAL,
+# não só mais um "problema" recuperável (ver planejador._saneia)
+def test_valida_bloco_figura_com_gerador_inexistente_e_fatal():
+    rel = validador.valida_bloco({"diz": "olha", "figura": {"gerador": "hexagrama_magico"}})
+    assert not rel.ok
+    assert rel.fatais
+    assert any("hexagrama_magico" in f for f in rel.fatais)
+
+
+def test_valida_bloco_calc_com_gerador_inexistente_e_fatal():
+    rel = validador.valida_bloco({"diz": "olha",
+                                  "calc": {"gerador": "raiz_cubica_magica", "params": {}}})
+    assert not rel.ok
+    assert rel.fatais
+    assert any("raiz_cubica_magica" in f for f in rel.fatais)
+
+
+def test_valida_bloco_gerador_existente_mas_com_erro_nao_e_fatal():
+    # 'triangulo' existe — faltar um parâmetro é recuperável, não é a mesma mentira
+    rel = validador.valida_bloco({"diz": "olha", "figura": {"gerador": "triangulo",
+                                                             "params": {}}})
+    assert not rel.ok
+    assert not rel.fatais
+
+
 # ─────────────────────────────────────────────────────────────── valida_aula
 def test_valida_aula_da_ouro_trapezio_e_100_por_cento_valida():
     rel = validador.valida_aula(carregar("trapezio"))

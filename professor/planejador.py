@@ -248,7 +248,12 @@ def _repara_spec(spec: dict) -> dict:
 
 def _saneia(aula: Aula) -> tuple[Aula, list[str]]:
     """Última linha: repara o que dá, joga fora bloco/ramo que não valida, garante
-    os ramos padrão. Um plano com 1 ramo quebrado não derruba a aula toda."""
+    os ramos padrão. Um plano com 1 ramo quebrado não derruba a aula toda.
+
+    Gerador inexistente é a EXCEÇÃO: não é bloco quebrado, é o LLM inventando uma
+    ferramenta que a gente não tem. Podar só esse bloco faria a figura/conta sumir
+    e a aula seguir como se tivesse acontecido — a mentira que a regra única do
+    projeto proíbe. Isso derruba o plano inteiro; fallback é o plano offline."""
     notas: list[str] = []
     todos = list(aula.blocos) + [b for v in (aula.ramos or {}).values() for b in v]
     for b in todos:
@@ -256,7 +261,12 @@ def _saneia(aula: Aula) -> tuple[Aula, list[str]]:
         if isinstance(fg, dict) and fg.get("gerador") == "figura":
             fg["spec"] = _repara_spec(fg.get("spec", {}))
 
-    bons = [b for b in aula.blocos if validador.valida_bloco(b).ok]
+    avaliados = {id(b): validador.valida_bloco(b) for b in todos}
+    fatais = [m for r in avaliados.values() for m in r.fatais]
+    if fatais:
+        return planeja_offline(), notas + fatais + ["gerador inexistente no plano — plano offline"]
+
+    bons = [b for b in aula.blocos if avaliados[id(b)].ok]
     if len(bons) < len(aula.blocos):
         notas.append(f"{len(aula.blocos) - len(bons)} bloco(s) inválidos removidos")
     if not bons:
@@ -265,7 +275,7 @@ def _saneia(aula: Aula) -> tuple[Aula, list[str]]:
 
     ramos: dict[str, list[dict]] = {}
     for g, blist in (aula.ramos or {}).items():
-        ok = [b for b in blist if validador.valida_bloco(b).ok]
+        ok = [b for b in blist if avaliados[id(b)].ok]
         if ok:
             ramos[g] = ok
         else:

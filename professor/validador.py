@@ -28,6 +28,12 @@ from professor.figuras import formas
 class Relatorio:
     problemas: list[str] = field(default_factory=list)
     avisos: list[str] = field(default_factory=list)
+    # gerador inexistente é um problema à parte: o LLM inventou uma ferramenta que
+    # não existe. Isso não dá pra só "podar o bloco e seguir" — é a mentira que a
+    # regra única do projeto proíbe (desenho/conta some, aula segue como se tivesse
+    # acontecido). `planejador._saneia` olha esta lista pra decidir entre podar o
+    # bloco (recuperável) e jogar o plano inteiro fora (não é).
+    fatais: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -36,6 +42,7 @@ class Relatorio:
     def __iadd__(self, outro: "Relatorio") -> "Relatorio":
         self.problemas += outro.problemas
         self.avisos += outro.avisos
+        self.fatais += outro.fatais
         return self
 
 
@@ -286,17 +293,23 @@ def valida_bloco(bloco: dict, *, onde: str = "bloco", ramos_validos: set | None 
                 rel.problemas.append(f"{onde}.pergunta.escuta_s deve ser um número de 3 a 60")
 
     if "figura" in bloco and bloco["figura"]:
+        gnome = bloco["figura"].get("gerador")
+        if gnome not in GERADORES:
+            rel.fatais.append(f"{onde}.figura: gerador '{gnome}' não existe")
         params, erros = _valida_chamada(bloco["figura"], "figura")
         rel.problemas += [f"{onde}.figura: {e}" for e in erros]
-        if not erros and bloco["figura"].get("gerador") != "figura":
+        if not erros and gnome != "figura":
             rel.problemas += [f"{onde}.figura: {e}"
-                              for e in _mat_figura(bloco["figura"]["gerador"], params)]
+                              for e in _mat_figura(gnome, params)]
     if "calc" in bloco and bloco["calc"]:
+        gnome = bloco["calc"].get("gerador")
+        if gnome not in GERADORES:
+            rel.fatais.append(f"{onde}.calc: gerador '{gnome}' não existe")
         params, erros = _valida_chamada(bloco["calc"], "calc")
         rel.problemas += [f"{onde}.calc: {e}" for e in erros]
         if not erros:
             rel.problemas += [f"{onde}.calc: {e}"
-                              for e in _mat_calc(bloco["calc"]["gerador"], params)]
+                              for e in _mat_calc(gnome, params)]
     if not bloco.get("figura") and not bloco.get("calc") and not bloco.get("diz"):
         rel.problemas.append(f"{onde}: bloco vazio")
     return rel
