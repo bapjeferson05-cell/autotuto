@@ -21,6 +21,19 @@ respondeu.
 
 ---
 
+## Demo ao vivo (20/09)
+
+```bash
+git clone https://github.com/bapjeferson05-cell/autotuto
+git checkout claude/repository-improvements-fzea65
+python3 -m venv .venv && .venv/bin/pip install matplotlib numpy pillow
+python autotuto trapezio
+```
+
+Abre `:8080`. Teclas `1` / `2` / `3`. Zero chave.
+
+---
+
 ## Arquitetura
 
 O LLM **não desenha e não faz conta**. Ele escreve um **plano** (JSON): uma lista de
