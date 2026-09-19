@@ -121,8 +121,13 @@ class Tocador:
 
             gat = None
             if r and r[0] == "barge":
-                gat = classificar(r[1], est.aula.ramos) or "por_que"
-                print(f'  ✋ "{r[1]}"  →  {gat}')
+                # F(regra de ouro): sem classificar() bater em ramo nenhum, cair em
+                # "por_que" era FINGIR que entendeu — o aluno pode ter dito qualquer
+                # coisa. Admitir e seguir é a mentira que a regra única proíbe evitar.
+                gat = classificar(r[1], est.aula.ramos)
+                print(f'  ✋ "{r[1]}"  →  {gat or "(não reconhecido)"}')
+                if not gat:
+                    self.falar("Essa eu não preparei agora — sigo daqui.")
             elif r and r[0] == "resposta":
                 dita = r[1]
                 pg = bloco["pergunta"]

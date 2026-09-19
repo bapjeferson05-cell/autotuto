@@ -131,8 +131,17 @@ class Visor:
 
     def falar(self, texto: str) -> str | None:
         self.mostrar_fala(texto)
-        if self.ritmo:
-            time.sleep(min(len(texto) * self.ritmo, 8.0))
+        if not self.ritmo:
+            return None
+        # teclas 1/2/3/0 têm que cortar a fala de verdade — só dormir e nunca olhar
+        # pra _injecao deixava a interrupção acumulada até a próxima 'pergunta',
+        # sendo lida como resposta de uma pergunta que ainda nem tinha sido feita.
+        fim = time.monotonic() + min(len(texto) * self.ritmo, 8.0)
+        while time.monotonic() < fim:
+            t = self.pop_injecao()
+            if t:
+                return t
+            time.sleep(0.05)
         return None
 
     def mostrar_fala(self, texto: str) -> None:
