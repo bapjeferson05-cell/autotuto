@@ -25,9 +25,10 @@ respondeu.
 
 ```bash
 git clone https://github.com/bapjeferson05-cell/autotuto
+cd autotuto
 git checkout claude/repository-improvements-fzea65
 python3 -m venv .venv && .venv/bin/pip install matplotlib numpy pillow
-python autotuto trapezio
+.venv/bin/python autotuto trapezio
 ```
 
 Abre `:8080`. Teclas `1` / `2` / `3`. Zero chave.
