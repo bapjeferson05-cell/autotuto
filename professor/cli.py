@@ -74,15 +74,24 @@ def _tenta_planejador(visor, pedido: str) -> None:
     aula, rel = planejador.planeja(pedido, verbose=True)
     if rel.avisos:
         print("  avisos:", rel.avisos)
-    if not aula.blocos:
-        print(f"\nnão consegui montar '{pedido}'. {aula.titulo if aula.titulo != '(vazia)' else ''}\n")
-        print(_lista())
+
+    # planeja() sem LLM no ar devolve planeja_offline() — que é a aula de ouro do
+    # TRAPÉZIO, com rel.ok=True. Tocar isso aqui seria responder "área do círculo"
+    # com uma aula de trapézio e cara de quem respondeu: a mentira que a regra
+    # única do projeto proíbe. Quem pediu tem que ouvir que não deu.
+    caiu_no_offline = any("plano offline" in a for a in rel.avisos)
+    if caiu_no_offline or not aula.blocos:
+        recusa = (f"Não consegui montar uma aula de '{pedido}' agora — não tenho "
+                  f"o modelo disponível aqui. Não vou te empurrar outra aula no lugar.")
+        print(f"\n{recusa}\n")
+        visor.mostrar_fala(recusa)
         visor.estado("pronto")
+        print(_lista())
         return
     _toca_na_tela(visor, aula)
 
 
-def _sessao(visor, *, ficar_no_ar: bool) -> None:
+def _sessao(visor) -> None:
     print("digite outro tópico na caixa do visor (ou Ctrl+C pra sair)…")
     try:
         while True:
@@ -106,7 +115,7 @@ def _rodar(nome_catalogo: str, *, ficar_no_ar: bool) -> None:
     print(f"'{nome_catalogo}' direto do catálogo, zero LLM — teclas 1/2/3/0 interrompem a fala.")
     _toca_na_tela(visor, carregar(nome_catalogo))
     if ficar_no_ar:
-        _sessao(visor, ficar_no_ar=ficar_no_ar)
+        _sessao(visor)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -140,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
     visor = Visor(ritmo=0.05).start()
     _tenta_planejador(visor, args.topico)
     if args.texto:
-        _sessao(visor, ficar_no_ar=True)
+        _sessao(visor)
     return 0
 
 
