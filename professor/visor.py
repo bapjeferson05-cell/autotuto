@@ -232,4 +232,8 @@ class Visor:
 
     def stop(self) -> None:
         if self._srv:
+            # shutdown() só para o serve_forever; sem server_close() o socket de
+            # escuta continua aberto e a porta segue ocupada pro próximo visor.
             self._srv.shutdown()
+            self._srv.server_close()
+            self._srv = None

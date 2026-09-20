@@ -36,3 +36,18 @@ def test_falar_sem_ritmo_nao_espera_nem_confere_injecao():
     with v._lock:
         v._injecao = "isso não devia importar"
     assert v.falar("qualquer coisa") is None
+
+
+def test_stop_libera_a_porta_de_verdade():
+    # shutdown() sozinho para o loop mas deixa o socket de escuta aberto: o
+    # próximo Visor na mesma porta levava "Address already in use".
+    v = Visor(porta=8089, ritmo=0).start()
+    v.stop()
+    v2 = Visor(porta=8089, ritmo=0).start()     # tem que conseguir religar
+    v2.stop()
+
+
+def test_stop_e_idempotente():
+    v = Visor(porta=8089, ritmo=0).start()
+    v.stop()
+    v.stop()

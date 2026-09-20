@@ -15,11 +15,14 @@ o aluno insistir (--novo). Sem isso, o comando só oferece o catálogo.
 from __future__ import annotations
 
 import argparse
+import errno
 import re
 import time
 import unicodedata
 
 from professor.aulas import carregar, disponiveis
+
+_PORTAS = (8080, 8081, 8082)
 
 
 def _norm(nome: str) -> str:
@@ -41,6 +44,22 @@ def _lista() -> str:
     linhas += [f"  autotuto {c}" for c in disponiveis()]
     linhas += ["", "tópico fora daqui? `autotuto --novo <topico>` tenta o planejador."]
     return "\n".join(linhas)
+
+
+def _abre_visor(ritmo: float = 0.05):
+    """Visor na 8080; se estiver ocupada, tenta as próximas. Rodar a demo duas vezes
+    (ou ter qualquer coisa na 8080) cuspia um traceback de OSError na tela."""
+    from professor.visor import Visor
+
+    for porta in _PORTAS:
+        try:
+            return Visor(porta=porta, ritmo=ritmo).start()
+        except OSError as e:
+            if e.errno != errno.EADDRINUSE:
+                raise
+            print(f"porta {porta} ocupada — tentando a próxima…")
+    raise SystemExit(f"portas {_PORTAS[0]}–{_PORTAS[-1]} ocupadas. Feche o visor que já "
+                     f"está rodando e tente de novo.")
 
 
 def _ouvir_teclado(visor, seg: float):
@@ -109,9 +128,7 @@ def _sessao(visor) -> None:
 
 
 def _rodar(nome_catalogo: str, *, ficar_no_ar: bool) -> None:
-    from professor.visor import Visor
-
-    visor = Visor(ritmo=0.05).start()
+    visor = _abre_visor()
     print(f"'{nome_catalogo}' direto do catálogo, zero LLM — teclas 1/2/3/0 interrompem a fala.")
     _toca_na_tela(visor, carregar(nome_catalogo))
     if ficar_no_ar:
@@ -144,9 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nquer que eu tente montar essa aula na hora? `autotuto --novo {args.topico}`")
         return 1
 
-    from professor.visor import Visor
-
-    visor = Visor(ritmo=0.05).start()
+    visor = _abre_visor()
     _tenta_planejador(visor, args.topico)
     if args.texto:
         _sessao(visor)

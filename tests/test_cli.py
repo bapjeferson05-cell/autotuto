@@ -90,3 +90,42 @@ def test_planejador_com_plano_de_verdade_toca_normal(monkeypatch):
     v = _VisorFake()
     cli._tenta_planejador(v, "círculo")
     assert v.tocou
+
+
+# ───── porta ocupada: rodar a demo duas vezes cuspia OSError na tela
+def _ocupa(porta):
+    import socket
+    s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("127.0.0.1", porta))
+    s.listen(1)
+    return s
+
+
+def test_abre_visor_cai_pra_proxima_porta_quando_a_8080_esta_ocupada():
+    from professor import cli
+
+    ocupada = _ocupa(cli._PORTAS[0])
+    try:
+        v = cli._abre_visor()
+        try:
+            assert v.porta == cli._PORTAS[1]
+        finally:
+            v.stop()
+    finally:
+        ocupada.close()
+
+
+def test_abre_visor_com_todas_ocupadas_sai_com_mensagem_e_nao_traceback():
+    import pytest
+
+    from professor import cli
+
+    socks = [_ocupa(p) for p in cli._PORTAS]
+    try:
+        with pytest.raises(SystemExit) as e:
+            cli._abre_visor()
+        assert "ocupadas" in str(e.value)
+    finally:
+        for s in socks:
+            s.close()
