@@ -70,6 +70,16 @@ def _aula_do_aluno(voz: Voz, visor: Visor):
     aula, rel = planejador.planeja(problema, verbose=True)
     print(f"  planejador: {time.monotonic() - t0:.0f}s · '{aula.titulo}' · "
           f"{len(aula.blocos)} blocos · ok={rel.ok}", flush=True)
+    # rel.fatais = "o que eu devolvi NÃO é sobre o que você pediu" (LLM fora do ar
+    # devolve a aula de ouro do trapézio). Tocar isso seria responder "área do
+    # círculo" com trapézio e cara de quem respondeu — a mentira que a regra única
+    # proíbe, e o mesmo bug que o cli.py já recusa.
+    if rel.fatais:
+        print(f"  recusado: {rel.fatais}", flush=True)
+        voz.falar("Não consegui montar uma aula sobre isso agora — não tenho o "
+                  "modelo disponível aqui. Não vou te empurrar outra aula no lugar. "
+                  f"O que eu tenho pronto é: {', '.join(disponiveis())}.")
+        return None
     return aula
 
 

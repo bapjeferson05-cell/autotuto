@@ -1,0 +1,13 @@
+# sem isto, o `COPY . .` dos Dockerfiles joga o node_modules/dist/.venv do host por
+# cima do que o `npm ci` / `pip install` acabou de montar na imagem.
+.git
+.venv
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+frontend/node_modules/
+frontend/dist/
+out/
+.env
+*.log

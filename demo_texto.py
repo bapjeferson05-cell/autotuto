@@ -58,6 +58,16 @@ def main() -> None:
                   f"{len(aula.blocos)} blocos · ok={rel.ok}", flush=True)
             if rel.avisos:
                 print("  avisos:", rel.avisos, flush=True)
+            # mesma recusa honesta do cli.py: sem LLM no ar, planeja() devolve a
+            # aula de ouro do TRAPÉZIO, e tocá-la como resposta a outro tópico é a
+            # mentira que a regra única do projeto proíbe.
+            if rel.fatais:
+                recusa = ("Não consegui montar uma aula sobre isso agora — não tenho o "
+                          "modelo disponível aqui. Não vou te empurrar outra aula no lugar.")
+                print(f"  recusado: {rel.fatais}", flush=True)
+                visor.mostrar_fala(recusa)
+                visor.estado("pronto")
+                continue
 
             est = tocador.toca(aula)
             visor.resumo(est.resumo())

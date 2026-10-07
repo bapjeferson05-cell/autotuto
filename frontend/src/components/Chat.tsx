@@ -77,8 +77,17 @@ export function Chat({
             aria-label="Sua mensagem"
           />
           <button type="submit" disabled={carregando || !texto.trim()}>Enviar</button>
+          {/* num beat de pergunta, "Continuar" mandava resposta nula e o backend
+              pontuava como SILÊNCIO, jogando o aluno no ramo de quem errou sem que
+              ele tivesse dito nada. */}
           {iniciado && (
-            <button type="button" className="secundario" onClick={onContinuar} disabled={carregando}>
+            <button
+              type="button"
+              className="secundario"
+              onClick={onContinuar}
+              disabled={carregando || aguardandoPergunta}
+              title={aguardandoPergunta ? 'Responde a pergunta pra seguir' : undefined}
+            >
               Continuar
             </button>
           )}

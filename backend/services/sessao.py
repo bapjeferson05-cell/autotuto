@@ -15,7 +15,9 @@ cliente HTTP (o frontend), não um loop local.
 from __future__ import annotations
 
 import base64
+import threading
 import uuid
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -36,13 +38,38 @@ class Sessao:
     avisos: list[str] = field(default_factory=list)
 
 
-SESSOES: dict[str, Sessao] = {}
+# Sem teto, qualquer um que chame POST /api/aulas em loop faz o processo crescer até
+# o OOM — não há autenticação nem expiração. OrderedDict + teto despeja a sessão mais
+# antiga; quem for despejado toma 404 e recomeça, o que é bem melhor que derrubar o
+# servidor inteiro. Continua em memória: com --workers > 1 cada processo tem o seu
+# dicionário e a sessão "some" quando o request cai noutro worker (por isso o backend
+# roda com 1 worker). Estado compartilhado de verdade pede Redis.
+_MAX_SESSOES = 500
+SESSOES: OrderedDict[str, Sessao] = OrderedDict()
+_LOCK_SESSOES = threading.Lock()
+
+
+def _guarda_sessao(sid: str, sessao: Sessao) -> None:
+    with _LOCK_SESSOES:
+        SESSOES[sid] = sessao
+        while len(SESSOES) > _MAX_SESSOES:
+            SESSOES.popitem(last=False)
+
+
+# professor/figuras/* desenha com pyplot, que é uma máquina de estado GLOBAL
+# (plt.subplots/plt.close mexem num registro de figuras compartilhado). No CLI isso
+# nunca incomodou porque é single-thread; aqui o FastAPI atende cada request numa
+# thread do pool, e duas figuras simultâneas se misturam. Serializar o desenho
+# resolve sem refatorar; a cura de verdade é largar o pyplot e usar Figure +
+# FigureCanvasAgg direto, que não tem estado global.
+_LOCK_FIGURA = threading.Lock()
 
 
 def _renderiza_figura(fig: dict) -> str:
     gerador = GERADORES[fig["gerador"]]
-    png = (gerador.fn(fig.get("spec", {})) if fig["gerador"] == "figura"
-           else gerador.fn(**(fig.get("params") or {})))
+    with _LOCK_FIGURA:
+        png = (gerador.fn(fig.get("spec", {})) if fig["gerador"] == "figura"
+               else gerador.fn(**(fig.get("params") or {})))
     return base64.b64encode(png).decode("ascii")
 
 
@@ -94,7 +121,7 @@ def iniciar_sessao(problema: str) -> tuple[str, Sessao, dict]:
         est = EstadoAula(aula)
         sessao = Sessao(estado=est, bloco_atual=None, avisos=rel.fatais)
         sid = uuid.uuid4().hex
-        SESSOES[sid] = sessao
+        _guarda_sessao(sid, sessao)
         return sid, sessao, {
             "fim": True,
             "recusa": True,
@@ -108,7 +135,7 @@ def iniciar_sessao(problema: str) -> tuple[str, Sessao, dict]:
     bloco = est.proximo()
     sessao = Sessao(estado=est, bloco_atual=bloco)
     sid = uuid.uuid4().hex
-    SESSOES[sid] = sessao
+    _guarda_sessao(sid, sessao)
 
     saida = _renderiza_bloco(bloco) if bloco else {"fim": True, "resumo": est.resumo()}
     saida["titulo"] = aula.titulo

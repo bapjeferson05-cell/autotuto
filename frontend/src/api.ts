@@ -1,6 +1,8 @@
 import type { Beat, IniciarResposta } from './types';
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+// `??` deixava passar a string vazia: um build-arg VITE_API_URL="" assava
+// BASE='' e toda chamada ia pro próprio host do frontend.
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 async function post<T>(caminho: string, corpo: unknown): Promise<T> {
   const r = await fetch(`${BASE}${caminho}`, {
