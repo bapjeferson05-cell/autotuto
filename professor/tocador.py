@@ -42,6 +42,11 @@ class Tocador:
         self.pausas = pausas
         self.settle = settle          # s entre a figura aparecer e a fala começar
         self._n = 0
+        # Interrupção que chegou numa fala onde não dá pra agir na hora (filler,
+        # "voltando de onde a gente parou", confirma). Antes o retorno era jogado
+        # fora e a tecla do aluno morria ali; aqui ela espera o próximo ponto de
+        # decisão em vez de sumir.
+        self._pendente: str | None = None
 
     # ---------------------------------------------------------------- stubs MVP
     def _falar_stub(self, txt: str) -> None:
@@ -62,6 +67,17 @@ class Tocador:
             return g.fn(spec.get("spec", {})), "figura"
         return g.fn(**(spec.get("params") or {})), nome
 
+    def _fala_guardando(self, texto: str) -> None:
+        """Fala onde quem chama não tem como tratar uma interrupção na hora.
+        Se o aluno falar durante essa fala, guarda em vez de descartar."""
+        fala = self.falar(texto)
+        if fala:
+            self._pendente = fala
+
+    def _pega_pendente(self) -> str | None:
+        t, self._pendente = self._pendente, None
+        return t
+
     def _toca_bloco(self, bloco: dict) -> tuple[str, str | None] | None:
         """Toca um beat. Devolve:
           ("barge", <fala>)      — aluno cortou a fala
@@ -72,15 +88,23 @@ class Tocador:
         if tem_figura:
             png, rot = self._figura_bytes(bloco["figura"])
             self.desenhar(png, rot)
+        falado = None
         if bloco.get("diz"):
             if tem_figura and self.settle and self.pausas:   # figura entra ANTES da fala
                 time.sleep(self.settle)
-            fala = self.falar(bloco["diz"])
-            if fala:
-                return ("barge", fala)
+            falado = self.falar(bloco["diz"])
+            # num beat de PERGUNTA, falar enquanto a pergunta é lida é RESPONDER, não
+            # interromper: a tela manda apertar 0 pra responder, e tratar isso como
+            # barge consumia o beat, pulava o `confirma` e mandava quem acertou pro
+            # ramo de quem errou — sem nunca fazer a pergunta.
+            if falado and not bloco.get("pergunta"):
+                return ("barge", falado)
         if bloco.get("pergunta"):
             if "_resp_scriptada" in bloco:
                 return ("resposta", bloco["_resp_scriptada"])
+            if falado:
+                print(f'  🎤 (respondeu durante a pergunta) "{falado}"')
+                return ("resposta", falado)
             seg = int(bloco["pergunta"].get("escuta_s", 12))
             print(f"  ⏳ esperando resposta ({seg}s)…")
             return ("resposta", self.ouvir(seg))
@@ -118,6 +142,10 @@ class Tocador:
             if bloco.get("pergunta") and est.na_principal and n_princ in resp_script:
                 bloco = {**bloco, "_resp_scriptada": resp_script.pop(n_princ)}
             r = self._toca_bloco(bloco)
+            if r is None:
+                guardada = self._pega_pendente()
+                if guardada:          # falou numa fala de transição; não se perde
+                    r = ("barge", guardada)
 
             gat = None
             if r and r[0] == "barge":
@@ -127,7 +155,7 @@ class Tocador:
                 gat = classificar(r[1], est.aula.ramos)
                 print(f'  ✋ "{r[1]}"  →  {gat or "(não reconhecido)"}')
                 if not gat:
-                    self.falar("Essa eu não preparei agora — sigo daqui.")
+                    self._fala_guardando("Essa eu não preparei agora — sigo daqui.")
             elif r and r[0] == "resposta":
                 dita = r[1]
                 pg = bloco["pergunta"]
@@ -139,7 +167,7 @@ class Tocador:
                     acertou = achou == senao or any(k in d for k in pg.get("acerta", []))
                     if acertou and pg.get("confirma"):           # acertou → fading: confirma curto
                         print("  ✓ acertou — pula a derivação (fading)")
-                        self.falar(pg["confirma"])
+                        self._fala_guardando(pg["confirma"])
                         gat = None
                     else:
                         gat = achou or senao
@@ -159,21 +187,31 @@ class Tocador:
 
     def _entra_ramo(self, est: EstadoAula, gat: str, *, filler: bool = True) -> None:
         if filler:
-            self.falar(filler_para(gat))
+            self._fala_guardando(filler_para(gat))
         if not est.entra_ramo(gat):
-            self.falar("Boa pergunta. Deixa eu achar um jeito melhor de mostrar isso.")
+            self._fala_guardando("Boa pergunta. Deixa eu achar um jeito melhor de mostrar isso.")
             return
         for rb in est.drena_ramo():
             print(f"  └ ramo {est.trilha.posicao}")
             r = self._toca_bloco(rb)
+            if r is None:
+                guardada = self._pega_pendente()
+                if guardada:
+                    r = ("barge", guardada)
             if r and r[0] == "barge":
                 g2 = classificar(r[1], est.aula.ramos)
-                print(f'    ✋ "{r[1]}"  →  {g2}')
+                print(f'    ✋ "{r[1]}"  →  {g2 or "(não reconhecido)"}')
                 if g2 and g2 != gat:
                     est.sai_ramo()
                     self._entra_ramo(est, g2)
                     return
-        self.falar("Voltando de onde a gente parou.")
+                if not g2:
+                    # mesma regra do toca(): sem classificar, admite em vez de
+                    # seguir drenando o ramo como se o aluno não tivesse falado.
+                    # Interromper DENTRO de um ramo é o momento mais provável,
+                    # porque o ramo é justamente a parte confusa.
+                    self._fala_guardando("Essa eu não preparei agora — sigo daqui.")
+        self._fala_guardando("Voltando de onde a gente parou.")
         print(f"  ↩  {est.resumo()}")
 
 
