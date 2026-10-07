@@ -67,10 +67,12 @@ def test_planejador_offline_recusa_em_vez_de_tocar_trapezio(monkeypatch):
     from professor.aulas import carregar
     from professor.validador import Relatorio
 
-    # exatamente o que planeja() devolve sem Ollama no ar
+    # exatamente o que planeja() devolve sem Ollama no ar. O gate olha `fatais`,
+    # não a frase em português — reescrever o aviso não pode desligar a regra.
     monkeypatch.setattr(planejador, "planeja",
                         lambda *a, **k: (carregar("trapezio"),
-                                         Relatorio(avisos=["plano offline (conexão recusada)"])))
+                                         Relatorio(avisos=["qualquer frase, em qualquer idioma"],
+                                                   fatais=["a aula devolvida não é sobre o pedido"])))
     v = _VisorFake()
     cli._tenta_planejador(v, "área do círculo")
 

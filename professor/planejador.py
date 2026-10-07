@@ -246,14 +246,20 @@ def _repara_spec(spec: dict) -> dict:
     return out
 
 
-def _saneia(aula: Aula) -> tuple[Aula, list[str]]:
+def _saneia(aula: Aula) -> tuple[Aula, list[str], list[str]]:
     """Última linha: repara o que dá, joga fora bloco/ramo que não valida, garante
-    os ramos padrão. Um plano com 1 ramo quebrado não derruba a aula toda.
+    os ramos padrão. Devolve (aula, notas, fatais) — `fatais` não-vazio significa
+    que a aula devolvida NÃO é sobre o que foi pedido (caiu no plano offline).
 
-    Gerador inexistente é a EXCEÇÃO: não é bloco quebrado, é o LLM inventando uma
-    ferramenta que a gente não tem. Podar só esse bloco faria a figura/conta sumir
-    e a aula seguir como se tivesse acontecido — a mentira que a regra única do
-    projeto proíbe. Isso derruba o plano inteiro; fallback é o plano offline."""
+    Beat que promete figura/conta e não consegue chamar o gerador é FATAL: podar só
+    ele faria o desenho sumir e a aula seguir como se tivesse acontecido — a mentira
+    que a regra única do projeto proíbe.
+
+    Mas fatal ONDE importa: na TRILHA PRINCIPAL derruba o plano, porque é o que o
+    aluno vai ver. Num RAMO opcional — que o aluno talvez nunca acione — derrubar a
+    aula inteira e servir um trapézio no lugar de uma aula boa de círculo é uma
+    mentira MAIOR que a que se quis evitar. Ali o ramo é descartado e o fallback
+    honesto entra no lugar dele."""
     notas: list[str] = []
     todos = list(aula.blocos) + [b for v in (aula.ramos or {}).values() for b in v]
     for b in todos:
@@ -262,28 +268,39 @@ def _saneia(aula: Aula) -> tuple[Aula, list[str]]:
             fg["spec"] = _repara_spec(fg.get("spec", {}))
 
     avaliados = {id(b): validador.valida_bloco(b) for b in todos}
-    fatais = [m for r in avaliados.values() for m in r.fatais]
-    if fatais:
-        return planeja_offline(), notas + fatais + ["gerador inexistente no plano — plano offline"]
+
+    fatais_principal = [m for b in aula.blocos for m in avaliados[id(b)].fatais]
+    if fatais_principal:
+        return (planeja_offline(), notas + fatais_principal,
+                fatais_principal + ["gerador impossível na trilha principal — plano offline"])
 
     bons = [b for b in aula.blocos if avaliados[id(b)].ok]
     if len(bons) < len(aula.blocos):
         notas.append(f"{len(aula.blocos) - len(bons)} bloco(s) inválidos removidos")
     if not bons:
-        return planeja_offline(), notas + ["plano inteiro inválido — plano offline"]
+        return (planeja_offline(), notas + ["plano inteiro inválido"],
+                ["plano inteiro inválido — plano offline"])
     aula.blocos = bons
 
     ramos: dict[str, list[dict]] = {}
     for g, blist in (aula.ramos or {}).items():
+        if any(avaliados[id(b)].fatais for b in blist):
+            notas.append(f"ramo '{g}' descartado (gerador impossível) — "
+                         f"entra o fallback honesto no lugar")
+            continue
         ok = [b for b in blist if avaliados[id(b)].ok]
-        if ok:
+        if not ok:
+            notas.append(f"ramo '{g}' descartado (inválido)")
+        elif len(ok) < len(blist):
+            # poda parcial deixava rastro ZERO: o ramo tocava sem a parte removida
+            notas.append(f"ramo '{g}': {len(blist) - len(ok)} bloco(s) removidos")
             ramos[g] = ok
         else:
-            notas.append(f"ramo '{g}' descartado (inválido)")
+            ramos[g] = ok
     for g, txt in _FALLBACK_RAMO.items():
         ramos.setdefault(g, [{"diz": txt, "espera": "media"}])
     aula.ramos = ramos
-    return aula, notas
+    return aula, notas, []
 
 
 def planeja(problema: str, *, tentativas: int = 4, sanear: bool = True,
@@ -307,7 +324,12 @@ def planeja(problema: str, *, tentativas: int = 4, sanear: bool = True,
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
             if verbose:
                 print(f"  LLM ({PROVEDOR}) indisponível ({e}) — usando plano offline")
-            return planeja_offline(problema), validador.Relatorio(avisos=[f"plano offline ({e})"])
+            # fatais é o sinal ESTRUTURADO de "o que eu devolvi não é sobre o que
+            # você pediu". Sem ele quem chama só teria a frase em português pra
+            # procurar — e reescrever a frase desligaria a regra de ouro em silêncio.
+            return planeja_offline(problema), validador.Relatorio(
+                avisos=[f"plano offline ({e})"],
+                fatais=[f"LLM indisponível ({e}) — a aula devolvida não é sobre o pedido"])
         try:
             ultima = Aula.de_json(_extrai_json(bruto))
         except (json.JSONDecodeError, KeyError, TypeError) as e:
@@ -326,10 +348,13 @@ def planeja(problema: str, *, tentativas: int = 4, sanear: bool = True,
                   "reenvie o JSON completo:\n- " + "\n- ".join(rel.problemas[:20])}]
 
     if sanear:
-        ultima, notas = _saneia(ultima)
+        ultima, notas, fatais = _saneia(ultima)
         rel2 = validador.valida_aula(ultima)
         rel2.avisos = notas + [f"{len(rel.problemas)} problema(s) do LLM não resolvidos em "
                                f"{tentativas} tentativas"]
+        # valida_aula() roda em cima da aula JÁ substituída (que é válida), então
+        # sem isto o fatal se perdia aqui e nenhum chamador conseguia vê-lo.
+        rel2.fatais = fatais
         if verbose:
             print(f"  saneado: {notas}")
         return ultima, rel2

@@ -246,11 +246,30 @@ def test_valida_bloco_calc_com_gerador_inexistente_e_fatal():
     assert any("raiz_cubica_magica" in f for f in rel.fatais)
 
 
-def test_valida_bloco_gerador_existente_mas_com_erro_nao_e_fatal():
-    # 'triangulo' existe — faltar um parâmetro é recuperável, não é a mesma mentira
+def test_valida_bloco_gerador_existente_mas_sem_params_tambem_e_fatal():
+    # 'triangulo' existe, mas sem os params obrigatórios NADA é desenhado — pro
+    # aluno é idêntico a gerador inventado: a narração fala de uma figura que não
+    # aparece. Fatal também.
     rel = validador.valida_bloco({"diz": "olha", "figura": {"gerador": "triangulo",
                                                              "params": {}}})
     assert not rel.ok
+    assert rel.fatais
+
+
+def test_valida_bloco_gerador_de_familia_errada_e_fatal():
+    # 'area_trapezio' existe, mas é da família 'calc' — num slot de figura não
+    # desenha nada. É o erro MAIS provável do LLM, e era o que o guard não pegava.
+    rel = validador.valida_bloco({"diz": "olha", "figura": {"gerador": "area_trapezio",
+                                                             "params": {"B": 1, "b": 1, "h": 1}}})
+    assert not rel.ok
+    assert any("família" in f for f in rel.fatais)
+
+
+def test_erro_so_matematico_nao_e_fatal():
+    # aqui o gerador RODA e desenha; só desenha errado. O loop de correção do
+    # planejador conserta isso — não precisa derrubar o plano.
+    rel = validador.valida_bloco({"diz": "olha", "figura": {
+        "gerador": "triangulo", "params": {"tipo": "retangulo"}}})
     assert not rel.fatais
 
 

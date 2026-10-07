@@ -37,7 +37,7 @@ class Relatorio:
 
     @property
     def ok(self) -> bool:
-        return not self.problemas
+        return not self.problemas and not self.fatais
 
     def __iadd__(self, outro: "Relatorio") -> "Relatorio":
         self.problemas += outro.problemas
@@ -292,21 +292,25 @@ def valida_bloco(bloco: dict, *, onde: str = "bloco", ramos_validos: set | None 
             if not isinstance(es, (int, float)) or not (3 <= es <= 60):
                 rel.problemas.append(f"{onde}.pergunta.escuta_s deve ser um número de 3 a 60")
 
+    # Beat que promete figura/calc e não consegue chamar o gerador é FATAL, não
+    # "problema": podar o bloco faz o desenho/conta sumir e a aula seguir como se
+    # tivesse acontecido. Vale pra gerador inexistente, gerador da família errada
+    # e params que não batem — em todos os três nada é desenhado.
+    # Erro MATEMÁTICO é outra categoria: ali o gerador roda, só desenha errado, e o
+    # loop de correção do planejador consegue consertar. Esse fica em `problemas`.
     if "figura" in bloco and bloco["figura"]:
         gnome = bloco["figura"].get("gerador")
-        if gnome not in GERADORES:
-            rel.fatais.append(f"{onde}.figura: gerador '{gnome}' não existe")
         params, erros = _valida_chamada(bloco["figura"], "figura")
         rel.problemas += [f"{onde}.figura: {e}" for e in erros]
+        rel.fatais += [f"{onde}.figura: {e}" for e in erros]
         if not erros and gnome != "figura":
             rel.problemas += [f"{onde}.figura: {e}"
                               for e in _mat_figura(gnome, params)]
     if "calc" in bloco and bloco["calc"]:
         gnome = bloco["calc"].get("gerador")
-        if gnome not in GERADORES:
-            rel.fatais.append(f"{onde}.calc: gerador '{gnome}' não existe")
         params, erros = _valida_chamada(bloco["calc"], "calc")
         rel.problemas += [f"{onde}.calc: {e}" for e in erros]
+        rel.fatais += [f"{onde}.calc: {e}" for e in erros]
         if not erros:
             rel.problemas += [f"{onde}.calc: {e}"
                               for e in _mat_calc(gnome, params)]

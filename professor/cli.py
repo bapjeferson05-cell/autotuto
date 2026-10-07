@@ -95,11 +95,12 @@ def _tenta_planejador(visor, pedido: str) -> None:
         print("  avisos:", rel.avisos)
 
     # planeja() sem LLM no ar devolve planeja_offline() — que é a aula de ouro do
-    # TRAPÉZIO, com rel.ok=True. Tocar isso aqui seria responder "área do círculo"
-    # com uma aula de trapézio e cara de quem respondeu: a mentira que a regra
-    # única do projeto proíbe. Quem pediu tem que ouvir que não deu.
-    caiu_no_offline = any("plano offline" in a for a in rel.avisos)
-    if caiu_no_offline or not aula.blocos:
+    # TRAPÉZIO. Tocar isso aqui seria responder "área do círculo" com uma aula de
+    # trapézio e cara de quem respondeu: a mentira que a regra única do projeto
+    # proíbe. `rel.fatais` é o sinal estruturado de que a aula devolvida não é
+    # sobre o pedido — antes isto procurava a string "plano offline" dentro de uma
+    # frase em português, e reescrever a frase desligava a regra em silêncio.
+    if rel.fatais or not aula.blocos:
         recusa = (f"Não consegui montar uma aula de '{pedido}' agora — não tenho "
                   f"o modelo disponível aqui. Não vou te empurrar outra aula no lugar.")
         print(f"\n{recusa}\n")
