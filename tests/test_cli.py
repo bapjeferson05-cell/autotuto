@@ -131,3 +131,42 @@ def test_abre_visor_com_todas_ocupadas_sai_com_mensagem_e_nao_traceback():
     finally:
         for s in socks:
             s.close()
+
+
+# ───── resolve() precisa aceitar frase natural, senão a caixa do visor manda
+# pro LLM uma aula que existe pronta no catálogo
+def test_resolve_aceita_frase_natural():
+    from professor.cli import resolve
+    assert resolve("área do trapézio") == "trapezio"
+    assert resolve("teorema de pitágoras") == "pitagoras"
+    assert resolve("quero entender a hipotenusa") == "pitagoras"
+    assert resolve("equação do primeiro grau") == "eq_primeiro_grau"
+    assert resolve("quanto custam 5 cadernos") == "regra_de_tres"
+
+
+def test_resolve_continua_dizendo_nao_pro_que_nao_existe():
+    from professor.cli import resolve
+    assert resolve("área do círculo") is None
+    assert resolve("fração") is None
+    assert resolve("banana com farofa") is None
+
+
+def test_ouvir_teclado_respeita_a_janela_anunciada():
+    """o terminal anuncia 'esperando resposta (12s)'; o teto de 8s tratava quem
+    respondia no nono segundo como quem ficou calado."""
+    import time as _t
+
+    from professor import cli
+
+    class _V:
+        def __init__(self):
+            self.chamadas = 0
+
+        def pop_injecao(self):
+            self.chamadas += 1
+            return "respondi tarde" if self.chamadas > 3 else None
+
+    v = _V()
+    t0 = _t.monotonic()
+    assert cli._ouvir_teclado(v, 12) == "respondi tarde"
+    assert _t.monotonic() - t0 < 12, "não devia esperar a janela toda depois de ouvir"

@@ -21,6 +21,8 @@ import time
 import unicodedata
 
 from professor.aulas import carregar, disponiveis
+from professor.classificador import normalizar
+from professor.planejador import _PISTAS
 
 _PORTAS = (8080, 8081, 8082)
 
@@ -31,12 +33,36 @@ def _norm(nome: str) -> str:
 
 
 def resolve(nome: str) -> str | None:
-    """Nome pedido (com ou sem acento) -> nome exato no catálogo, ou None."""
-    alvo = _norm(nome)
+    """Frase pedida -> nome da aula de ouro, ou None.
+
+    Exigir que a frase INTEIRA virasse a chave exata ("trapezio") fazia a caixa do
+    visor mandar quase toda frase natural pro LLM — "teorema de pitágoras", "área
+    do trapézio", "quero entender fração" — e aí, sem LLM no ar, o aluno ouvia que
+    não dava, de uma aula que está pronta no catálogo. O inverso da premissa do
+    comando. As pistas são as mesmas que o planejador já usa pra achar o few-shot.
+    """
     for c in disponiveis():
-        if _norm(c) == alvo:
+        if _norm(c) == _norm(nome):
             return c
-    return None
+    # `_norm` junta palavras com "_" (serve pra comparar chave), então \b não quebra
+    # nele. Pra casar FRASE usa-se o normalizador do classificador, separado por
+    # espaço — o mesmo que já decide os gatilhos de interrupção.
+    alvo = normalizar(nome)
+    # casamento por palavra inteira, do mais específico pro mais genérico. Substring
+    # cru dava falso positivo: a pista "x +" normaliza pra "x" e casa dentro de
+    # "existe", mandando "qualquer coisa que não existe" pra aula de equação.
+    catalogo = disponiveis()
+    achados = []
+    for nome_aula, pistas in _PISTAS.items():
+        if nome_aula not in catalogo:
+            continue
+        for pista in pistas:
+            chave = normalizar(pista)
+            if len(chave) < 4:
+                continue
+            if re.search(rf"\b{re.escape(chave)}\b", alvo):
+                achados.append((len(chave), nome_aula))
+    return max(achados)[1] if achados else None
 
 
 def _lista() -> str:
@@ -63,7 +89,10 @@ def _abre_visor(ritmo: float = 0.05):
 
 
 def _ouvir_teclado(visor, seg: float):
-    fim = time.monotonic() + min(seg, 8.0)
+    # respeita o escuta_s do beat: o teto de 8s cortava a janela de 12s que o
+    # próprio terminal anuncia ("esperando resposta (12s)"), e quem levava 9s pra
+    # ler a figura e responder era tratado como quem ficou calado.
+    fim = time.monotonic() + seg
     while time.monotonic() < fim:
         t = visor.pop_injecao()
         if t:
@@ -113,8 +142,15 @@ def _tenta_planejador(visor, pedido: str) -> None:
 
 def _sessao(visor) -> None:
     print("digite outro tópico na caixa do visor (ou Ctrl+C pra sair)…")
+    visor.estado("pronto")
     try:
         while True:
+            # uma tecla apertada aqui deixava `_injecao` preso e o estado em
+            # "ouvindo" pra sempre — e a página só mostra a caixa de texto em
+            # "pronto"/"aguardando". Resultado: a caixa sumia, o texto ficava
+            # latente pra invadir a próxima aula, e o loop não tinha saída.
+            if visor.pop_injecao():
+                visor.estado("pronto")
             pedido = visor.pop_pergunta()
             if pedido:
                 print(f"\n🎤 “{pedido}”")
@@ -125,15 +161,19 @@ def _sessao(visor) -> None:
                     _tenta_planejador(visor, pedido)
             time.sleep(0.15)
     except KeyboardInterrupt:
-        visor.stop()
+        print()
 
 
 def _rodar(nome_catalogo: str, *, ficar_no_ar: bool) -> None:
     visor = _abre_visor()
-    print(f"'{nome_catalogo}' direto do catálogo, zero LLM — teclas 1/2/3/0 interrompem a fala.")
-    _toca_na_tela(visor, carregar(nome_catalogo))
-    if ficar_no_ar:
-        _sessao(visor)
+    try:
+        print(f"'{nome_catalogo}' direto do catálogo, zero LLM — "
+              f"teclas 1/2/3/0 interrompem a fala.")
+        _toca_na_tela(visor, carregar(nome_catalogo))
+        if ficar_no_ar:
+            _sessao(visor)
+    finally:
+        visor.stop()      # só _sessao fechava; sair pelos outros caminhos vazava o socket
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -163,9 +203,12 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     visor = _abre_visor()
-    _tenta_planejador(visor, args.topico)
-    if args.texto:
-        _sessao(visor)
+    try:
+        _tenta_planejador(visor, args.topico)
+        if args.texto:
+            _sessao(visor)
+    finally:
+        visor.stop()
     return 0
 
 

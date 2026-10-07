@@ -100,6 +100,10 @@ document.getElementById("cx").addEventListener("submit", (e) => {
                        body: JSON.stringify({texto: t})}).catch(()=>{});
 });
 document.addEventListener("keydown", (e) => {
+  // sem isto, digitar espaço na caixa engolia o caractere E disparava uma
+  // interrupção: não dava pra escrever um tópico de mais de uma palavra.
+  const alvo = e.target;
+  if (alvo && (alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA")) return;
   const t = TECLAS[e.key];
   if (!t) return;
   e.preventDefault();
