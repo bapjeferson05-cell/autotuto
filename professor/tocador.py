@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
-from professor.classificador import classificar
+from professor.classificador import classificar, normalizar
 from professor.esquema import GERADORES, Aula
 from professor.estado import EstadoAula
 from professor.fillers import filler_para
@@ -163,8 +163,11 @@ class Tocador:
                 if dita:
                     print(f'  🎤 "{dita}"')
                     achou = classificar(dita, est.aula.ramos)
-                    d = dita.lower()
-                    acertou = achou == senao or any(k in d for k in pg.get("acerta", []))
+                    d = normalizar(dita)
+                    # `achou == senao` dava ACERTO pra quem caiu no ramo de
+                    # remediação — ou seja, quem respondeu "por quê?" era
+                    # parabenizado e tinha a derivação pulada. Acerto é só `acerta`.
+                    acertou = any(normalizar(k) in d for k in pg.get("acerta", []))
                     if acertou and pg.get("confirma"):           # acertou → fading: confirma curto
                         print("  ✓ acertou — pula a derivação (fading)")
                         self._fala_guardando(pg["confirma"])

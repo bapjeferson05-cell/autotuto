@@ -17,6 +17,11 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", s)).strip()
 
 
+# quem compara a fala do aluno com as palavras de `acerta` usa isto: sem normalizar,
+# "triângulo" não casa com "triangulo" e um acerto vira erro por causa do acento.
+normalizar = _norm
+
+
 # ordem importa: o primeiro que casar ganha. cada entrada é (gatilho, [regex...]).
 _REGRAS: list[tuple[str, tuple[str, ...]]] = [
     ("por_que_div_2", (r"\b(por ?que|pq).*(divid|sobre|barra|\bdois\b|\b2\b|meio|metade)",

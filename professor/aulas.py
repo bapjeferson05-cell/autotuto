@@ -60,7 +60,13 @@ TRAPEZIO: dict = {
         {"diz": "Antes de eu te dar a fórmula, me diz uma coisa: e se a base de cima fosse "
                 "encolhendo, até virar zero? Que figura o trapézio viraria?",
          "figura": _trap(segmentos=[{"de": "D", "para": "C", "cor": "destaque", "lw": 5}]),
+         # `acerta` explícito: antes o acerto era inferido de "classificou no mesmo
+         # ramo do `senao`", o que só funcionava aqui porque neste beat o `senao` é
+         # o ramo que EXPLICA a resposta certa. Nas outras aulas o `senao` é
+         # `por_que` — o ramo de quem não sabe — e a mesma regra parabenizava quem
+         # tinha acabado de pedir ajuda.
          "pergunta": {"escuta_s": 12, "senao": "e_triangulo",
+                      "acerta": ["triangulo", "triangular"],
                       "confirma": "Isso! Vira um triângulo. E guarda essa ideia — a fórmula "
                                   "do trapézio já contém a do triângulo."}},
         {"diz": "Então a fórmula é essa: soma das duas bases, vezes a altura, dividido "

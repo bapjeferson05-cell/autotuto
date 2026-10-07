@@ -124,3 +124,95 @@ def test_chega_ao_fim_da_aula():
 
 def test_saude():
     assert client.get("/api/saude").json() == {"ok": True}
+
+
+# ═════════ as mentiras que o cli.py já recusava e o backend ainda servia
+
+def test_plano_offline_e_recusado_em_vez_de_servir_trapezio():
+    """planeja() sem LLM devolve a aula de ouro do TRAPÉZIO com cara de resposta.
+    Servir isso pra quem pediu círculo é a mentira que a regra única proíbe — e
+    aqui era pior que no CLI, porque é o caminho do `docker compose up`."""
+    def _offline(problema, *, verbose=False):
+        return carregar("trapezio"), validador.Relatorio(
+            avisos=["plano offline"],
+            fatais=["LLM indisponível — a aula devolvida não é sobre o pedido"])
+
+    with patch("backend.services.sessao.planejador.planeja", side_effect=_offline):
+        r = client.post("/api/aulas", json={"problema": "área do círculo de raio 5"})
+    body = r.json()
+
+    assert r.status_code == 200
+    assert body.get("recusa") is True
+    assert "trapézio" not in (body.get("diz") or "").lower()
+    assert "Não consegui montar" in body["diz"]
+    assert body["aulas_prontas"], "recusou sem oferecer o que existe pronto"
+
+
+def test_interrupcao_nao_classificada_nao_finge_que_entendeu():
+    sid = _sid()
+    r = client.post(f"/api/aulas/{sid}/proximo",
+                    json={"resposta": "asdkjasdkj zzz sem sentido nenhum"})
+    body = r.json()
+    assert "não preparei" in body["diz"], body
+    # e não pode ter entrado em ramo nenhum
+    assert "ramo" not in body.get("resumo", "")
+
+
+def test_pedir_ajuda_nao_conta_como_acerto():
+    """senao='por_que' é o ramo de quem NÃO sabe. Tratar 'classificou no senao'
+    como acerto parabenizava quem acabou de admitir que não entendeu."""
+    def _eq(problema, *, verbose=False):
+        return carregar("eq_primeiro_grau"), validador.Relatorio()
+
+    with patch("backend.services.sessao.planejador.planeja", side_effect=_eq):
+        sid = client.post("/api/aulas", json={"problema": "equação"}).json()["session_id"]
+        corpo = None
+        for _ in range(8):
+            corpo = client.post(f"/api/aulas/{sid}/proximo", json={}).json()
+            if corpo.get("tem_pergunta"):
+                break
+        assert corpo and corpo.get("tem_pergunta"), "não cheguei no beat de pergunta"
+        r = client.post(f"/api/aulas/{sid}/proximo", json={"resposta": "por quê?"}).json()
+
+    assert "Exato" not in (r.get("diz") or ""), "parabenizou quem pediu ajuda"
+
+
+def test_acerto_com_acento_continua_sendo_acerto():
+    sid = _sid()
+    for _ in range(3):
+        client.post(f"/api/aulas/{sid}/proximo", json={})
+    r = client.post(f"/api/aulas/{sid}/proximo", json={"resposta": "vira um triângulo"}).json()
+    assert "Isso" in r["diz"], ("acento derrubou um acerto", r)
+
+
+def test_diz_passos_chega_no_frontend():
+    """o 'worked example' é uma frase por linha da conta; o adapter descartava e o
+    aluno da web via álgebra muda enquanto o de voz ouvia o porquê de cada passo."""
+    sid = _sid()
+    for _ in range(3):
+        client.post(f"/api/aulas/{sid}/proximo", json={})
+    client.post(f"/api/aulas/{sid}/proximo", json={"resposta": "vira um triângulo"})
+    beat = client.post(f"/api/aulas/{sid}/proximo", json={}).json()
+    assert beat.get("diz_passos"), beat
+    assert len(beat["diz_passos"]) == len(beat["passos_latex"])
+
+
+def test_calc_que_estoura_nao_vira_500_nem_engole_o_beat():
+    """params crus do LLM ('18' em vez de 18) estouravam no gerador: HTTP 500, e
+    como o beat já tinha sido consumido, o retry do cliente pulava ele."""
+    from professor.esquema import Aula
+
+    aula = Aula("Teste", [{"diz": "a conta vem aí",
+                           "calc": {"gerador": "area_trapezio",
+                                    "params": {"B": "18", "b": "10", "h": "6"}}},
+                          {"diz": "beat seguinte"}])
+
+    def _torto(problema, *, verbose=False):
+        return aula, validador.Relatorio()
+
+    with patch("backend.services.sessao.planejador.planeja", side_effect=_torto):
+        r = client.post("/api/aulas", json={"problema": "x"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["diz"] == "a conta vem aí"
+    assert body.get("falhou"), "fingiu que a conta saiu"
