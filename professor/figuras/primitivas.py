@@ -22,10 +22,9 @@ from __future__ import annotations
 import io
 
 import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 from matplotlib.patches import Arc, FancyArrow
 
 FUNDO = "#0E2A22"
@@ -37,11 +36,26 @@ CORES = {
     "verde": "#7BD88F", "roxo": "#B98AE0",
 }
 
-plt.rcParams.update({
+matplotlib.rcParams.update({
     "figure.facecolor": FUNDO, "axes.facecolor": FUNDO,
     "text.color": GIZ, "font.family": "DejaVu Sans", "font.size": 15,
     "mathtext.fontset": "cm",
 })
+
+
+def nova_figura(w: float, h: float, *, dpi: int = 140, linhas: int = 1, colunas: int = 1):
+    """Figura + eixos SEM passar pelo pyplot.
+
+    `plt.subplots()` registra a figura num gerenciador GLOBAL do pyplot, que não é
+    thread-safe: duas figuras desenhadas ao mesmo tempo (o backend atende cada
+    request numa thread do pool) se misturavam. `Figure` + `FigureCanvasAgg` não
+    têm estado global nenhum — cada figura é um objeto isolado — e de quebra não
+    precisam de `plt.close()`, porque não há registro de onde removê-las.
+    """
+    fig = Figure(figsize=(w, h), dpi=dpi)
+    FigureCanvasAgg(fig)                    # backend Agg explícito, sem matplotlib.use()
+    eixos = fig.subplots(linhas, colunas)
+    return fig, eixos
 
 
 def _cor(nome):
@@ -51,7 +65,6 @@ def _cor(nome):
 def _png(fig) -> bytes:
     buf = io.BytesIO()
     fig.savefig(buf, format="png", facecolor=FUNDO, bbox_inches="tight", pad_inches=0.3)
-    plt.close(fig)
     return buf.getvalue()
 
 
@@ -71,7 +84,7 @@ def _perp(v):
 # ═══════════════════════════════════════════════════════ FIGURA (composição)
 def figura(spec: dict, *, w=6.6, h=6.6) -> bytes:
     P = {k: _V(v) for k, v in spec.get("pontos", {}).items()}
-    fig, ax = plt.subplots(figsize=(w, h), dpi=140)
+    fig, ax = nova_figura(w, h)
     ax.set_aspect("equal")
     ax.axis("off")
 
@@ -199,7 +212,7 @@ def funcao(expr="x**2", x0=-5.0, x1=5.0, *, raiz=False, vertice=False,
            area=None, ponto=None, titulo=None) -> bytes:
     x = np.linspace(x0, x1, 600)
     y = eval(expr, {"__builtins__": {}}, {**_ENV, "x": x})  # noqa: S307
-    fig, ax = plt.subplots(figsize=(7, 6), dpi=140)
+    fig, ax = nova_figura(7, 6)
     ax.axhline(0, color=GIZ_FRACO, lw=1)
     ax.axvline(0, color=GIZ_FRACO, lw=1)
     ax.plot(x, y, color=CORES["destaque"], lw=3, zorder=3)
@@ -226,7 +239,7 @@ def funcao(expr="x**2", x0=-5.0, x1=5.0, *, raiz=False, vertice=False,
 
 # ═══════════════════════════════════════════════════════ RETA NUMÉRICA
 def reta_numerica(x0=-5, x1=5, *, pontos=None, intervalo=None) -> bytes:
-    fig, ax = plt.subplots(figsize=(9, 1.8), dpi=140)
+    fig, ax = nova_figura(9, 1.8)
     ax.axis("off")
     ax.annotate("", xy=(x1 + 0.5, 0), xytext=(x0 - 0.5, 0),
                 arrowprops=dict(arrowstyle="<|-|>", color=GIZ, lw=1.8))
@@ -250,7 +263,7 @@ def reta_numerica(x0=-5, x1=5, *, pontos=None, intervalo=None) -> bytes:
 
 # ═══════════════════════════════════════════════════════ PASSO (uma linha de conta)
 def passo(latex: str, *, tam=30, cor="giz") -> bytes:
-    fig, ax = plt.subplots(figsize=(7.4, 2.0), dpi=140)
+    fig, ax = nova_figura(7.4, 2.0)
     ax.axis("off")
     ax.text(0.5, 0.5, f"${latex}$", color=_cor(cor), fontsize=tam,
             ha="center", va="center", transform=ax.transAxes)

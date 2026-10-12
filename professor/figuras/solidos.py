@@ -11,13 +11,9 @@ from __future__ import annotations
 
 import math
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 
-from professor.figuras.primitivas import CORES, FUNDO, GIZ, GIZ_FRACO, _png
+from professor.figuras.primitivas import CORES, FUNDO, GIZ, GIZ_FRACO, _png, nova_figura
 
 PHI = (1 + math.sqrt(5)) / 2
 _AZ, _EL = math.radians(27), math.radians(20)
@@ -26,7 +22,7 @@ _K = 0.34                       # achatamento de um círculo horizontal visto de
 
 # ═══════════════════════════════════════════════════ infra
 def _fig(legenda=None):
-    fig, ax = plt.subplots(figsize=(5.4, 5.4), dpi=140)
+    fig, ax = nova_figura(5.4, 5.4)
     fig.patch.set_facecolor(FUNDO)
     ax.set_facecolor(FUNDO)
     ax.set_aspect("equal")

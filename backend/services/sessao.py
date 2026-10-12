@@ -56,20 +56,14 @@ def _guarda_sessao(sid: str, sessao: Sessao) -> None:
             SESSOES.popitem(last=False)
 
 
-# professor/figuras/* desenha com pyplot, que é uma máquina de estado GLOBAL
-# (plt.subplots/plt.close mexem num registro de figuras compartilhado). No CLI isso
-# nunca incomodou porque é single-thread; aqui o FastAPI atende cada request numa
-# thread do pool, e duas figuras simultâneas se misturam. Serializar o desenho
-# resolve sem refatorar; a cura de verdade é largar o pyplot e usar Figure +
-# FigureCanvasAgg direto, que não tem estado global.
-_LOCK_FIGURA = threading.Lock()
-
-
 def _renderiza_figura(fig: dict) -> str:
+    # Sem lock de propósito: professor/figuras/* largou o pyplot (que guarda as
+    # figuras num registro GLOBAL) e passou a usar Figure + FigureCanvasAgg, onde
+    # cada figura é um objeto isolado. Serializar aqui só jogaria fora o paralelismo
+    # do pool de threads sem comprar segurança nenhuma.
     gerador = GERADORES[fig["gerador"]]
-    with _LOCK_FIGURA:
-        png = (gerador.fn(fig.get("spec", {})) if fig["gerador"] == "figura"
-               else gerador.fn(**(fig.get("params") or {})))
+    png = (gerador.fn(fig.get("spec", {})) if fig["gerador"] == "figura"
+           else gerador.fn(**(fig.get("params") or {})))
     return base64.b64encode(png).decode("ascii")
 
 

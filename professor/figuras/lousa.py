@@ -11,10 +11,10 @@ from __future__ import annotations
 import io
 
 import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.patches import Rectangle
+
+from professor.figuras.primitivas import nova_figura
 
 # ─────────────────────────────────────────────────────────── paleta "lousa"
 FUNDO = "#0E2A22"       # verde-escuro de quadro
@@ -24,7 +24,7 @@ DESTAQUE = "#F2B134"     # âmbar — o "olha aqui"
 AZUL = "#5AB1E0"
 VERM = "#E0625E"
 
-plt.rcParams.update({
+matplotlib.rcParams.update({
     "figure.facecolor": FUNDO, "axes.facecolor": FUNDO,
     "text.color": GIZ, "axes.edgecolor": GIZ_FRACO,
     "xtick.color": GIZ_FRACO, "ytick.color": GIZ_FRACO,
@@ -34,7 +34,7 @@ plt.rcParams.update({
 
 
 def _novo(w=6.4, h=6.4):
-    fig, ax = plt.subplots(figsize=(w, h), dpi=140)
+    fig, ax = nova_figura(w, h)
     ax.set_aspect("equal")
     ax.axis("off")
     return fig, ax
@@ -43,7 +43,6 @@ def _novo(w=6.4, h=6.4):
 def _png(fig) -> bytes:
     buf = io.BytesIO()
     fig.savefig(buf, format="png", facecolor=FUNDO, bbox_inches="tight", pad_inches=0.25)
-    plt.close(fig)
     return buf.getvalue()
 
 
@@ -85,10 +84,10 @@ def trapezio(B=6.0, b=3.5, h=4.0, *, destacar=None, fechar=0.0) -> bytes:
 def trapezio_como_media(B=6.0, b=3.5, h=4.0) -> bytes:
     """Os dois retângulos (B·h e b·h) empilhados — a área do trapézio é a MÉDIA.
     É a resposta visual pro 'por que dividido por dois?'."""
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(10, 5), dpi=140)
+    fig, (a1, a2) = nova_figura(10, 5, colunas=2)
     for ax, base, cor, rot in ((a1, B, DESTAQUE, "B·h"), (a2, b, AZUL, "b·h")):
         ax.set_aspect("equal"); ax.axis("off")
-        ax.add_patch(plt.Rectangle((0, 0), base, h, fill=True, color=cor, alpha=0.18,
+        ax.add_patch(Rectangle((0, 0), base, h, fill=True, color=cor, alpha=0.18,
                                    ec=cor, lw=2.5))
         _rotulo(ax, base / 2, h / 2, rot, cor=cor, tam=20, fontweight="bold")
         ax.set_xlim(-1, max(B, b) + 1); ax.set_ylim(-1, h + 1)
@@ -120,7 +119,7 @@ def grafico(expr="x**2", x0=-4.0, x1=4.0, *, ponto=None) -> bytes:
         y = eval(expr, {"__builtins__": {}}, env)  # noqa: S307 — expr controlada
     except Exception:
         y = x * 0
-    fig, ax = plt.subplots(figsize=(6.8, 6.0), dpi=140)
+    fig, ax = nova_figura(6.8, 6.0)
     ax.axhline(0, color=GIZ_FRACO, lw=1); ax.axvline(0, color=GIZ_FRACO, lw=1)
     ax.plot(x, y, color=DESTAQUE, lw=3)
     if ponto is not None:

@@ -10,17 +10,14 @@ from __future__ import annotations
 import math
 from math import gcd
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 
-from professor.figuras.primitivas import CORES, FUNDO, GIZ, GIZ_FRACO, _png, figura
+from professor.figuras.primitivas import (CORES, FUNDO, GIZ, GIZ_FRACO, _png, figura,
+                                          nova_figura)
 
 
 def _ax(w=5.6, h=5.6):
-    fig, ax = plt.subplots(figsize=(w, h), dpi=140)
+    fig, ax = nova_figura(w, h)
     fig.patch.set_facecolor(FUNDO)
     ax.set_facecolor(FUNDO)
     ax.set_aspect("equal")
