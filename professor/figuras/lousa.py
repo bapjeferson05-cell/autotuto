@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import io
 
-import matplotlib
 import numpy as np
 from matplotlib.patches import Rectangle
 
@@ -24,13 +23,8 @@ DESTAQUE = "#F2B134"     # âmbar — o "olha aqui"
 AZUL = "#5AB1E0"
 VERM = "#E0625E"
 
-matplotlib.rcParams.update({
-    "figure.facecolor": FUNDO, "axes.facecolor": FUNDO,
-    "text.color": GIZ, "axes.edgecolor": GIZ_FRACO,
-    "xtick.color": GIZ_FRACO, "ytick.color": GIZ_FRACO,
-    "font.family": "DejaVu Sans", "font.size": 15,
-    "mathtext.fontset": "cm",
-})
+# o tema vive em primitivas.TEMA, aplicado no import dela — duplicar aqui fazia a
+# aparência depender da ordem de import
 
 
 def _novo(w=6.4, h=6.4):

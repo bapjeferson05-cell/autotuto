@@ -11,13 +11,26 @@ from __future__ import annotations
 
 import os
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from backend.services import sessao as svc_sessao
 
-app = FastAPI(title="AutoTuto API")
+
+@asynccontextmanager
+async def ciclo(_app: FastAPI):
+    yield
+    # sem isto o processo fica preso no atexit: as threads do ThreadPoolExecutor não
+    # são daemon, e um plano travado esperando o LLM (até 200s por tentativa)
+    # seguraria o desligamento inteiro. cancel_futures descarta o que ainda nem
+    # começou; quem já está em voo termina, mas não bloqueia o shutdown por fila.
+    svc_sessao._EXECUTOR_PLANO.shutdown(wait=False, cancel_futures=True)
+
+
+app = FastAPI(title="AutoTuto API", lifespan=ciclo)
 
 _origens = os.environ.get("AUTOTUTO_CORS_ORIGENS", "http://localhost:5173,http://127.0.0.1:5173")
 app.add_middleware(

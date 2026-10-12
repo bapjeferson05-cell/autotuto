@@ -136,14 +136,77 @@ sem isso "triângulo" não casava com "triangulo" e um acerto virava erro.
   trapézio") em vez de exigir a chave exata — antes mandava pro LLM uma aula que
   está pronta no catálogo, e sem LLM no ar o aluno ouvia que não dava.
 
-### Aberto — não mexi
+### Aberto depois daquela rodada
 
-- `professor/figuras/*` usa `pyplot`, que é estado global. O backend serializa o
-  desenho com um lock (resolve a corrida), mas a cura real é largar o `pyplot` e
-  usar `Figure` + `FigureCanvasAgg`, que não tem estado global.
-- Endpoint síncrono bloqueia o event loop em até 4×200s de I/O de LLM, inclusive
-  para `/api/saude`. Pede `async` + `run_in_threadpool`, ou fila.
-- `SESSOES` ganhou teto e lock, mas segue em memória por processo: com
-  `--workers > 1` a sessão "some" quando o request cai noutro worker. Estado
-  compartilhado de verdade pede Redis.
+- `professor/figuras/*` usando `pyplot` (estado global) — **fechado em 2026-10-12**.
+- Endpoint síncrono e `/api/saude` — **fechado em 2026-10-12**, mas o diagnóstico
+  original estava errado; ver abaixo.
+- `SESSOES` segue em memória por processo: com `--workers > 1` a sessão "some"
+  quando o request cai noutro worker. Estado compartilhado de verdade pede Redis.
 - `main` e esta branch continuam sem ancestral comum (ver 2026-09-20).
+
+---
+
+## 2026-10-12 — fechando os dois itens abertos, com medição
+
+### Pyplot fora das figuras
+
+`professor/figuras/*` criava figuras com `plt.subplots()`, que as registra num
+gerenciador **global** do pyplot. Trocado por `Figure` + `FigureCanvasAgg`: cada
+figura vira um objeto isolado, sem registro nenhum — e o `plt.close()` deixa de ser
+necessário, porque não há de onde remover.
+
+**Honestidade sobre a evidência:** eu **não reproduzi** corrupção com o pyplot. 90
+renderizações em 16 threads, três tentativas, saíram todas corretas. A corrida é um
+risco documentado, não um bug observado. O que foi medido é outro ganho:
+
+| | 24 figuras, 8 threads |
+|---|---|
+| serializado com lock | 1,17s |
+| paralelo, sem lock | 0,82s |
+| | **1,4x** |
+
+Sem estado global o lock do backend pôde sair, e é daí que vem o ganho.
+
+**Sem regressão visual:** as 9 figuras nomeadas do catálogo saem IDÊNTICAS byte a
+byte (sha256 igual) ao que saíam com pyplot.
+
+De quebra, atacando o próprio código novo: `lousa.py` e `primitivas.py` escreviam
+cada um o seu `rcParams` no mesmo global, e o de `lousa` era superconjunto. A
+aparência da figura dependia de **quais módulos tinham sido importados** — o mesmo
+tipo de estado global que o pyplot trouxe. Consolidado em `primitivas.TEMA`.
+
+### O event loop nunca esteve bloqueado — mas o pool estava
+
+O `/code-review` disse que o endpoint síncrono bloqueava o event loop e matava a
+`/api/saude`. **O mecanismo está errado**, e medir foi o que mostrou: endpoint `def`
+do FastAPI já roda no pool de threads do Starlette. Com um plano de 3s em voo,
+`/api/saude` respondia em **6ms**.
+
+O problema real é mais estreito: o pool é **compartilhado** e tem 40 vagas. Planos
+presos no LLM (até 4 tentativas × 200s) o tomam inteiro. Medido num uvicorn de
+verdade, 45 planos de 5s em voo:
+
+| | GET /api/saude |
+|---|---|
+| ocioso | 20ms |
+| sob carga, antes | **4,79s** |
+| sob carga, depois | **1,6ms** |
+
+Duas mudanças: `/api/saude` virou `async def` (respondido no event loop, zero vagas
+do pool), e o plano foi pra um `ThreadPoolExecutor` próprio e limitado
+(`AUTOTUTO_MAX_PLANOS`, padrão 8). Quem espera vaga espera como `await`, não
+segurando thread compartilhada.
+
+Atacando de novo o próprio código: o executor nunca era desligado, e as threads dele
+não são daemon — um plano preso seguraria o atexit. Com `lifespan` +
+`shutdown(wait=False, cancel_futures=True)`, verificado: retorna em 0,000s com um
+plano de 30s em voo.
+
+### Estado
+
+- Suíte: **189 testes** passando (eram 183).
+- Demo reensaiada em contêiner novo: apertar `0` durante a leitura da pergunta dá
+  "acertou — pula a derivação (fading)".
+- O `.venv` foi reconstruído do zero neste contêiner — nada do ambiente antigo é
+  necessário pra rodar.

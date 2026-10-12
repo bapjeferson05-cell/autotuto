@@ -36,11 +36,18 @@ CORES = {
     "verde": "#7BD88F", "roxo": "#B98AE0",
 }
 
-matplotlib.rcParams.update({
+# Fonte ÚNICA do tema. Antes `lousa.py` escrevia o seu próprio rcParams (um
+# superconjunto deste), então a aparência de uma figura dependia de QUAIS módulos
+# tinham sido importados: quem importasse só `primitivas` desenhava com os eixos no
+# padrão do matplotlib. É o mesmo tipo de estado global que fez o pyplot sair daqui.
+TEMA = {
     "figure.facecolor": FUNDO, "axes.facecolor": FUNDO,
-    "text.color": GIZ, "font.family": "DejaVu Sans", "font.size": 15,
+    "text.color": GIZ, "axes.edgecolor": GIZ_FRACO,
+    "xtick.color": GIZ_FRACO, "ytick.color": GIZ_FRACO,
+    "font.family": "DejaVu Sans", "font.size": 15,
     "mathtext.fontset": "cm",
-})
+}
+matplotlib.rcParams.update(TEMA)
 
 
 def nova_figura(w: float, h: float, *, dpi: int = 140, linhas: int = 1, colunas: int = 1):
