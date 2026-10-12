@@ -216,3 +216,51 @@ def test_calc_que_estoura_nao_vira_500_nem_engole_o_beat():
     body = r.json()
     assert body["diz"] == "a conta vem aí"
     assert body.get("falhou"), "fingiu que a conta saiu"
+
+
+# ═════════ o plano lento não pode prender o pool compartilhado do Starlette
+#
+# Medido num uvicorn de verdade, com 45 planos de 5s em voo:
+#   antes  → GET /api/saude levava 4,79s (contra 20ms ocioso)
+#   depois → 1,6ms, igual a ocioso
+#
+# A causa não era o event loop (endpoint `def` do FastAPI já roda no pool): era o
+# pool COMPARTILHADO de 40 vagas sendo tomado inteiro por planos presos no LLM.
+# Os dois testes abaixo são estruturais — fixam o mecanismo que produziu aquela
+# medição. Reproduzir a latência em teste exigiria subir servidor e carga real,
+# que não cabe numa suíte unitária.
+
+def test_saude_nao_consome_vaga_do_pool_de_threads():
+    import inspect
+
+    from backend import app as app_mod
+    assert inspect.iscoroutinefunction(app_mod.saude), (
+        "/api/saude precisa ser `async def` pra ser respondido no event loop; como "
+        "`def` ele entra na fila do pool e fica atrás dos planos lentos")
+
+
+def test_iniciar_usa_executor_proprio_e_nao_o_pool_compartilhado():
+    import inspect
+
+    from backend import app as app_mod
+    from backend.services import sessao as svc
+
+    assert inspect.iscoroutinefunction(app_mod.iniciar)
+    fonte = inspect.getsource(app_mod.iniciar)
+    assert "iniciar_sessao_async" in fonte, (
+        "o plano precisa ir pro executor próprio; chamar iniciar_sessao direto num "
+        "endpoint `def` devolve o problema do pool compartilhado")
+    assert svc._EXECUTOR_PLANO._max_workers <= 16, (
+        "o executor do plano tem que ser LIMITADO — ilimitado só muda o lugar do "
+        "problema")
+
+
+def test_iniciar_sessao_async_devolve_o_mesmo_que_a_versao_sincrona():
+    import asyncio
+
+    from backend.services import sessao as svc
+
+    with patch("backend.services.sessao.planejador.planeja", side_effect=_aula_offline):
+        sid, sessao, saida = asyncio.run(svc.iniciar_sessao_async("trapézio"))
+    assert sid and sessao is not None
+    assert saida["titulo"] == carregar("trapezio").titulo

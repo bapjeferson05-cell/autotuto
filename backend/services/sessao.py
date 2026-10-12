@@ -14,10 +14,13 @@ cliente HTTP (o frontend), não um loop local.
 """
 from __future__ import annotations
 
+import asyncio
 import base64
+import os
 import threading
 import uuid
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -100,6 +103,25 @@ def _renderiza_bloco(bloco: dict) -> dict[str, Any]:
 
 def _renderiza_extra(diz: str) -> dict[str, Any]:
     return {"fim": False, "diz": diz, "tem_pergunta": False}
+
+
+# O planejador espera o LLM: até `tentativas` × timeout (4 × 200s no pior caso).
+# Endpoint `def` do FastAPI roda no pool de threads COMPARTILHADO do Starlette (40
+# vagas por padrão), então planos lentos o bastante ocupam o pool inteiro e qualquer
+# outra rota — inclusive /api/saude — fica na fila. Medido antes desta mudança: com
+# 45 planos de 5s em voo, /api/saude levava 4,8s contra 20ms ocioso.
+# Aqui o plano vai pra um executor PRÓPRIO e limitado: ele pode encher o dele e
+# ninguém mais sente. Quem espera vaga espera dentro do event loop (um await), não
+# segurando thread do pool compartilhado.
+_MAX_PLANOS_SIMULTANEOS = int(os.environ.get("AUTOTUTO_MAX_PLANOS", "8"))
+_EXECUTOR_PLANO = ThreadPoolExecutor(max_workers=_MAX_PLANOS_SIMULTANEOS,
+                                     thread_name_prefix="plano")
+
+
+async def iniciar_sessao_async(problema: str) -> tuple[str, Sessao, dict]:
+    """iniciar_sessao fora do pool compartilhado (ver _EXECUTOR_PLANO)."""
+    return await asyncio.get_running_loop().run_in_executor(
+        _EXECUTOR_PLANO, iniciar_sessao, problema)
 
 
 def iniciar_sessao(problema: str) -> tuple[str, Sessao, dict]:

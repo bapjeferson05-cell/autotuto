@@ -37,10 +37,13 @@ class ProximoIn(BaseModel):
 
 
 @app.post("/api/aulas")
-def iniciar(corpo: IniciarIn):
+async def iniciar(corpo: IniciarIn):
     if not corpo.problema.strip():
         raise HTTPException(400, "problema vazio")
-    sid, _sessao, saida = svc_sessao.iniciar_sessao(corpo.problema)
+    # async + executor próprio: o plano pode demorar minutos esperando o LLM, e
+    # endpoint `def` o faria ocupar o pool compartilhado do Starlette, deixando as
+    # outras rotas na fila. Ver _EXECUTOR_PLANO em services/sessao.py.
+    sid, _sessao, saida = await svc_sessao.iniciar_sessao_async(corpo.problema)
     return {"session_id": sid, **saida}
 
 
@@ -61,5 +64,8 @@ def estado(session_id: str):
 
 
 @app.get("/api/saude")
-def saude():
+async def saude():
+    # `async def` de propósito: respondido no próprio event loop, sem consumir vaga
+    # do pool de threads. É a rota que o orquestrador usa pra decidir se o processo
+    # está vivo — ela não pode ficar atrás de uma fila de planos lentos.
     return {"ok": True}
